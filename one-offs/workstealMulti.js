@@ -19,8 +19,9 @@ Usage:
 ***/
 
 var wsim = {
-	ms: 10,
-	nThreads: 6,
+	ms: 20,
+	ms2: 10, //for second+ run
+	nThreads: 4,
 	seqBlock: 10,
 	fontSize: "14px",
 	paddingSize: "5px",
@@ -38,7 +39,7 @@ wsim.colors =
 			case 3:
 				return [[255, 0, 0], [0, 255, 0], [0, 0, 255]];
 			case 4:
-				return [[153, 51, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255]];
+				return [[255, 255, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255]];
 			case 5:
 				return [[0, 255, 255], [255, 255, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255]];
 			case 6:
@@ -307,6 +308,10 @@ Stealer design:
 	}
 	
 	function paintConflicts () {
+	
+		var good = 0;
+		var bad = 0;
+	
 		if (wsim.hist.length < 2) return; //nothing to compare to yet
 		var now = wsim.hist[wsim.hist.length - 1];
 		var prv = wsim.hist[wsim.hist.length - 2];
@@ -321,6 +326,8 @@ Stealer design:
 						break;
 					}
 				}
+				if (hit) good++;
+				else bad++;
 				if (o.style && o.className != 'cursor') {
 							o.style.backgroundColor = "rgba(" + (hit ? "0" : "255") + ", 0, " + (hit ? "255" : "0") + ", " + depthToOpacity(1) + ")";
 							o.style.color = "#000";
@@ -330,6 +337,8 @@ Stealer design:
 				
 			}
 		}
+
+		console.log('good hit rate:', good / (good + bad + 0.0));
 
 	}
 	
@@ -360,6 +369,8 @@ Stealer design:
 	}
 	
 	function go () {
+	
+		if (wsim.hist.length > 0) wsim.ms = wsim.ms2;
 	
 		var map = [];
 		wsim.hist.push(map);
