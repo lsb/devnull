@@ -36,3 +36,13 @@
 Icon?
 ehthumbs.db
 Thumbs.db
+
+*.aux
+
+*.lof
+
+*.lot
+
+thesis/template/thesis.run.xml
+
+thesis/template/thesis.toc
