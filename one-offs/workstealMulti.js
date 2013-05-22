@@ -19,8 +19,9 @@ Usage:
 ***/
 
 var wsim = {
+	showDelta: false,
 	ms: 20,
-	ms2: 10, //for second+ run
+	ms2: 5, //for second+ run
 	nThreads: 4,
 	seqBlock: 10,
 	fontSize: "14px",
@@ -219,9 +220,24 @@ Stealer design:
 		function drawComputePost (current) {
 				if (!current || !current.style) return;
 				if (current.style) {
-					current.style.backgroundColor="rgba(" + wsim.colors[i][0] + "," + wsim.colors[i][1] + "," + wsim.colors[i][2] + ",0.05)";
-	//				current.style.border="1px solid rgba(" + wsim.colors[i][0] + "," + wsim.colors[i][1] + "," + wsim.colors[i][2] + ",0.2)";
-	//				current.style.padding= wsim.paddingSize;
+					if (wsim.showDelta) {					
+						var prv = wsim.hist[wsim.hist.length - 2][i];
+						var hit = false;
+						for (var di = 0; di < prv.length; di++) {
+							if (prv[di] == current) {
+								hit = true;
+								break;
+							}
+						}
+						var o = current;						
+						o.style.backgroundColor = "rgba(" + (hit ? "0" : "255") + ", 0, " + (hit ? "255" : "0") + ", " + depthToOpacity(1) + ")";
+						o.style.color = "#000";
+						o.style.borderColor = "transparent";
+						o.style.padding = wsim.paddingSize;
+
+					} else {
+						current.style.backgroundColor="rgba(" + wsim.colors[i][0] + "," + wsim.colors[i][1] + "," + wsim.colors[i][2] + ",0.05)";
+					}
 				}	
 		}
 		var res = {
@@ -338,7 +354,10 @@ Stealer design:
 			}
 		}
 
-		console.log('good hit rate:', good / (good + bad + 0.0));
+		var pHits = good / (good + bad + 0.0);
+		pHits = Math.round(pHits * 100);
+		console.log('% data hits:', pHits, '%');
+		alert("Percent of nodes that stayed on the same thread: " + pHits + "%");
 
 	}
 	
@@ -370,7 +389,10 @@ Stealer design:
 	
 	function go () {
 	
-		if (wsim.hist.length > 0) wsim.ms = wsim.ms2;
+		if (wsim.hist.length > 0) {
+			wsim.ms = wsim.ms2;
+			wsim.showDelta = true;
+		}
 	
 		var map = [];
 		wsim.hist.push(map);
