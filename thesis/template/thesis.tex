@@ -1,6 +1,40 @@
 \documentclass{ucbthesis}
 \usepackage{biblatex}
 
+
+
+%%%%
+\usepackage{syntax} 
+\setlength{\grammarparsep}{0.15cm}   % vertical distance between production rules
+\setlength{\grammarindent}{1cm}
+\renewcommand{\litleft}{\bfseries}
+\renewcommand{\ulitleft}{\bfseries}
+\newcommand{\superscript}[1]{\ensuremath{^{\textrm{#1}}}}
+\newcommand{\subscript}[1]{\ensuremath{_{\textrm{\uppercase{#1}}}}}
+\renewcommand{\syntleft}{\normalfont\itshape}
+\renewcommand{\syntright}{}
+%\newcommand{\deriv}{~::=~}
+\newcommand{\deriv}{~ $\rightarrow$ ~}
+
+\usepackage{graphicx}
+
+
+\usepackage{listings}
+\newcommand*{\Comment}[1]{\hfill\makebox[3.0cm][l]{#1}}%
+\newcommand*{\BComment}[1]{\Comment{\textbf{#1}}}
+\newcommand*{\uncertain}[1]{{\textcolor{red}{\textbf{#1}}}}\newcommand{\sched}[1]{\lstinline[morekeywords={parPre,parPost,recursive,;,||,spawn,join,taskRecursive},mathescape]{#1}}
+
+%\newcommand{\hole}{\fbox{\emph{?hole}}~}
+\newcommand{\hole}{{\emph{?hole}}}
+%\newcommand{\hlang}{\emph{\texttt{HBOX-AG}}}
+%\newcommand{\hlang}{ {\huge \textbf{\textsc{H-AG}}} }
+\newcommand{\hlang}{ \texttt{H-AG} }
+\newcommand{\hlangpp}{ \texttt{hbox++} }
+
+
+%%%%
+
+
 % Double spacing, if you want it.
 % \def\dsp{\def\baselinestretch{2.0}\large\normalsize}
 % \dsp
@@ -88,8 +122,8 @@ I want to thank my advisor for advising me.
 \include{chap6} %case studies
 \include{chap7} %conclusion
 
-% \appendix
-% \chapter{More Monticello Candidates}
+\appendix
+\include{appendixGrammars}
 
 \printbibliography
 

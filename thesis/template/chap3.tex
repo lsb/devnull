@@ -1,8 +1,64 @@
-\chapter{Parallel Programming as Partial Behavioral Specification: Schedule Sketching}
-\section{Motivation}
-\section{Target Language of Visit Schedules}
-\section{Input Language of Visit Schedules}
-\section{Examples}
-\subsection{Guiding Parallelization}
-\subsection{Preventing Serialization}
-\subsection{Designing Algorithms}
+\chapter{A Safe Scheduling Language for Structured Parallel Traversals}
+
+\section{Motivation and Approach}
+\begin{itemize}
+\item structure is good for parallelization
+\item parallelization needs checking
+\item structured parallelism in layout 
+\end{itemize}
+
+
+
+\section{Background:  Static Sequential and Task Parallel Visitors}
+\subsection{Sequential Visitors}  
+\begin{itemize}
+\item Knuth: synth and inh
+\item OAG
+\end{itemize}
+\subsection{Task Parallel Visitors} 
+\begin{itemize}
+\item FNC-2 / Work stealing
+\end{itemize}
+
+\section{Structured Parallelism in Visitors} 
+\subsection{td, bu, in order} (related to distributed?)
+\subsection{concurrent} (old paper: unstructured within visit)
+\subsection{multipass} (any old paper? unstructured within visit)
+\subsection{nested}
+
+\section{A Behavioral Specification Language}
+\subsection{Formalism}
+
+\section{Schedule Compilation}
+Phrase as rewrites working in an EDSL w/ templates
+\subsection{Rewrite rules}
+\section{Schedule Verification}
+\subsection{Overview}
+\begin{itemize}
+\item properties to prove: schedule followed (and complete), dependencies realizable 
+\item structure of proof
+\end{itemize}
+\subsection{Axioms}
+\begin{itemize}
+\item axioms
+\item examples from each
+\end{itemize}
+\subsection{Proof}
+
+\section{Case Studies: Layout as Structured Parallel Visits}
+\subsection{Box model}
+\subsection{Nested text}
+\subsection{Grids}
+
+
+\section{Related Work}
+Lang of schedules
+\begin{itemize}
+\item background
+\item stencils and skeletons: wavefront, ...
+\item polyhedra
+\end{itemize}
+Schedule verification
+\begin{itemize}
+\item compare to OAG etc., looser dataflow/functional langs
+\end{itemize}

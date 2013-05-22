@@ -1,10 +1,49 @@
-\chapter{Modernized Attribute Grammars}
+\chapter{Layout Languages as Sugared Attribute Grammars}
+\section{Motivation and Approach}
 
-\section{Motivation}
-\section{The HBox Language}
-\section{Classical Attribute Grammar}
-\section{Interfaces}
-\section{Traits}
-\section{Loops}
-\section{Embedding Foreign Functions}
+\subsection{Important properties for layout languages and others}
+\begin{itemize}
+\item Verified semantics: total definition, linear complexity, change-impact analysis, ...
+\item Verified implementations
+\item Implementation complexity of layout lang: program analysis and code generation simplify optimization, tooling, debugging, ...
+\item Implementation complexity of spec lang: desugaring eliminates costs
+\end{itemize}
+
+\subsection{Approach}
+\begin{itemize}
+\item language for defining tree evaluator that is restricted enough for automation support
+\item push language expressiveness where needed
+\item reduce language complexity via desugaring semantics
+\end{itemize}
+
+
+\section{The HBox Language as a Classical Attribute Grammar}
+\subsection{Example tree with dynamic dependencies}
+\subsection{Example static grammar instance}
+\subsection{Dynamic evaluator}
+
+\section{Desugaring Modern Constructs}
+\subsection{Motivation: Productive Features with Simple Implementations}
+\subsection{Interfaces: Lightweight and Reusable Input/Output Specifications}
+\subsection{Traits: Reusing Cross-cutting Code}
+\subsection{Foreign Functions: Embedded Domain Specific Language}
+\subsection{Loops}
+
+\section{Evaluation: Mechanized Layout Features}
+
+\subsection{Rendering: Immediate Mode and Beyond}
+\subsection{Non-euclidean: Sunburst Diagram}
+\subsection{Charts: Line graphs}
+\subsection{Animation and Interaction: Treemap}
+\subsection{Flow-based: CSS Box Model}
+\subsection{Grid-based: HTML Tables}
+
+\section{Related Work}
+\begin{itemize}
+\item loose formalisms: browser impl (C++), d3 (JavaScript), latex formulas (ML)
+\item restricted formalisms: cassowary and hp, UREs
+\item AGs: html tables
+\end{itemize}
+
+
 
