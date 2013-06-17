@@ -1,16 +1,82 @@
 \chapter{MIMD and SIMD Tree Traversals}
+\section{Overview}
+
+For a full language, statically identified parallelization opportunities still require an efficient runtime implementation that exploits them. In this section, we show how to exploit the logical concurrency identified within a tree traversal to optimize for the architectural properties of two types of hardware platforms: MIMD (e.g., multicore) and SIMD (e.g., sub-word SIMD and GPU) hardware. For both types of platforms, we optimize the schedule within a traversal and the data representation. We innovate upon known techniques in several ways:
+
+\begin{enumerate}
+\item \textbf{Semi-static work stealing for MIMD:} MIMD traversals should be optimized for low overheads, load balancing, and locality. Existing techniques such as work stealing provide spatial locality and, with tiling, low overheads. However, dynamic load balancing within a traversal leads to poor temporal locality across traversals. The processor a node is assigned to in one traversal may not be the same one in a subsequent traversal, and as the number of processors increases, the probability of assigning to a different one increases. Our solution dynamically load balances one traversal and, due to similarities across traversals, successfully reuses it.
+\item \textbf{Clustering traversals for SIMD:}  SIMD evaluation is sensitive to divergence across parallel tasks in instruction selection. Visits to different types of tree nodes yield different instruction streams, so na\i{v}e vectorization fails for webpages due to their visual variety. Our insight is that similar nodes can be semi-statically identified. Thus \emph{clustered} nodes will be grouped in the data representation and run in SIMD at runtime.
+\item \textbf{Automatically staged parallel memory allocation to efficiently combine SIMD layout and SIMD rendering:} We optimized the schedule of memory allocations in the layout computation into an efficient parallel prefix sum. Otherwise, parallel dynamic memory allocation requests would contend over the free memory buffer and void GPU performance benefits. We automated the optimization by reducing the scheduling problem to attribute grammar scheduling and automatically performing the reduction through macro expansion.
+\end{enumerate}
+
+Our techniques are important and general. They overcame bottlenecks preventing seeing any speedup from parallel evaluation for webpage layout and data visualization. Notably, they are generic to computations over trees, not just layout. An important question going forward is how to combine them as, in principle, they are complementary.
+
 \section{MIMD: Semi-static work stealing}
 \subsection{Scheduling}
 \subsection{Data representation}
 \subsection{Evaluation}
-\section{GPU: Staying on-device}
-\subsection{Level-synchronous breadth-first traversal}
-\subsection{Rendering}
+
+
+\section{SIMD Background: Level-Synchronous Breadth-First Tree Traversal}
+The common baseline for our two SIMD optimizations is to implement parallel preorder and postorder tree traversals as level-synchronous breadth-first parallel tree traversals. Reps first suggested such an approach to parallel attribute grammar evaluation [[CITE]], but did not implement it. Performance bottlenecks led to us deviate from the core representation used by more recent data parallel languages such as NESL [[CITE]] and Data Parallel Haskell [[CITE]]. We discuss our two innovations in the next subsections, but first overview the baseline technique established by existing work.
+
+\newsavebox{\bfsVisitor}
+\begin{lrbox}{\bfsVisitor}% Store first listing
+\begin{lstlisting}[mathescape,language=C++,morekeywords={spawn,join,reverse,parallel_for}]
+void parPre(void (*visit)(Prod &), List<List<Prod>>  &levels) {
+  for (List<Prod> level in levels)
+  	parallel_for (Prod p in level)
+		visit(p)
+}
+void parPost(void (*visit)(Prod &), List<List<Prod>>  &levels) {
+  for (Array<Prod> level in levels.reverse())
+  	parallel_for (Prod p in level)
+		visit(p)
+}\end{lstlisting}
+\end{lrbox}
+
+\begin{figure}
+\subfloat[\textbf{Level-synchronous Breadth-First Traversal}]{\label{fig:bfstraversal:code}  \usebox{\bfsVisitor}  } \\
+\subfloat[\textbf{Logical Tree}]{\label{fig:bfstraversal:replog} \includegraphics[trim=0 0 0 0,clip,width=0.3\columnwidth]{chapter6/bfslayouttree} } 
+ \subfloat[\textbf{Tree Representation}]{\label{fig:bfstraversal:repmem}  \includegraphics[trim=0 0 0 0,clip,width=0.6\columnwidth]{chapter6/bfslayoutmem} } 
+\caption{\textbf{SIMD tree traversal as level-synchronous breadth-first iteration with corresponding structure-split data representation.}}
+\label{fig:bfstraversal}
+\end{figure}
+
+The na\i{v}e tree traversal schedule is to sequentially iterate one level of the tree at a time and  traverse the nodes of a level in parallel. A parallel preorder traversal starts on the root node's level and then proceeds downwards, while a postorder traversal starts on the tree fringe and moves upwards (Figure~\ref{fig:bfstraversal}~\ref{fig:bfstraversal:code}). Our MIMD implementation, in contrast, allows one processor to compute on a different tree level than another active processor. In data visualizations, we empirically observed that most of the nodes on a level will dispatch to the same layout instructions, so our na\i{v}e traversal schedule avoids instruction divergence.
+
+The level-synchronous traversal pattern eliminates many divergent memory accesses by using a corresponding data representation. Adjacent nodes in the schedule are collocated in in memory. Furthermore, individual node attributes are stored in \emph{column} order through a array-of-structure to structure-of-array conversion. The conversion collocates individual attributes, such as the width attribute of one node being stored next to the width attribute of the node's sibling (Figure~\ref{fig:bfstraversal:repmem}). The index of a node in a breadth-first traversal of the tree is used to perform a lookup in any of the attribute arrays. The benefit this encoding is that, during SIMD  layout of several adjacent nodes, reads and writes are coalesced into  bulk reads and writes. For example, if a layout pass adds a node's padding to its width, several contiguous paddings and several contiguous widths will be read, and the sum will be stored with a contiguous write. Such optimizations are crucial because the penalty of non-coalesced access is high and, for layout, relatively few computations occur between the reads and writes.
+
+Full implementation of the data representation poses several subtleties. 
+\begin{itemize}
+\item \textbf{Level representation.} To eliminate traversal overhead, a summary provides the index of the first and last node on each level of a tree. Such a summary provides  data range information for launching the parallel kernels that evaluate the nodes of a level as well as the information for how to proceed to the next level.
+\item \textbf{Edge representation.} A node may need multiple named lists of children, such as an HTML table with a header, footer, and an arbitrary number of rows. We encode the table's edges as 3 global arrays of offsets: header, footer, and first-row. To support iterating across rows, we also introduce a 4th array to encode whether a node is the last sibling. Thus, any named edge introduces a global array for the offset of the pointed-to node, and for iteration, a shared global array reporting whether a node at a particular index is the end of a list.
+\item \textbf{Memory compression.} Allocating an array the size of the tree for every type of node attribute wastes memory. We instead statically compute the maximum number of attributes required for any type of node, allocate an array for each one, and map the attributes of different types of nodes into different arrays. For example, in a language of HBox nodes as Circle nodes who have attributes 'r' and 'angle', 4 arrays will be allocated. The HBox requires an array for each of the attributes 'w', 'h', 'x', and 'y' while the Circle nodes only require two arrays. Each node has one type, and if that that type is HBox, the node's entry in the first array will contain the 'w' attribute. If the node has type Circle, the node's entry in the first entry will contain the 'r' attribute.
+\item \textbf{Tiling.} Local structural mutations to a tree such as adding or removing nodes should not force global modifications. As most SIMD hardware has limited vector lengths (e.g., 32 elements wide), we split our representation into blocks. Adding nodes may require allocation of a new block and reorganization of the old and new block. Likewise, after successive additions or deletions, the overall structure may need to be compacted. Such techniques are standard for file systems, garbage collectors, and databases.
+\end{itemize}
+
+
+In summary, our basic SIMD tree traversal schedule and data representation descend from the approach of NESL [[CITE]] and Data Parallel Haskell [[CITE]]. Previous work shows how to generically convert a tree of structures into a structure of arrays. Those approaches do not support statically unbounded nesting depth (i.e., tree depth), but our system supports arbitrary tree depth because our transformation is not as generic.  
+
+A key property of all of our systems, however, is that the structure of the tree is fixed prior to the traversals.  In contrast, for example, parallel breadth-first traversals of graphs will dynamically find a minimum spanning tree [[CITE]]. Such dynamic alternatives incur unnecessary overheads when performing a sequence of traversals and sacrifice memory coalescing opportunities. Layout is often a repetitive process, whether due to multiple tree traversals for one invocation or an animation incurring multiple invocations, so costs in creating an optimized data representation and schedule are worth paying.
+
+\section{Input-dependent Clustering for SIMD Evaluation}
+
+
+\input{chap6simd}
+
+\input{chap6staging}
+
 \subsection{Evaluation}
-\section{Sub-word SIMD: Clustering}
-\subsection{The problem}
-\subsection{Instruction clustering}
-\subsection{Data clustering}
-\subsection{Evaluation}
-Limit study and benchmarks
+\begin{enumerate}
+\item structure split BFS  benefit for data viz and webpages
+\item clustering limit study and benchmarks
+\item CPU vs GPU for layout, then factor in rendering loop
+\end{enumerate}
 \section{Related Work}
+\begin{enumerate}
+\item representation The representation might be further compacted. For example, the last two arrays will have null values for Circle nodes. Even in the case of full utilization, space can be traded for time for even more aggressive compression [[CITE rinard]]
+\item duane
+\item trishul
+\item gnu irregular array stuff
+\end{enumerate}
