@@ -22,9 +22,11 @@
 \usepackage{listings}
 
 \usepackage{subfig}
+ \usepackage{caption}
 
+%\captionsetup[subfigure]{position=bottom}
 
-
+\newcommand{\code}[1]{\lstinline|#1|}
 \newcommand*{\Comment}[1]{\hfill\makebox[3.0cm][l]{#1}}%
 \newcommand*{\BComment}[1]{\Comment{\textbf{#1}}}
 \newcommand*{\uncertain}[1]{{\textcolor{red}{\textbf{#1}}}}\newcommand{\sched}[1]{\lstinline[morekeywords={parPre,parPost,recursive,;,||,spawn,join,taskRecursive},mathescape]{#1}}

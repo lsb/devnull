@@ -61,21 +61,156 @@ In summary, our basic SIMD tree traversal schedule and data representation desce
 A key property of all of our systems, however, is that the structure of the tree is fixed prior to the traversals.  In contrast, for example, parallel breadth-first traversals of graphs will dynamically find a minimum spanning tree [[CITE]]. Such dynamic alternatives incur unnecessary overheads when performing a sequence of traversals and sacrifice memory coalescing opportunities. Layout is often a repetitive process, whether due to multiple tree traversals for one invocation or an animation incurring multiple invocations, so costs in creating an optimized data representation and schedule are worth paying.
 
 \section{Input-dependent Clustering for SIMD Evaluation}
-
-
 \input{chap6simd}
 
+\section{Automatically Staged SIMD Memory Allocation for Rendering}
 \input{chap6staging}
 
-\subsection{Evaluation}
-\begin{enumerate}
-\item structure split BFS  benefit for data viz and webpages
-\item clustering limit study and benchmarks
-\item CPU vs GPU for layout, then factor in rendering loop
-\end{enumerate}
+
+\section{Evaluation}
+
+
+\subsection{SIMD Clustering}
+We evaluate several aspects of our clustering approach. First, we examine applicability to various visualizations. Second, we evaluate the speed and performance benefit. Clustering provides invariants that benefit more than just vectorization, so we distinguish sequential vs. parallel speedups. Finally, there are different options in what clusters to form, so for each stage of evaluation, we compare impact.
+
+\begin{figure}
+\centering
+\includegraphics[trim=0 0 0 0,clip,width=1.0\columnwidth]{chapter6/csscompression}
+\caption{\textbf{Compression ratio for different CSS clusterings.} Bars depict compression ratio (number of clusters over number of nodes). Recursive clustering is for the reduce pattern, level-only for the map pattern. ID is an identifier set by the C3 browser for nodes sharing the same style parse information while value is by clustering on actual style field values.}
+\label{fig:csscompression}
+\end{figure}
+
+
+
+
+\subsubsection{Applicability}
+
+
+We examined idealized speedup for several workloads:
+
+\begin{itemize}
+
+\item \textbf{Synthetic.} For a controlled synthetic benchmark, we simulated the effect of increasing number of clusters on speedup for various SIMD architectures.  Our simulation assumes perfect speedups for SIMD evaluation of nodes run together on a SIMD unit. The ideal speedup is a function of the minimum of the SIMD unit's length (for longer clusters, multiple SIMD invocations are mandatory) and the number of clusters (at least one SIMD step is necessary for each cluster).   Figure~\ref{fig:simulatedclusteringspeedup} shows, for architectures of different vector length, that the simulated speedup from clustering (solid black line with circles) is close to the ideal speedup (solid green line).
+
+\item \textbf{Data visualization.} For our data visualizations, we found that, across the board, all of the nodes of a level shared the same type. For example, our visualization for multiple line graphs puts the root node on the first level, the axis for each line graph on the second level, and all of the actual line segments on the third level. 
+
+\item \textbf{CSS.} We analyzed potential speedup on webpages. Webpages are a challenging case because an individual webpage features high visual diversity, with popular sites using an average of 27KB of style data per page.~\footnote{https://developers.google.com/speed/articles/web-metrics}. We picked 10 popular websites from the Alexa Top 100 US websites that rendered sufficiently correctly in the C3~[[CITE]] web browser. It was also challenging in practice because it required clustering based on individual node attributes, not just the node type.
+
+Figure~{fig:csscompression} compares how well nodes of a webpage can be clustered. It reports the \emph{compression ratio}, which divides the number of clusters by the number of nodes. Sequential execution would assign each node to its own cluster, so the ratio would be 1. In contrast, if the tree is actually a list of 100 elements, and the list can be split into 25 clusters, the ratio would be 25\%. Assuming infinite-length vector processors and constant-time evaluation of a node, the compression ratio is the exact inverse of the speedup. A ratio of 1 leads to a 1X speedup, and a compression ratio of 25\% leads to a 4X speedup.
+
+Clustering each level by attributes that influence control flow achieved a 12\% compression ratio (Figure~{fig:csscompression}): an 8.3X idealized speedup. When we strengthened the clustering condition to enforce stronger invariants in the cluster, such as to consider properties of the parent node, the ratio quickly worsened. Thus, we see that our basic approach is promising for websites on modern subword-SIMD instruction sets, such as a 4-wide SSE (x86) and NEON (ARM), and the more recent 8-wide AVX (x86). Even longer vector lengths are still beneficial because some clusters were long. However, eliminating all divergences requires addressing control flows influenced by attributes of node neighbors, which leads to poor compression ratios. Thus, we emphasize that 8.3X is an upper bound on the idealized speedup: not all branches in a cluster are addressed.
+\end{itemize}
+
+Empirically, we see that clustering is applicable to CSS, and in the case of our data visualizations, unnecessary. Vectorization limit studies based on analyzing dynamic data dependencies from program traces suggest that general programs can be much more aggressively vectorized, so clustering may be the beginning of one such approach~[[CITE]].
+
+
+
+
+\begin{figure}
+\centering
+\includegraphics[trim=0 0 0 0,clip,width=1.0\columnwidth]{chapter6/cssspeedup4}
+B =breadth first, S = structure splitting, M = level clustering, R = nested clustering, H = hoisting, V = SSE 4.2 
+\caption{\textbf{Speedups from clustering on webpage layout.} Run on a 2.66GHz Intel Core i7 (GCC 4.5.3 with flags -O3 -combine -msse4.2) and does not preprocessing time.
+}
+\label{fig:cssspeedup}
+\end{figure}
+
+\subsubsection{Speedup}
+We evaluate the speedup benefits of clustering for webpage layout. We take care to distinguish sequential benefits from parallel, and of different clustering approaches. Our implementation was manual:  we examine optimizing one pass of the C3~[[CITE]] browser's CSS layout engine that is responsible for computing intrinsic dimensions. The C3 browser was written in C\#, so we wrote our optimized traversal in C\+\+ and pinned the memory for shared access.  We use a breadth-first tree representation and schedule for our baseline, but note that doing such a layout already provides a speedup over C3's unoptimized global layout. 
+
+For our experimental setup, we evaluate the same popular webpages above that rendered legibly with the experimental C3 browser.  Benchmarks ran on a 2.66GHz Intel Core i7 (GCC 4.5.3 with flags -O3 -combine -msse4.2). We performed 1,000 trials, and to avoid warm data cache effects, iterated through different webpages.
+
+We first examine sequential performance. Converting an array-of-structures to a structure-of-arrays causes a 10\% slowdown (B S in Figure~\ref{fig:cssspeedup}). However, clustering each level and hoisting computations shared throughout a cluster led to a 2.1X sequential benefit (M S H). Nested clustering provided more optimization opportunities, but the compression ratio worsened: it only achieved a 1.7X sequential speedup (R S H). Clustering provides a significant sequential speedup.
+
+Next, we examine the benefit of vectorization. SSE instructions provide 4-way SIMD parallelism. Vectorizing the nested clustering improves the speedup from 1.7X to 2.6X, and the level clustering from 2.1X to 3.5X. Thus, we see significant total speedups. The 1.7X relative speedup of vectorization, however, is still far from the 4X: level clustering suffers from randomly strided children, and the solution of nested clustering sacrifices the compression ratio.
+
+\begin{figure}
+\centering
+\includegraphics[trim=0 0 0 0,clip,width=1.0\columnwidth]{chapter6/csspower}
+\caption{\textbf{Performance/Watt increase for clustered webpage layout.}}
+\label{fig:csspower}
+\end{figure}
+
+\subsubsection{Power}
+Much of our motivation for parallelization is better performance-per-Watt, so we evaluate power efficiency. To measure power, we sampled the power performance counters during layout. Each measurement looped over the same webpage over 1s due to the low resolution of the counter. Our setup introduces warm cache effects, but we argue it is still reasonable because a full layout engine would use multiple passes and therefore also have a warm cache across traversals.
+
+In Figure~\ref{fig:csspower}, we show a 2.1X improvement in power efficiency for clustered sequential evaluation, which matches the 2.1X sequential speedup of Figure~\ref{fig:cssspeedup}. Likewise, we report a 3.6X cumulative improvement in power efficiency when vectorization is included, which is close to the 3.5X speedup. Thus, both in sequential and parallel contexts, clustering improves performance per Watt. Furthermore, it supports the general reasoning in parallel computing of 'race-to-halt' as a strategy for improving power efficiency.
+
+
+\begin{figure}
+\centering
+\includegraphics[trim=0 0 0 0,clip,width=0.6\columnwidth]{chapter6/datarelayouttime3}
+\caption{\textbf{Impact of data relayout time on total CSS speedup.} Bars depict layout pass times. Speedup lines show the impact of including clustering preprocessing time.}
+\label{fig:cssrelayout}
+\end{figure}
+
+
+
+\subsubsection{Overhead}
+Our final examination of clustering is of the overhead. Time spent clustering before layout must not outweigh the performance benefit; it is an instance of the planning problem. 
+
+For the case of data visualization, we convert the data structure into arrays with an offline preprocessor. Thus, our data visualizations experience no clustering cost.
+
+For webpage layout, clustering is performed on the client when the webpage is received. We measured performing sequential two-pass clustering. Figure~\ref{fig:cssrelayout} shows the overhead relative to one pass using the bars. The highest relative overhead was for the Flickr homepage, where it reaches almost half the time of one pass. However, layout occurs in multiple passes. For a 5-pass layout engine where we model each pass as similar to the one we optimized, the overhead is amortized. The small gap between the solid and dashed lines in Figure~\ref{fig:cssrelayout} show there is little difference when we include the preprocessing overhead in the speedup calculation.
+
+\subsection{Staged SIMD Memory Allocation}
+We evaluate three dimensions of our staged memory allocation approach: flexibility, productivity, and performance. First, it needs to be able to express the rendering tasks that we encounter in GPU data visualization. Second, it should some form of productivity benefit for these tasks. Finally, the performance on those tasks must be fast  enough to support real-time animations and interactions of big data sets.
+
+\subsubsection{Flexibility}
+Our staged structuring and automation approach cannot express all dynamic memory usage patterns, so it is important to validate that it works on common patterns that occur in visualization. We found the three following patterns to be important:
+
+\begin{itemize}
+\item \textbf{Functional graphics.} Functional graphics primitives used in languages such as Scheme, O'Caml, and Haskell follow the form that we used for \code{Circle}. For example, many of our visualizations use simple variants such as 2D rectangles,  3D line, and arcs.
+\item \textbf{Linked view}. Multiple renderable objects can be associated with one node, which we can use for providing different views of the same data. Such functionality is common for statistical analysis software:
+
+\begin{lstlisting}[mathescape]
+render :=  @Circle(x,y,r)  + @Circle(offsetX + abs(x), offsetY + abs(y), r);
+\end{lstlisting}
+
+\item \textbf{Zooming.} We can use the same multiple representation capability for a live zoomed out view (``picture-in-picture''):
+
+\begin{lstlisting}[mathescape]
+render :=  
+  @Circle(x, y, radius) 
+   + @Circle(xFrame + x*zoom, yFrame + y*zoom, radius *zoom);
+\end{lstlisting}
+
+\item \textbf{Visibility toggles.} Our macros support conditional expressions, which enables controlling whether to render an object. For example, a boolean input attribute can control whether to show a circle: \code{render := isOn ? @Circle(0,0,10) : 0; }
+\item \textbf{Alternative representations.} Conditional expressions also enable choosing between multiple representations, not just on/off visibility:
+\begin{lstlisting}[mathescape]
+render := 
+  isOff ? 0
+    : mouseHover ? @CircleOutline(0,0,10) 
+    : @Circle(0,0,10,5) ;
+\end{lstlisting}
+
+\end{itemize}
+
+\subsubsection{Productivity}
+Productivity is difficult to measure. Before using the automation extensions for rendering, we repeatedly encountered bugs in manipulating the allocation calls and memory buffers. The bugs related both to incorrect scheduling and to incorrect pointer arithmetic. Our new design eliminates the possibility of both bugs.
+
+One suggestive productivity measure is of how many lines of code the macro abstraction eliminates from our visualizations. We measured the impact on using it for 3 of our visualizations. The first visualization is our HBox language extended with rendering calls, while the other two are interactive reimplementations of popular visualizations: a treemap~[[CITE]] and multiple 3D line graphs~[[CITE]].
+
+
+\begin{table}[ht]\caption{Lines of Code Before/After Invoking the '@' Macro}\centering\begin{tabular}{c r r r}\hline\hline \textbf{Visualization} & \textbf{Before (loc)} & \textbf{After (loc)} & \textbf{Decrease} \\ [0.5ex] \hline
+  HBox & 97 & 54 & 44\% \\
+  Treemap & 296 & 241 & 19\% \\
+  GE & 337 & 269 & 20\% \\ [1ex] 
+\hline\end{tabular}\label{table:macroreduction}\end{table}
+Table~\ref{table:macroreduction} compares the lines of code in visualizations before and after we added the macros. Using the macros eliminated 19--44\% of the code. Note that we are \emph{not} measuring the macro-expanded code, but code that a human wrote.
+
+
+
+As shown in Figure~\ref{fig:stagedallocClient}, the eliminated code is code that was introduced by staging the library calls. Porting unstaged functional graphics calls to the library, is in practice, an alpha renaming of function names.  Using the '@' macro eliminates 19--44\% of the code that would have otherwise been introduced and completely eliminates two classes of bugs (scheduling and pointer arithmetic), so the productivity benefit is non-trivial. 
+
+\subsubsection{Performance}
+
+
+
 \section{Related Work}
 \begin{enumerate}
 \item representation The representation might be further compacted. For example, the last two arrays will have null values for Circle nodes. Even in the case of full utilization, space can be traded for time for even more aggressive compression [[CITE rinard]]
+\item sims limit studies
 \item duane
 \item trishul
 \item gnu irregular array stuff

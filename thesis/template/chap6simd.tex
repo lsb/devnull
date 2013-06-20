@@ -1,5 +1,4 @@
-Once the tree is available, we automatically optimize the schedule for traversing a tree level to avoid instruction divergence. \textbf{TODO overview subsection} 
-
+Once the tree is available, we automatically optimize the schedule for traversing a tree level in a way that avoids instruction divergence. Our insight is that we can cluster tasks (nodes) based on node attributes that influence control flow. We match the data layout to the new schedule, and optimize the clustering process to prevent the planning overhead to outweigh its benefit. The overall optimization can be thought of an extension to loop unswitching where the predicate is input-dependent and a sorting prepass guarantees that subintervals will branch identically.
 
 \begin{figure}
 \subfloat{  \includegraphics[trim=0 0 0 0,clip,width=0.32\columnwidth]{chapter6/simulatedclusteringspeedup/simulatedclusteringspeedup-1} }
@@ -112,3 +111,16 @@ Our algorithm matches the data representation order to the schedule by placing n
 Reordering data is expensive as all of the data is moved. In the case of our data visualization system, we can avoid the cost because the data is preprocessed on our server. For webpage layout, the client performs clustering, which we optimize enough such that the cost is outweighed by the subsequent performance improvements.
 
 We optimize reordering with a simple parallel two-pass technique. The first pass traverses each level in parallel to compute the cluster for each node and tabulate the cluster sizes for each tree level. The second pass again traverses each level in parallel, and as each node is traversed, copies it into the next free slot of the appropriate cluster. Even finer-grained parallelization is possible, but this algorithm was sufficient for lowering reordering costs enough to be amortized.
+
+\subsection{Nested Clustering}
+Clustering can also be used to address divergences induced by computations over neighboring nodes. They avoidable irregularities can take several forms:
+
+\begin{itemize}
+\item \textbf{Branches.} For the case of webpage layout, we saw cases where attributes of the parent node or children node influence instruction selection, such as whether to include a child node in a width computation. The properties can be included in the clustering condition to eliminate the corresponding instruction divergences. 
+
+\item \textbf{Load imbalance in loops.} One node may have no children while another may have many. If the layout computation involves a loop, SIMD evaluation will perform the two loops in lock-step. Thus, as the nodes have different amounts of children, the SIMD lanes devoted to the first child will not be utilized: this is a load balancing problem. The number of children can be included in the clustering condition to eliminate load imbalance.
+
+\item \textbf{Random memory access in loops.} A further issue with lock-step loops over child nodes is memory divergence. A breadth-first layout would provide strided memory access, but if each level is clustered, the locations of a node's children may be random without further aid. We found a \emph{nested} solution where \emph{subtrees} are assigned to clusters. Instead of just associating nodes of a level with a cluster, our algorithm then treats the nodes of a cluster as roots. It recursively expands a subtree such that all of the cluster nodes share it (with respect to the attributes influencing control flow). The data layout follows the nested clustering, so parallel memory accesses to the children of nodes will be coalesced. 
+\end{itemize}
+
+Each of these clusterings introduce an invariant for a cluster for optimizing performance within that cluster. However, the clustering condition is more discriminating.  Cluster sizes may decrease, which would  significantly decrease  performance if cluster size shrinks below vector length size. Our evaluation explores these options in practice.
