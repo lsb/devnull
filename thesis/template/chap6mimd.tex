@@ -48,6 +48,56 @@ Figure~\ref{fig:compression} depicts several of the data representation optimiza
 
 
 
+\begin{figure}
+\centering
+\includegraphics[width=1.0\columnwidth]{chapter6/wssimulation}
+\caption{\textbf{Simulation of work stealing.} Top-down simulated tree traversal of a tiled tree by three processors in three steps.}
+\label{fig:wssimulation}
+\end{figure}
+
+
+\begin{figure}
+\centering
+\includegraphics[width=1.0\columnwidth]{chapter6/workstealviz}
+\caption{\textbf{Simulation of work stealing on Wikipedia.} Colors depict claiming processor and dotted boundaries indict subtree steals. Top-left boxes measure hit rate for individual processor.}
+\label{fig:wswikipedia}
+\end{figure}
+
+
+
+\begin{figure}
+\centering
+\includegraphics[width=1.0\columnwidth]{chapter6/workstealdelta}
+\caption{\textbf{Temporal cache misses for simulated work stealing over multiple traversals.} Simulation of 4 threads on Wikipedia. Blue shade represents a hit and red a miss. 67\% of the nodes were misses. Top-left boxes measure hit rate for individual processor.}
+\label{fig:wswikipediadelta}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics[width=1.0\columnwidth]{chapter6/wsbad}
+\caption{\textbf{Dynamic work stealing for three traversals.} Tiles are claimed by different processors in different traversals.}
+\label{fig:wsbad}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics[width=1.0\columnwidth]{chapter6/wsgood}
+\caption{\textbf{Semi-static work stealing.} Dynamic schedule for first traversal is reused for subsequent ones.}
+\label{fig:wsgood}
+\end{figure}
+
 
 \subsection{Scheduling: Semi-static Work Stealing}
+We optimize our tree traversal task scheduler for low overheads, high temporal and spatial data locality, and load balancing. Webpages are relatively small and use many traversals, so we found that aggressively optimizing individual traversals to be an important implementation concern. Our approach is to combine static scheduling~[[CITE]] with dynamic work stealing. We semi-statically schedule a traversal over the tree to as soon as it is available and reuse that schedule across traversals: this optimizes for temporal locality and low over-heads. We use work stealing as a heuristic for computing the first tree traversal for approximate load balancing.  We did not see significant speedups with the base approaches on their own, but our combination led to 7X parallel speedups. 
+
+
+Our algorithm schedules the first traversal using work stealing~[[CITE]]. Work stealing was introduced as a dynamic scheduling algorithm that provides load balancing and spatial locality. Figure~\ref{fig:wssimulation} depicts a trace of three processors performing work stealing. Each processor operates on an internal task queue, and whenever a processor exhausts its internal queue, it will \emph{steal} from another processor's queue. In the case of a top-down tree traversal, acting upon an internal queue corresponds to a depth-first traversal of a subtree, and stealing corresponds to transferring ownership of an untraversed subtree. We lower overheads on the first traversal in two ways: we perform task coarsening by scheduling tiles rather than individual nodes, and we simulate the work stealing in one thread on a localized copy of the tiling meta data. The colors of Figure~\ref{fig:wswikipedia} show how different processors claim different nodes of a webpage during a parallel traversal: the localization of colors demonstrates the spatial locality of work stealing. Likewise, figure demonstrates that there are relatively few scheduling overheads (steals are indicated by dotted borders).
+
+Work stealing suffers from runtime overheads and lack of temporal locality. To estimate the overhead, we simulated work stealing for 6 processors on Wikipedia. Assuming uniform compute time per node, 5\% of the nodes would trigger stealing. This cost is in addition to constant overhead to processing the internal per-processor task queues. The issue with temporal locality is that a node will be assigned to different processors across multiple traversals. Figure~\ref{fig:wswikipediadelta} shows which nodes must move across processors in a simulation 4 processors performing a sequence of  two traversals. 67\% of the nodes are red, indicating substantial movement. Both the steal rate and temporal miss rate worsen as the number of processors increase.
+
+We use work stealing as a heuristic for semi-static scheduling so that the strengths of one address the weaknesses of the other. Semi-static scheduling precomputes the traversal order for each processor, which eliminates runtime overheads. Computing a load-balanced schedule can be quite expensive, however, because optimality is NP~[[CITE]]. Instead, we use work stealing as a heuristic by running a simulation in which the cost of each tile is the number of nodes in it and penalizing simulated steals. The trace through the simulation for a top-down traversal is used as the schedule for top-down traversals, and the reverse for bottom-up. Computing the schedule is fast -- a linear traversal over the tile meta data. 
+
+Our approach achieves low overheads, high temporal and spatial locality locality, and load balanced evaluation. Temporal locality is enforced by reusing the same schedule across the traversals, and semi-static scheduling with a fast heuristic provides low overheads. Our work stealing heuristic provides spatial locality and an approximate form of load balancing.
+
+
 \subsection{Evaluation}

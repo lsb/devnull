@@ -1,12 +1,12 @@
-\chapter{MIMD and SIMD Tree Traversals}
+\chapter{Optimizing Tree Traversals for MIMD and SIMD}
 \section{Overview}
 
-For a full language, statically identified parallelization opportunities still require an efficient runtime implementation that exploits them. In this section, we show how to exploit the logical concurrency identified within a tree traversal to optimize for the architectural properties of two types of hardware platforms: MIMD (e.g., multicore) and SIMD (e.g., sub-word SIMD and GPU) hardware. For both types of platforms, we optimize the schedule within a traversal and the data representation. We innovate upon known techniques in several ways:
+For a full language, statically identified parallelization opportunities still require an efficient runtime implementation that exploits them. In this section, we show how to exploit the logical concurrency identified within a tree traversal to optimize for the architectural properties of two types of hardware platforms: MIMD (e.g., multicore) and SIMD (e.g., sub-word SIMD and GPU) hardware. For both types of platforms, we optimize the schedule within a traversal and the data representation. We innovate upon known techniques in two ways:
 
 \begin{enumerate}
 \item \textbf{Semi-static work stealing for MIMD:} MIMD traversals should be optimized for low overheads, load balancing, and locality. Existing techniques such as work stealing provide spatial locality and, with tiling, low overheads. However, dynamic load balancing within a traversal leads to poor temporal locality across traversals. The processor a node is assigned to in one traversal may not be the same one in a subsequent traversal, and as the number of processors increases, the probability of assigning to a different one increases. Our solution dynamically load balances one traversal and, due to similarities across traversals, successfully reuses it.
 \item \textbf{Clustering traversals for SIMD:}  SIMD evaluation is sensitive to divergence across parallel tasks in instruction selection. Visits to different types of tree nodes yield different instruction streams, so na\i{v}e vectorization fails for webpages due to their visual variety. Our insight is that similar nodes can be semi-statically identified. Thus \emph{clustered} nodes will be grouped in the data representation and run in SIMD at runtime.
-\item \textbf{Automatically staged parallel memory allocation to efficiently combine SIMD layout and SIMD rendering:} We optimized the schedule of memory allocations in the layout computation into an efficient parallel prefix sum. Otherwise, parallel dynamic memory allocation requests would contend over the free memory buffer and void GPU performance benefits. We automated the optimization by reducing the scheduling problem to attribute grammar scheduling and automatically performing the reduction through macro expansion.
+%\item \textbf{Automatically staged parallel memory allocation to efficiently combine SIMD layout and SIMD rendering:} We optimized the schedule of memory allocations in the layout computation into an efficient parallel prefix sum. Otherwise, parallel dynamic memory allocation requests would contend over the free memory buffer and void GPU performance benefits. We automated the optimization by reducing the scheduling problem to attribute grammar scheduling and automatically performing the reduction through macro expansion.
 \end{enumerate}
 
 Our techniques are important and general. They overcame bottlenecks preventing seeing any speedup from parallel evaluation for webpage layout and data visualization. Notably, they are generic to computations over trees, not just layout. An important question going forward is how to combine them as, in principle, they are complementary.
@@ -61,11 +61,84 @@ A key property of all of our systems, however, is that the structure of the tree
 \section{Input-dependent Clustering for SIMD Evaluation}
 \input{chap6simd}
 
-\section{Automatically Staged SIMD Memory Allocation for Rendering}
-\input{chap6staging}
-
 
 \section{Evaluation}
+
+
+
+
+
+
+\begin{table}[t]
+\center
+\begin{tabular}{l|c|c|c|c| c | c | c}
+~  &\multicolumn{4}{c|}{\textbf{Total speedup}} & \multicolumn{3}{c}{\textbf{Parallel speedup}}\\
+~  &\multicolumn{4}{c|}{Cores} & \multicolumn{3}{c}{Cores}\\
+{\small \textbf{Configuration}} & 1 & 2 & 4 & 8 & 2 & 4 & 8\\ [0.5ex] \hline \hline
+TBB, \code{server} & 1.2x & 0.6x & 0.6x & 1.2x & 0.5x & 0.5x & 1.0x \\ \hline
+FTL, \code{server} & 1.4x & 2.4x & 5.2x & 9.3x & 1.8x & 3.8x & 6.9x \\ 
+FTL, \code{laptop} & 1.4x & 2.1x & & & 1.6x &     &  \\ 
+FTL, \code{mobile} & 1.3x & 2.2x & & & 1.7x &     &  \\ 
+\end{tabular}
+\caption{\textbf{Speedups and strong scaling across different backends (Back) and hardware}. Baseline is a sequential traversal with no data layout optimizations. FTL is our multicore tree traversal library. Left columns show total speedup (including data layout optimizations by our code generator) and right columns show just parallel speedup. Server = Opteron 2356, laptop = Intel Core i7, mobile = Atom 330.}
+\label{tab:diffhw}
+\end{table}
+
+\subsection{MIMD Data Representation and Scheduling Optimizations}
+By statically exposing traversal structure (e.g., \sched{parPre}) to our code generators, we observe sequential and parallel speedups. We separately evaluate the importance of the data representation optimizations from the scheduling ones on random 500-1000 node documents in the \hlangpp{} language. Finally, we examine the parallel benefit on webpages.
+
+
+We first evaluate the perform of our task scheduler (FTL in Table~\ref{tab:diffhw}).  Our comparison point is Intel's TBB~\cite{inteltbb} dynamic task scheduler that performs work stealing~\cite{cilk}, which was the most efficient third-party work stealing library that we tried. We included our data layout optimizations in all calculations because, without them, we saw no speedup.  TBB causes slowdowns until achieving no cost (nor benefit) at 8 cores. Our insight is that it suffered from high overheads: switching to scheduling tiles by using our optimized data representation improved performance. Our semi-static working stealing scheduler, however, achieved a 6.9X speedup on 8 cores. We did not see significant further speedups for higher core counts, and hypothesize that it is due to the socket jump. We experimented with other schedulers, such as a simple for-loop over tiles near the fringe of the tree, but the achieved 2X speedup is much lower than the 6.9X of our semi-static work stealer.
+
+
+Data representation was key to achieving parallel speedups. It achieved 1.2X-1.4X speedups for sequential processing (Table~\ref{tab:diffhw}). However, on 4 cores, it improved performance from 2.8X without data representation optimizations to 5.2X when using them. The difference is 1.9X: our data representation optimizations both complement and improve scheduling optimizations. Without them, parallel performance was poor.
+
+\begin{table}[t]
+\center
+\begin{tabular}{l|l| c | c | c}
+~ & & \multicolumn{3}{c}{\textbf{Parallel speedup}}\\
+~ & & \multicolumn{3}{c}{Cores}\\
+\textbf{Backend} & Input & 2 & 4 & 8\\ [0.5ex] \hline \hline
+TBB & {Wikipedia} &  1.5x & 1.6x & 1.2x \\
+TBB & {xkcd Blog} &  1.5x & 1.8x & 1.2x \\ \hline
+FTL & {Wikipedia} &  1.6x & 2.8x & 3.2x \\
+FTL & {xkcd Blog} &  1.5x & 2.3x & 3.1x \\ 
+\end{tabular}
+\caption{\textbf{Parallel CSS layout engine}. Run on a 2356 Opteron.}
+\label{fig:cssperf}
+\end{table}
+
+Table~\ref{fig:cssperf} shows the parallel speedup on running our 9 pass layout engine for two popular web pages that render faithfully with it: Wikipedia and the XKCD blog. Note that the benchmarks do \emph{not} include sequential speedups. The best performance of TBB was a 1.8X speedup on 4 cores, and its speedup on 8 cores was 1.2X. In comparison, our scheduler achieved 2.8X on 2 cores and 3.2X on 8X. Our insight as to why we did not see further benefits is overheads. Across our benchmarks, we generally saw speedups when sequential traversals took longer than a certain amount, but because so many traversals are used for CSS, enough of them are small enough that we do not expect strong scaling. Our intuition is that either a full layout engine is complicated enough that the sequential cost of each traversal will be higher than in our prototype, or even more aggressive data representation optimizations should be performed. As is, we have demonstrated significant 3X+ speedups on real workloads from just the parallelization.
+
+
+\begin{figure}
+\centering
+\includegraphics[trim=0 0 0 0,clip,width=1.0\columnwidth]{chapter6/gpuspeedup}
+\caption{\textbf{Sequential and Parallel Benefits of Breadth-First Layout and Staged Allocation.} Allocation is merged into the 4th stage and buffer indexing and tessellation form the rendering pass. JavaScript variants use HTML5 canvas drawing primitives while WebCL does not include WebGL painting time ($<$ 5ms). Thin vertical bars indicate standard deviation and horizontal bars show deadlines for animation and hand-eye interaction.}
+\label{fig:treemapjsgpu}
+\end{figure}
+
+
+\subsection{Baseline SIMD Speedups (GPU)}
+We evaluate the sequential and parallel performance benefits of our baseline breadth-first layout.   For an animation to achieve 24fps, the time spent to process a frame should not exceed 42ms, and for eye-hand interactions, 100ms (10fps). We examine the case of a 5 pass treemap that supports live filtering over 100,000 data points. The first 3 passes are purely devoted to layout, the 4th pass includes layout computations and allocation requests, and the 5th pass propagates buffer indices and performs tessellation. 
+
+We compare 3 backends for our compiler: canonical JavaScript (a tree of nodes), JavaScript over our structure-split breadth-first tree layout (and with typed arrays~[[CITE]]), and WebCL for the GPU.  The first two variants invoke HTML5 canvas drawing primitives, while the last invokes WebGL (GPU) painting primitives over vertex buffers computed in the rendering pass. The time for WebGL painting calls are not shown, but they take less than 5ms. Each variant is repeated 15 times on a 4 core 2012 2.66GHz Intel Core i7 with 8 GB memory and a 1024 MB NVIDIA GeForce GT 650M graphics card.
+
+We first examine  the significant sequential benefits.The first 4 groups of columns in Figure~\ref{fig:treemapjsgpu} shows the average time spent on different layout passes and the 6th on the pass for buffer index computation and tessellation. Performing compiler optimizations enables a 14X sequential speedup on layout in the Chrome web browser. No speedup is observed in the rendering pass because the time is dominated by HTML5 canvas calls. We hypothesize part of the sequential benefit is related to our clustering optimization: all of the nodes in a level have the same type, so implicit optimizations such as branch prediction should perform better. Finally, we note that while sequential layout time is a magnitude too slow for real-time animation, our prototype is within 54ms for real-time interaction (ignoring rendering).
+
+Parallel speedups are also significant. WebCL (GPU) evaluation of layout is 5X faster than sequential. The impact of compiling JavaScript vs. C (WebCL) on the benchmark is unclear: JavaScript is generally a magnitude slower than native code, except the runtime WebCL compiler is not running at high optimization levels. The benefits for parallel computation of the buffer indices and tessellation is much more clear: the speedup is 31X. 
+
+\begin{figure}
+\centering
+\includegraphics[trim=0 0 0 0,clip,width=1.0\columnwidth]{chapter6/gpuvscpu}
+\caption{\textbf{Multicore vs. GPU Acceleration of Layout.} Benchmark on an early version of the treemap visualization and does not include rendering pass.}
+\label{fig:cpuvsgpu}
+\end{figure}
+
+To better understand the benefit of parallelization, we compared running the layout traversals using multicore vs. GPU acceleration (Figure~\ref{fig:cpuvsgpu}) for an early prototype of the layout traversals. Both use breadth-first traversals compiled with OpenCL, except differ on the hardware target. We see that a server-grade multiprocessor (32-core AMD Opteron 2356) can outperform a laptop GPU, but the comparison is unfair in terms of power consumption. TODO compare power ratings.
+
+
+Ultimately, when the sequential and parallel optimizations are combined, we see an end-to-end speedup of 54X. It is high enough such that it enables real-time animation for our data set, not just real-time user interaction.
 
 
 \subsection{SIMD Clustering}
@@ -150,58 +223,6 @@ Our final examination of clustering is of the overhead. Time spent clustering be
 For the case of data visualization, we convert the data structure into arrays with an offline preprocessor. Thus, our data visualizations experience no clustering cost.
 
 For webpage layout, clustering is performed on the client when the webpage is received. We measured performing sequential two-pass clustering. Figure~\ref{fig:cssrelayout} shows the overhead relative to one pass using the bars. The highest relative overhead was for the Flickr homepage, where it reaches almost half the time of one pass. However, layout occurs in multiple passes. For a 5-pass layout engine where we model each pass as similar to the one we optimized, the overhead is amortized. The small gap between the solid and dashed lines in Figure~\ref{fig:cssrelayout} show there is little difference when we include the preprocessing overhead in the speedup calculation.
-
-\subsection{Staged SIMD Memory Allocation}
-We evaluate three dimensions of our staged memory allocation approach: flexibility, productivity, and performance. First, it needs to be able to express the rendering tasks that we encounter in GPU data visualization. Second, it should some form of productivity benefit for these tasks. Finally, the performance on those tasks must be fast  enough to support real-time animations and interactions of big data sets.
-
-\subsubsection{Flexibility}
-Our staged structuring and automation approach cannot express all dynamic memory usage patterns, so it is important to validate that it works on common patterns that occur in visualization. We found the three following patterns to be important:
-
-\begin{itemize}
-\item \textbf{Functional graphics.} Functional graphics primitives used in languages such as Scheme, O'Caml, and Haskell follow the form that we used for \code{Circle}. For example, many of our visualizations use simple variants such as 2D rectangles,  3D line, and arcs.
-\item \textbf{Linked view}. Multiple renderable objects can be associated with one node, which we can use for providing different views of the same data. Such functionality is common for statistical analysis software:
-
-\begin{lstlisting}[mathescape]
-render :=  @Circle(x,y,r)  + @Circle(offsetX + abs(x), offsetY + abs(y), r);
-\end{lstlisting}
-
-\item \textbf{Zooming.} We can use the same multiple representation capability for a live zoomed out view (``picture-in-picture''):
-
-\begin{lstlisting}[mathescape]
-render :=  
-  @Circle(x, y, radius) 
-   + @Circle(xFrame + x*zoom, yFrame + y*zoom, radius *zoom);
-\end{lstlisting}
-
-\item \textbf{Visibility toggles.} Our macros support conditional expressions, which enables controlling whether to render an object. For example, a boolean input attribute can control whether to show a circle: \code{render := isOn ? @Circle(0,0,10) : 0; }
-\item \textbf{Alternative representations.} Conditional expressions also enable choosing between multiple representations, not just on/off visibility:
-\begin{lstlisting}[mathescape]
-render := 
-  isOff ? 0
-    : mouseHover ? @CircleOutline(0,0,10) 
-    : @Circle(0,0,10,5) ;
-\end{lstlisting}
-
-\end{itemize}
-
-\subsubsection{Productivity}
-Productivity is difficult to measure. Before using the automation extensions for rendering, we repeatedly encountered bugs in manipulating the allocation calls and memory buffers. The bugs related both to incorrect scheduling and to incorrect pointer arithmetic. Our new design eliminates the possibility of both bugs.
-
-One suggestive productivity measure is of how many lines of code the macro abstraction eliminates from our visualizations. We measured the impact on using it for 3 of our visualizations. The first visualization is our HBox language extended with rendering calls, while the other two are interactive reimplementations of popular visualizations: a treemap~[[CITE]] and multiple 3D line graphs~[[CITE]].
-
-
-\begin{table}[ht]\caption{Lines of Code Before/After Invoking the '@' Macro}\centering\begin{tabular}{c r r r}\hline\hline \textbf{Visualization} & \textbf{Before (loc)} & \textbf{After (loc)} & \textbf{Decrease} \\ [0.5ex] \hline
-  HBox & 97 & 54 & 44\% \\
-  Treemap & 296 & 241 & 19\% \\
-  GE & 337 & 269 & 20\% \\ [1ex] 
-\hline\end{tabular}\label{table:macroreduction}\end{table}
-Table~\ref{table:macroreduction} compares the lines of code in visualizations before and after we added the macros. Using the macros eliminated 19--44\% of the code. Note that we are \emph{not} measuring the macro-expanded code, but code that a human wrote.
-
-
-
-As shown in Figure~\ref{fig:stagedallocClient}, the eliminated code is code that was introduced by staging the library calls. Porting unstaged functional graphics calls to the library, is in practice, an alpha renaming of function names.  Using the '@' macro eliminates 19--44\% of the code that would have otherwise been introduced and completely eliminates two classes of bugs (scheduling and pointer arithmetic), so the productivity benefit is non-trivial. 
-
-\subsubsection{Performance}
 
 
 
