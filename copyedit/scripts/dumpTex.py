@@ -23,18 +23,22 @@ def spellcheckCall (rawWord, caseSensitive):
   return subprocess.check_output(command, shell=True)
 
 good = spellcheckCall('hello', False)
+good2 = spellcheckCall('low-power',False)
+tokNumber = re.compile(r'(\$)?([0-9]+(,|\.)?)+(%|x|X)?$')
 
 def spellcheck(word, caseSensitive=False):
+  if tokNumber.match(word):
+    return (True,[])
   res = spellcheckCall(word, caseSensitive)
-  if good == res or (len(res) > 0 and res[0] == '+'):
-    print 'good', word
+  if good == res or good2 == res or (len(res) > 0 and res[0] == '+'):
+    #print 'good', word
     return (True,[])
   else:
     hit = re.search(':',res)
     if hit:
       options = res[(hit.start() + 1) : len(res)] 
       alts = map(lambda x: x.strip(), options.split(', '))
-      print 'bad', w, '=>', ','.join(alts)
+      #print 'bad', w, '=>', ','.join(alts)
       return (False, alts)
     else:
       print 'bad', w, 'no alts', res
@@ -199,6 +203,7 @@ def originalSentence (sent,includePunctuation=True):
   return pText[cTotal:(cTotal2 + len(w2)+ (1 if includePunctuation else 0))]
 
 minWords = 2
+count = 0
 for paragraph in allParagraphs():
   sys.stdout.flush()
   for line in paragraphToLines(paragraph):
@@ -206,10 +211,15 @@ for paragraph in allParagraphs():
       if len(sent) <= minWords:
         continue
       (f,p,l,c,cTotal,w,pText) = sent[0]
-      print f,(p+l),c,':',originalSentence(sent)
+      #print f,(p+l),c,':',originalSentence(sent)
       #print
       #print p,l,c,':', ' '.join(map(lambda (f,p,line,c,cTotal,w,pText): w, sent))
       for (f,p,l,c,cTotal,w,pText) in sent:
-        spellcheck(w) 
+        (stat, alts) = spellcheck(w) 
+        if stat == False:
+          count = count + 1
+          print
+          print count, ':', f.split("/")[-1],(p+l),c,':',w, '->', alts
+          print '     "', originalSentence(sent),'"'
 
 
