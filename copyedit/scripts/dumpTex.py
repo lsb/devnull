@@ -12,7 +12,20 @@ if len(sys.argv) != 2:
 file = sys.argv[1]
 
 
+def checkGrammar(paragraphRaw):
+  commandTok = re.compile(r'\\[a-zA-Z]+')
+  paragraph = commandTok.sub('', paragraphRaw)
+  noiseTok = re.compile(r'[{}]')
+  paragraph = noiseTok.sub('', paragraph)
 
+  checker = "/Users/lmeyerov/Dropbox/Research/github/devnull/copyedit/packages/LanguageTool-2.2/languagetool-commandline.jar"
+  command = 'echo "' + paragraph + '" | java -jar ' + checker + ' -l en-US -u -'
+  out = subprocess.check_output(command, shell=True)
+  print '========'
+  print paragraph
+  print '--------'
+  print out
+  print '~~~~~~~~'
 
 def writeDict (words):
   with open('dict', 'w') as f:
@@ -210,19 +223,26 @@ def originalSentence (sent,includePunctuation=True):
 
 
 
-writeDict(['GPU','multicore'])
+writeDict(['GPU','multicore','TBB'])
 minWords = 2
 count = 0
 for paragraph in allParagraphs():
-  sys.stdout.flush()
-  for line in paragraphToLines(paragraph):
-    for sent in lineToSentences(line):
+      #sys.stdout.flush()
+      #for line in paragraphToLines(paragraph):
+      #for sent in lineToSentences(line):
+      sent = paragraph
       if len(sent) <= minWords:
         continue
+      okParagraph = True
       for (stat, (f,p,l,c,cTotal,w,pText), sugg) in spellcheckSentence(sent):
         if stat == False:
+          okParagraph = False
           print
           print f.split("/")[-1],(p+l),c,':',w, '->', sugg
           print '     "', originalSentence(sent),'"'
-
+      if okParagraph:
+        (_,_,_,_,c,_,p) = sent[0]
+        (_,_,_,_,c2,w,_) = sent[-1]
+        para = p[c:(c2+len(w)+1)]
+        checkGrammar(para)
 
