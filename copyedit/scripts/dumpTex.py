@@ -14,39 +14,45 @@ file = sys.argv[1]
 
 
 
+def writeDict (words):
+  with open('dict', 'w') as f:
+    s = '\n'.join(words)
+    f.write(s)
+    f.flush()
 
 def spellcheckCall (rawWord, caseSensitive):
   checker = 'ispell' #/opt/local/bin/ispell
   word = rawWord if caseSensitive else rawWord.lower()
-  command = 'echo -e "!\n' + word + '" | ' + checker + ' -a -t | tail -n +2'
+  command = 'echo "' + word + '" | ' + checker + ' -a -t -p dict | tail -n +2'
   #print word, command
   return subprocess.check_output(command, shell=True)
 
-good = spellcheckCall('hello', False)
-good2 = spellcheckCall('low-power',False)
-tokNumber = re.compile(r'(\$)?([0-9]+(,|\.)?)+(%|x|X)?$')
 
-def spellcheck(word, caseSensitive=False):
-  if tokNumber.match(word):
-    return (True,[])
-  res = spellcheckCall(word, caseSensitive)
-  if good == res or good2 == res or (len(res) > 0 and res[0] == '+'):
-    #print 'good', word
-    return (True,[])
-  else:
-    hit = re.search(':',res)
-    if hit:
-      options = res[(hit.start() + 1) : len(res)] 
-      alts = map(lambda x: x.strip(), options.split(', '))
-      #print 'bad', w, '=>', ','.join(alts)
-      return (False, alts)
+def spellcheckSentence(sent):
+
+  orig = map(lambda (f,p,l,c,c2,w,p2): w.strip(), sent)
+  terms = map(lambda (f,p,l,c,c2,w,p2): w.replace("-",""), sent)
+  skips = re.compile('^(#|\(|\)|([0-9][0-9,.+]*)|\'+|"+|\+)?$')
+  terms = map(lambda w: 'skip' if skips.match(w) else w, terms)
+  qry = ' '.join(terms)
+
+  out = spellcheckCall(qry, True)
+  splits = r'\n'
+  outs = re.split(splits, out)[:-2]
+  okTok = re.compile(r'\*|\+')
+  for i, w in enumerate(outs):
+    if okTok.match(w):
+      yield (True, sent[i], [])
+    elif orig[i].find('-') != -1 and  w.find(': ') != -1 and orig[i] in  w.split(': ')[1].split(', '):
+      yield (True, sent[i], [])
+    elif w[0] == '&':
+      yield (False, sent[i], w.split(': ')[1].split(', '))
     else:
-      print 'bad', w, 'no alts', res
-      return (False, [])
+      yield (False, sent[i], [])
 
 tokExpandCommands = re.compile(r'\\(ref|subref|sched|caption|emph|textbf|title|section|subsection|subsubsection|subsubsubsection)')
 tokCommand = re.compile(r'(\\begin{tabular}.*?\\end{tabular})|(\\begin{lstlisting}.*?\\end{lstlisting})|(\\begin{grammar}.*?\\end{grammar})|(\\((\\\\)| |([a-zA-Z0-9]*(\*|({.*?})|\[.*?\])*)))', re.DOTALL)
-tokText = re.compile(r'[a-zA-Z\-\'-\+#]+|((\$)?[0-9]+(,|\.|x|X|(\\%))?)')
+tokText = re.compile(r'[a-zA-Z\-\'-\+#]+|((\$)?[0-9]+(,|[\.xX+]|(\\%))?)')
 tokNoise = re.compile(r'(\$.*\$)|[{},:\n\r \t.!<>;`|*"#=@&~\[\]\+\?\(\)/]|(%.*(\n|$))')
 
 def words (paragraph, firstLine):
@@ -202,6 +208,9 @@ def originalSentence (sent,includePunctuation=True):
   (_,_,_,_,cTotal2,w2,_,) = sent[len(sent)-1]
   return pText[cTotal:(cTotal2 + len(w2)+ (1 if includePunctuation else 0))]
 
+
+
+writeDict(['GPU','multicore'])
 minWords = 2
 count = 0
 for paragraph in allParagraphs():
@@ -210,16 +219,10 @@ for paragraph in allParagraphs():
     for sent in lineToSentences(line):
       if len(sent) <= minWords:
         continue
-      (f,p,l,c,cTotal,w,pText) = sent[0]
-      #print f,(p+l),c,':',originalSentence(sent)
-      #print
-      #print p,l,c,':', ' '.join(map(lambda (f,p,line,c,cTotal,w,pText): w, sent))
-      for (f,p,l,c,cTotal,w,pText) in sent:
-        (stat, alts) = spellcheck(w) 
+      for (stat, (f,p,l,c,cTotal,w,pText), sugg) in spellcheckSentence(sent):
         if stat == False:
-          count = count + 1
           print
-          print count, ':', f.split("/")[-1],(p+l),c,':',w, '->', alts
+          print f.split("/")[-1],(p+l),c,':',w, '->', sugg
           print '     "', originalSentence(sent),'"'
 
 
