@@ -77,7 +77,7 @@ We show that the attribute grammar formalism supports specification of layout la
 \begin{figure}
 \subfloat[\textbf{Input tree.} Only some of the x, y, w, and h attributes are specified.]{\label{fig:hbox:input}
 \begin{minipage}{1\columnwidth}\centering
-\includegraphics[trim=0 0 0 0,clip,width=1.0\columnwidth]{chapter2/output}
+\includegraphics[trim=0 0 0 0,clip,width=0.6\columnwidth]{chapter2/output}
 \end{minipage}}\\
 \subfloat[\textbf{Textual encoding of input tree.}]{\label{fig:hbox:texttree}
 \begin{minipage}{1\columnwidth}\centering
@@ -112,7 +112,7 @@ $~~~$ HBOX$_0$.w = HBOX$_1$.w + HBOX$_2$.w \}
 \end{figure}
 
 
-\section{The HBox Language as a Classical Attribute Grammar}
+\section{Background: Layout with Classical Attribute Grammar}
 
 This section describes specifying a simple layout language as an attribute grammar and two classical implementation strategies. We reuse the example throughout our work to explore various concepts.
 
@@ -134,30 +134,144 @@ We declaratively specify the layout language of horizontal boxes, \hlang{},  as 
 
 
 The specification intentionally does not define the evaluation order. For example, the specification does not state whether to compute a node's width before its height. Likewise, our optimized approach will compute the attributes as a sequence of tree traversals, but the specification does not state what those traversals are. Leaving the evaluation order unspecified provides freedom for our compilers to pick an efficient parallel order. Irrespective of whatever evaluation order is ultimately used to solve for the attribute values, the statements define constraints that must hold over the computed result. Attribute grammars can therefore be thought of as a single assignment language where attributes are dataflow variables~[[CITE]].
-zzz
 
-The language of attribute grammars is defined in Figure~\frefb{fig:hbox}{fig:ag}. 
-Our example assumes the following encoding. Semantic functions are pure and left uninterpreted, so, for example, we encode the addition of widths as ``\mbox{HBOX$_0$.w = f(HBOX$_1$.w, HBOX$_2$.w)}''. Likewise, constant values are equivalent to nullary function calls. Our program analysis techniques do not need to know the contents of the function, just that the output of a call depends purely on the inputs. 
+
+The language of attribute grammars is defined in Figure~\frefb{fig:hbox}{fig:ag}. In addition the defining the context free grammar, it supports single-assignment constraints over attributes of nodes in a production. Our example uses the following encoding. Semantic functions are pure and left uninterpreted, so, for example, we encode the addition of widths as ``\mbox{HBOX$_0$.w = f(HBOX$_1$.w, HBOX$_2$.w)}''. Our program analysis techniques do not need to know the contents of the function, just that the output of a call depends purely on the inputs.  For the same reason, we encode constant values as nullary function calls. 
 
 To specify grammars more complicated than \hlang{}, we describe linguistic extensions for richer functional specifications (Section~\ref{sec:desugaring}) and, to control the evaluation order, behavioral specification (Chapters~\ref{chap:3} and \ref{chap:4}).
 
 \begin{figure}
-\centering
-\includegraphics[trim=0 0 0 0,clip,width=0.8\columnwidth]{chapter2/deps}
-\caption{\textbf{Data dependencies.} Shown for constraint tree  in Figure~ZZZ~(a). Circles denote attributes, with black circles being \sched{input()} sources. Thin lines show data dependencies and thick lines show production derivations.}
+\subfloat[Initial dependencies.]{\label{fig:deps:full}
+\begin{minipage}{0.5\columnwidth}\centering
+\includegraphics[trim=0 0 0 0,clip,width=1.0\columnwidth]{chapter2/deps}
+\end{minipage}}
+\subfloat[After first round of evaluation.]{\label{fig:deps:step}
+\begin{minipage}{0.5\columnwidth}\centering
+\includegraphics[trim=0 0 0 0,clip,width=1.0\columnwidth]{chapter2/depsstep}
+\end{minipage}}
+\caption{\textbf{Dynamic data dependencies and evaluation}. Shown for constraint tree  in Figure~ZZZ~(a). Circles denote attributes, with black circles denote attributes with resolved dependencies such as \sched{input()}s. Thin lines show data dependencies and thick lines show production derivations. Second chart shows the dependency graph resulting from evaluating all source nodes and marking them as resolved.}
 \label{fig:deps}
 \end{figure}
 
+
 \subsection{Dynamic data dependencies and dynamic evaluation}
+A simple and classic evaluation strategy is to \emph{dynamically} compute over a tree. The evaluator dynamically follows the dynamic data dependencies between instances of attributes. The dynamic evaluation strategy is too slow for our use cases, but it introduces the key concepts of dynamic data dependencies, the dynamic semantics of attributes grammars, and the corresponding dynamic interpreter.
+
+An instance of a document corresponds to the dependency graph shown in Figure~\frefb{fig:reps}{fig:deps:full}. Each attribute of a tree node is either a source, meaning its value can be computed based on other known values, or it cannot be evaluated until other attribute values are known. It is a dynamic dependency graph in that each data dependency in the static code may be instantiated as multiple data dependencies given a tree at runtime. 
+
+The dynamic data dependency graph leads to a simple semantics for the result of evaluation. The graph corresponds to a system of equations where edges link instance variables. For example, static code \code{HBOX$_2$.x = HBOX$_0$.x + HBOX$_1$.w} instantiates twice for the Figure~\frefb{fig:deps}{fig:reps:full}: once for each $x$ attribute with an incoming elbow connector. The value of both $x$s are constrained by distinct instances of the above constraint. If the dependency graph is a directed acyclic graph and each attribute appears on the lefthand side of exactly one equality statement (\emph{dataflow variables}), there is exactly one solution to the system of equations.
+
+A simple procedure solves an instance of a system of equations: topological traversal. The algorithm is as follows:
+\begin{figure}
+\begin{lstlisting}[mathescape,language=C++,morekeywords={for,in,where,input,output,repeat,until,return}]
+input: $G = (V,E)$
+output: $Map$
+$Map \leftarrow \emptyset$
+$E' \leftarrow E$
+$V' \leftarrow V$
+for $a \in V' \texttt{where} \not\exists (n,a) \in E'$:
+  $Map \leftarrow Map \cup \{a \rightarrow \texttt{eval}(a)\}$
+  $V' \leftarrow V' - a$
+  $E' \leftarrow E' \ (\{a\} \times V)$
+repeat until $E' = \emptyset$
+return $Map$
+\end{lstlisting}
+\caption{\textbf{Dynamic attribute grammar evaluator.} It selects attributes in a safe order by dynamically removing dependency edges as they are resolved. }
+\label{fig:dyneval}
+\end{figure}
+The algorithm literately finds an attribute whose dependencies have all been previously resolved, evaluates the attribute, and repeats. If the input graph is a directed acyclic graph, this procedure is guaranteed to terminate. The insight is that a directed acyclic graph has at least one fringe node, the loop removes them, and removing these nodes yields a smaller directed acylic graph.
+
+The dynamic evaluation strategy provides a small explanation for the natural semantics, but it leaves several challenges. First, runtime manipulation of a dynamic dependency graph introduces high overheads because every dynamic dependency edge must be manipulated. Second, it is unsafe. For example, a cycle in the dependency graph causes the above evaluation strategy to get stuck, so dynamic evaluators must introduce runtime cycle check. Designers can build layout widgets that, depending on how they are invoked, fail to display!
+
+%\subsection{Static data dependencies and static evaluators}
 
 
-\subsection{Static data dependencies and static evaluators}
 
 
 \section{Desugaring Loops and Other Modern Constructs}
 \label{sec:desugaring}
-\subsection{Motivation: Productive Features with Simple Implementations}
-\subsection{Interfaces: Lightweight and Reusable Input/Output Specifications}
+
+The attribute grammar formalism was invented for describing semantics~[[CITE]] and before many modern constructs became mainstream: we had to design extensions for improved expressiveness and maintainability. Our extensions exploit concepts from structured, object-oriented, and functional programming. Other language designers have build such extensions as well~[[CITE]]: our challenge was to make expressive extensions that facilitate effective parallelization and do not overly complicate language and tool implementation. This section documents the language features and how they simplify implementation, and leaves performance optimization to the next chapter.
+
+Our key insight is that pre- and post-processing supports desugaring a feature-rich attribute grammar into the canonical attribute grammar notation. Tools then operate at the most appropriate stage, such as our scheduler on the small, canonical attribute grammar representation. Likewise, our code generators take a generated schedule and relate it back to a representation from early in the preprocessing stage.
+
+
+
+
+\begin{figure}
+\subfloat[\textbf{Blah.}]{\label{fig:iface:problem}
+\begin{minipage}{1\columnwidth}
+\begin{grammar}
+<S> \deriv{} \emph{HBOX}  $|$  \emph{VBOX}
+
+<HBOX> \deriv{} $\epsilon$  
+
+<HBOX$_0$> \deriv{} \emph{HBOX$_1$} \emph{HBOX$_2$} 
+
+<HBOX$_0$> \deriv{} \emph{VBOX$_1$} \emph{HBOX$_2$} 
+
+<HBOX$_0$> \deriv{} \emph{HBOX$_1$} \emph{VBOX$_2$} 
+
+<HBOX$_0$> \deriv{} \emph{VBOX$_1$} \emph{VBOX$_2$} 
+
+<VBOX> \deriv{}$\epsilon$  
+
+<VBOX$_0$> \deriv{} \emph{HBOX$_1$} \emph{HBOX$_2$} 
+
+<VBOX$_0$> \deriv{} \emph{VBOX$_1$} \emph{HBOX$_2$} 
+
+<VBOX$_0$> \deriv{} \emph{HBOX$_1$} \emph{VBOX$_2$} 
+
+<VBOX$_0$> \deriv{} \emph{VBOX$_1$} \emph{VBOX$_2$} 
+
+\end{grammar}
+\end{minipage}
+}\\
+\subfloat[\textbf{Blah.}]{\label{fig:iface:rewrite}
+\begin{minipage}{1\columnwidth}
+\begin{grammar}
+<S> \deriv{} \emph{BOX}
+
+<BOX> \deriv{} \emph{HBOX} $|$ \emph{VBOX}
+
+<HBOX> \deriv{} $\epsilon$  
+
+<HBOX$_0$> \deriv{} \emph{BOX$_1$} \emph{BOX$_2$} 
+
+<VBOX> \deriv{} $\epsilon$  
+
+<VBOX$_0$> \deriv{} \emph{BOX$_1$} \emph{BOX$_2$} 
+
+\end{grammar}
+\end{minipage}
+}\\
+\subfloat[\textbf{Blah.}]{\label{fig:iface:clean}
+\begin{minipage}{1\columnwidth}
+%\begin{lstlisting}
+asdf
+%\end{lstlisting}
+\end{minipage}
+}
+\caption{\textbf{Blah}.Blah}
+\label{fig:iface}
+\end{figure}
+
+
+
+
+\subsection{Interfaces over Raw Productions}
+The canonical attribute grammar formalism does not support information hiding nor specifying enforceable relationships between nodes. We solve both issues by describing terminals with nominal types.
+
+Consider the code duplication performed when extending \hlang with vertical boxes. The children of a \code{HBox} could be a horizontal box or a vertical box, and the same for the children of a vertical box. Figure~\ref{??} shows significant code bloat in the attribute grammar formalism because canonical attribute grammars cannot abstract over node types. Adding a new box type requires modifying all previous box classes, and in the presence multiple children, extension suffers exponential costs.
+
+attributes
+
+
+why nominal vs structural
+
+
+
+
 \subsection{Traits: Reusing Cross-cutting Code}
 \subsection{Loops}
 \subsection{Embedded Domain Specific Language: Functional Rendering}

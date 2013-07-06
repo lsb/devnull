@@ -1,0 +1,217 @@
+\boolfalse {citerequest}\boolfalse {citetracker}\boolfalse {pagetracker}\boolfalse {backtracker}\relax 
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{Contents}{ii}
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{List of Figures}{iv}
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{List of Tables}{vi}
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{\chapternumberline {1}Introduction}{1}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Why Parallel Computing}{1}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Why Mechanize Layout}{1}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Approach}{1}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {1.1}Mechanizing Layout Languages with Sugared Attribute Grammars}{1}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {1.2}A Scheduling Language for Structuring and Verifying Parallel Traversals}{1}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {1.3}Controlling Automatic Parallelization through Schedule Sketches}{1}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {1.4}The Design of a Parallel Schedule Synthesizer}{1}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {1.5}Optimizing Parallel Tree Traversals for Commodity Architectures}{1}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {1.6}Collaborators and Publications}{1}
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{\chapternumberline {2}Layout Languages as Sugared Attribute Grammars}{2}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2.1}Motivation and Approach}{2}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Important properties for layout languages and others}{2}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2.2}Background: Layout with Classical Attribute Grammar}{4}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Attribute Grammars}{4}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Dynamic data dependencies and dynamic evaluation}{7}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2.3}Desugaring Loops and Other Modern Constructs}{8}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Interfaces over Raw Productions}{8}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Traits: Reusing Cross-cutting Code}{10}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Loops}{10}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Embedded Domain Specific Language: Functional Rendering}{10}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2.4}Evaluation: Mechanized Layout Features}{10}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Rendering: Immediate Mode and Beyond}{10}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Non-euclidean: Sunburst Diagram}{10}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Charts: Line graphs}{10}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Animation and Interaction: Treemap}{10}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Flow-based: CSS Box Model}{10}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Grid-based: HTML Tables}{10}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2.5}Related Work}{10}
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{\chapternumberline {3}A Safe Scheduling Language for Structured Parallel Traversals}{11}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.1}Motivation and Approach}{11}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.2}Background: Static Sequential and Task Parallel Visitors}{11}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Sequential Visitors}{11}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Task Parallel Visitors}{11}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.3}Structured Parallelism in Visitors}{11}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{td, bu, in order}{11}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{concurrent}{12}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{multipass}{12}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{nested}{12}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.4}A Behavioral Specification Language}{12}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Formalism}{12}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.5}Schedule Compilation}{12}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Rewrite rules}{12}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.6}Schedule Verification}{12}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Overview}{12}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Axioms}{12}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Proof}{12}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.7}Automatically Staging Memory Allocation for SIMD Rendering}{12}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Problem}{13}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Staged Parallel Memory Allocation}{14}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Automation with Automatic Scheduling and Macros}{16}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.8}Scheduling Loops}{17}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.9}Evaluation: Layout as Structured Parallel Visits}{17}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Box model}{17}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Nested text}{17}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Grids}{17}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{SIMD Rendering through Staged Memory Allocation}{17}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{Flexibility}{17}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{Productivity}{18}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{Performance}{18}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.10}Related Work}{18}
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{\chapternumberline {4}Interacting with Automatic Parallelizers through Schedule Sketching}{20}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {4.1}Automatic Parallelization: The Good, the Bad, and the Ugly}{20}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{The Good: Automating Dependency Management}{20}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{The Bad: Guiding Parallelization}{20}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{The Ugly: Preventing Serialization}{20}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {4.2}Holes}{20}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {4.3}Generalizing Holes to Unification}{20}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {4.4}Case Studies: Sketching in Action}{20}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {4.5}Related Work}{21}
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{\chapternumberline {5}Parallel Schedule Synthesis}{22}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {5.1}Motivation: Fast and Parameterized Algorithm Design}{22}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {5.2}Optimized Algorithm: Finding One Schedule}{22}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {5.3}Optimized Algorithm: Autotuning Over Many Schedules}{22}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Alternation Heuristic: Off-by-one Optimality}{22}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Enumeration via Incrementalization}{22}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {5.4}Complexity Analysis and the Power of Sketching}{22}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {5.5}Evaluation}{22}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Speed of synthesis}{22}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Line counts of extensions}{22}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Loss from greedy heuristic}{22}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Benefit from autotuning}{22}
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{\chapternumberline {6}Optimizing Tree Traversals for MIMD and SIMD}{23}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {6.1}Overview}{23}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {6.2}MIMD: Semi-static work stealing}{24}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Data representation: Tuned and Compressed Tiles}{24}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Scheduling: Semi-static Work Stealing}{26}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Evaluation}{30}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {6.3}SIMD Background: Level-Synchronous Breadth-First Tree Traversal}{30}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {6.4}Input-dependent Clustering for SIMD Evaluation}{32}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{The Problem}{32}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Code Clustering}{34}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Data Clustering}{35}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Nested Clustering}{36}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {6.5}Evaluation}{36}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{MIMD Data Representation and Scheduling Optimizations}{36}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{Baseline SIMD Speedups (GPU)}{39}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{SIMD Clustering}{40}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{Applicability}{40}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{Speedup}{42}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{Power}{43}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{Overhead}{44}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {6.6}Related Work}{44}
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{\chapternumberline {7}Conclusion}{46}
+\defcounter {refsection}{0}\relax 
+\contentsline {appendix}{\chapternumberline {A}Layout Grammars}{47}
