@@ -48,3 +48,5 @@ thesis/template/thesis.run.xml
 thesis/template/thesis.toc
 
 copyedit/scripts/.dumpTex.py.swp
+
+copyedit/scripts/dict
