@@ -4,7 +4,7 @@ import sys
 import re
 import os
 import subprocess
-
+import pexpect
  
 if len(sys.argv) != 2:
 	raise Exception('Expected one argument of input file, only got', len(sys.argv))
@@ -12,19 +12,53 @@ if len(sys.argv) != 2:
 file = sys.argv[1]
 
 
-def checkGrammar(paragraphRaw):
-  commandTok = re.compile(r'\\[a-zA-Z]+')
-  paragraph = commandTok.sub('', paragraphRaw)
-  noiseTok = re.compile(r'[{}]')
-  paragraph = noiseTok.sub('', paragraph)
+LinkParser = None
+def restartParser ():
+  global LinkParser
+  if LinkParser:
+    LinkParser.close(force=True)
+  LinkParser = pexpect.spawn("link-parser")
+  LinkParser.expect('linkparser>')
+restartParser()
 
-  checker = "/Users/lmeyerov/Dropbox/Research/github/devnull/copyedit/packages/LanguageTool-2.2/languagetool-commandline.jar"
-  command = 'echo "' + paragraph + '" | java -jar ' + checker + ' -l en-US -u -'
+tokIncomplete = re.compile("No complete linkages found")
+tokOk = re.compile("Found .* had no P.P. violations\)")
+def checkGrammar(sent):
+  clean = sent.replace("}","").replace(".","")
+  clean = clean if clean[len(clean)-1]=="?" else (clean + ".")
+  try:
+    print '========'
+    print clean 
+    LinkParser.sendline(clean)
+    LinkParser.expect('linkparser>', timeout=0.3)
+    print '--------'
+    out = LinkParser.before
+    if tokIncomplete.search(out):
+      print 'INCOMPLETE'
+    elif tokOk.search(out):
+      print 'COMPLETE'
+    else:
+      print "Unknown!!!", out
+    print '~~~~~~~~'
+  except:
+    print "Bad link-parser call"
+    print str(LinkParser)
+    #raise Exception('bad link parser call')
+    print '~~~~~~~~'
+    restartParser()
+    #return checkGrammar(sent)
+  return
+
+
+  command = 'echo -e"!batch\n!verbosity=0\n' + clean + '" | ' + checker
   out = subprocess.check_output(command, shell=True)
   print '========'
-  print paragraph
+  print sent 
   print '--------'
-  print out
+  if tokIncomplete.match(out):
+    print 'INCOMPLETE'
+  else:
+    print out
   print '~~~~~~~~'
 
 def writeDict (words):
@@ -200,7 +234,7 @@ def paragraphToLines(words):
   if len(line) > 0:
     yield line
 
-sentenceTok = re.compile(r'\n|\.')
+sentenceTok = re.compile(r'\n|\.|\?')
 def lineToSentences(line):
   sentence = []
   offset = 0
@@ -236,13 +270,18 @@ for paragraph in allParagraphs():
       okParagraph = True
       for (stat, (f,p,l,c,cTotal,w,pText), sugg) in spellcheckSentence(sent):
         if stat == False:
+          #spelling error
           okParagraph = False
           print
           print f.split("/")[-1],(p+l),c,':',w, '->', sugg
-          print '     "', originalSentence(sent),'"'
+          #print '     "', originalSentence(sent),'"'
       if okParagraph:
         (_,_,_,_,c,_,p) = sent[0]
         (_,_,_,_,c2,w,_) = sent[-1]
-        para = p[c:(c2+len(w)+1)]
-        checkGrammar(para)
-
+        para = p[c:(c2+len(w))]
+        print 'ok Paragraph, checking for grammar'
+        #print para
+        for line in paragraphToLines(paragraph):
+          for sent in lineToSentences(line):
+            checkGrammar(originalSentence(sent))
+ 
