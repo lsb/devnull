@@ -61,35 +61,7 @@ Phrase as rewrites working in an EDSL w/ templates
 \subsection{SIMD Rendering through Staged Memory Allocation}
 We evaluate three dimensions of our staged memory allocation approach: flexibility, productivity, and performance. First, it needs to be able to express the rendering tasks that we encounter in GPU data visualization. Second, it should some form of productivity benefit for these tasks. Finally, the performance on those tasks must be fast  enough to support real-time animations and interactions of big data sets.
 
-\subsubsection{Flexibility}
-Our staged structuring and automation approach cannot express all dynamic memory usage patterns, so it is important to validate that it works on common patterns that occur in visualization. We found the three following patterns to be important:
 
-\begin{itemize}
-\item \textbf{Functional graphics.} Functional graphics primitives used in languages such as Scheme, O'Caml, and Haskell follow the form that we used for \code{Circle}. For example, many of our visualizations use simple variants such as 2D rectangles,  3D line, and arcs.
-\item \textbf{Linked view}. Multiple renderable objects can be associated with one node, which we can use for providing different views of the same data. Such functionality is common for statistical analysis software:
-
-\begin{lstlisting}[mathescape]
-render :=  @Circle(x,y,r)  + @Circle(offsetX + abs(x), offsetY + abs(y), r);
-\end{lstlisting}
-
-\item \textbf{Zooming.} We can use the same multiple representation capability for a live zoomed out view (``picture-in-picture''):
-
-\begin{lstlisting}[mathescape]
-render :=  
-  @Circle(x, y, radius) 
-   + @Circle(xFrame + x*zoom, yFrame + y*zoom, radius *zoom);
-\end{lstlisting}
-
-\item \textbf{Visibility toggles.} Our macros support conditional expressions, which enables controlling whether to render an object. For example, a boolean input attribute can control whether to show a circle: \code{render := isOn ? @Circle(0,0,10) : 0; }
-\item \textbf{Alternative representations.} Conditional expressions also enable choosing between multiple representations, not just on/off visibility:
-\begin{lstlisting}[mathescape]
-render := 
-  isOff ? 0
-    : mouseHover ? @CircleOutline(0,0,10) 
-    : @Circle(0,0,10,5) ;
-\end{lstlisting}
-
-\end{itemize}
 
 \subsubsection{Productivity}
 Productivity is difficult to measure. Before using the automation extensions for rendering, we repeatedly encountered bugs in manipulating the allocation calls and memory buffers. The bugs related both to incorrect scheduling and to incorrect pointer arithmetic. Our new design eliminates the possibility of both bugs.
