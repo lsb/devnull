@@ -62,12 +62,12 @@ We show that the attribute grammar formalism supports specification of layout la
 \begin{lrbox}{\hboxtreetext}% Store first listing
 \begin{lstlisting}[language=C++,morekeywords={spawn,join,reverse,parallel_for}]
 <S>
-  <HBox>
-    <HBox>
-      <HBox w=20 h=5/>
-      <HBox w=15 h=5/>
+  <HBox name=child>
+    <HBox name=left>
+      <HBox name=left w=20 h=5/>
+      <HBox name=right w=15 h=5/>
     </HBox>
-    <HBox w=15 h=5/>
+    <HBox name=right w=15 h=5/>
   </HBox>
 </S>
 \end{lstlisting}
@@ -193,13 +193,36 @@ The dynamic evaluation strategy provides a small explanation for the natural sem
 
 The attribute grammar formalism was invented for describing semantics~[[CITE]] and before many modern constructs became mainstream: we had to design extensions for improved expressiveness and maintainability. Our extensions exploit concepts from structured, object-oriented, and functional programming. Other language designers have build such extensions as well~[[CITE]]: our challenge was to make expressive extensions that facilitate effective parallelization and do not overly complicate language and tool implementation. This section documents the language features and how they simplify implementation, and leaves performance optimization to the next chapter.
 
-Our key insight is that pre- and post-processing supports desugaring a feature-rich attribute grammar into the canonical attribute grammar notation. Tools then operate at the most appropriate stage, such as our scheduler on the small, canonical attribute grammar representation. Likewise, our code generators take a generated schedule and relate it back to a representation from early in the preprocessing stage.
+Our key insight is that pre- and post-processing supports desugaring a feature-rich attribute grammar into the canonical attribute grammar notation. Tools then operate at the most appropriate stage, such as our scheduler on the small, canonical attribute grammar representation. Likewise, our code generators take a generated schedule and relate it back to a representation from early in the preprocessing stage. Many of the below features are built as explicit compiler stages, but over time, we found that declarative tree rewriting systems such as ANTLR and OMeta support automating individual stages.
+
+
+
+\newsavebox{\ifacegrammar}
+\begin{lrbox}{\ifacegrammar}% Store first listing
+\begin{lstlisting}[language=C++,morekeywords={interface,class,children}]
+interface BoxI { }
+class HBoxLeaf : BoxI { }
+class HBoxBinary : BoxI { 
+  children {
+    left: BoxI;
+    right: BoxI;
+  }
+}
+class VBoxLeaf : BoxI { }
+class VBoxBinary : BoxI { 
+  children {
+    left: Box;
+    right: Box;
+  }
+}
+\end{lstlisting}
+\end{lrbox}
 
 
 
 
 \begin{figure}
-\subfloat[\textbf{Blah.}]{\label{fig:iface:problem}
+\subfloat[\textbf{Canonical attribute grammar.}]{\label{fig:iface:problem}
 \begin{minipage}{1\columnwidth}
 \begin{grammar}
 <S> \deriv{} \emph{HBOX}  $|$  \emph{VBOX}
@@ -214,7 +237,7 @@ Our key insight is that pre- and post-processing supports desugaring a feature-r
 
 <HBOX$_0$> \deriv{} \emph{VBOX$_1$} \emph{VBOX$_2$} 
 
-<VBOX> \deriv{}$\epsilon$  
+<VBOX> \deriv{} $\epsilon$  
 
 <VBOX$_0$> \deriv{} \emph{HBOX$_1$} \emph{HBOX$_2$} 
 
@@ -227,7 +250,10 @@ Our key insight is that pre- and post-processing supports desugaring a feature-r
 \end{grammar}
 \end{minipage}
 }\\
-\subfloat[\textbf{Blah.}]{\label{fig:iface:rewrite}
+\subfloat[\textbf{Interface sugar.}]{\label{fig:iface:clean}
+\usebox{\ifacegrammar}
+}\\
+\subfloat[\textbf{Interface encoding.}]{\label{fig:iface:rewrite}
 \begin{minipage}{1\columnwidth}
 \begin{grammar}
 <S> \deriv{} \emph{BOX}
@@ -244,36 +270,131 @@ Our key insight is that pre- and post-processing supports desugaring a feature-r
 
 \end{grammar}
 \end{minipage}
-}\\
-\subfloat[\textbf{Blah.}]{\label{fig:iface:clean}
-\begin{minipage}{1\columnwidth}
-%\begin{lstlisting}
-asdf
-%\end{lstlisting}
-\end{minipage}
 }
-\caption{\textbf{Blah}.Blah}
+\caption{\textbf{Interfaces for tree grammars}. Subfigures show manually encoding multiple production right-hand sides, an encoding that uses a \code{Box} non-terminal for indirection, and the high-level encoding using interfaces and classes.}
 \label{fig:iface}
 \end{figure}
 
 
+\begin{figure}
+\begin{lstlisting}[language=C++,morekeywords={spawn,join,reverse,parallel_for}]
+{"class": "HBox",
+ "children": {
+   "left": {
+     "class": "HBox",
+     "children": {
+       "left":  {"class": "HBox", "w": 20, "h": 5},
+       "right": {"class": "HBox", "w": 15, "h": 5}}},
+   "right": {
+     {"class": "HBox", "w": 15, "h": 5}}}}
+\end{lstlisting}
+\caption{\textbf{Input tree as graph with labeled nodes and edges}. Specified in the JSON notation.}
+\label{fig:hboxjson}
+\end{figure}
+
+\subsection{Interfaces for Encoding Tree Grammars}
+Attribute grammars are an extension to the tree grammar formalism for defining input trees, so improving the abstraction capabilities of tree grammars also aids the ability to structure attribute grammars. In particular, we found the need to support  abstracting over similar types of non-terminals. Our solution is to provide a notion of classes and interfaces. Our core extension is macro-expressible with attribute grammars and therefore reduces implementation requirements, though it is still important enough that it merits deeper compiler support. 
 
 
-\subsection{Interfaces over Raw Productions}
-The canonical attribute grammar formalism does not support information hiding nor specifying enforceable relationships between nodes. We solve both issues by describing terminals with nominal types.
+Consider the code duplication performed when extending \hlang with vertical boxes. The children of a \code{HBox} could be a horizontal box or a vertical box, and the same for the children of a vertical box. Figure~\ref{fig:face:problem} shows that the 3 productions of \hlang grew to be 11. The example highlights that canonical attribute grammars cannot abstract over node types. Adding a new box type requires modifying all previous box classes, and in the presence multiple children, extension suffers exponential costs. 
 
-Consider the code duplication performed when extending \hlang with vertical boxes. The children of a \code{HBox} could be a horizontal box or a vertical box, and the same for the children of a vertical box. Figure~\ref{??} shows significant code bloat in the attribute grammar formalism because canonical attribute grammars cannot abstract over node types. Adding a new box type requires modifying all previous box classes, and in the presence multiple children, extension suffers exponential costs.
-
-attributes
+To abstract over node types, we introduce the notion of classes and interfaces (Figure~\ref{fig:iface:clean}). Classes are similar to the productions of an attribute grammar: the class name specifies the production's lefthand side non-terminal and the children block specifies the production's righthand side. Unlike attribute grammars, an interface name is used for the righthand side rather than the class name. \code{HBox} and \code{VBox} implement interface \code{BoxI}, so any class specified to have a \code{BoxI} child can have a \code{HBox} or \code{VBox} child within the concrete tree. 
 
 
-why nominal vs structural
+Classes and interfaces are formally equivalent to tree grammars in the sense of a 1-to-1 correspondence between trees described by both. First, a tree grammar can be expressed with classes and interfaces by treating all productions with the same lefthand-side non-terminal as different classes belonging to the same interface. In the other direction, each interface can be expressed as a production that derives the classes, and the classes expand into productions. Figures~\ref{fig:iface:clean} and \ref{fig:iface:rewrite} demonstrate the correspondence for \hlang. The induced implementation requirements are therefore slight in the sense that the construct is sugar for a pattern in the canonical attribute grammars. 
+
+We depart from the correspondence for the encoding of trees in two ways. First, we represent input as a tree with labeled nodes and edges. Node labels denote the class and edge labels specify child bindings. Figure~\ref{fig:hboxjson} uses the JSON format common to dynamic languages for an instance of a tree in \hlang. By naming children, such as \code{left} and \code{right}, we eliminate sensitivity to their order within a code block. With order sensitivity, adding a middle child \code{center} would needlessly require refactoring references to the repositioned element \code{right}. Likewise, reordering children in the input data does not require refactoring the attribute grammar.
+
+Our second departure from the canonical attribute grammar encoding optimizes the data representation by eliding intermediate interface nodes. The reduction to attribute grammars suggests adding a new non-terminal for each interface, but doing so in the data representation doubles the number of nodes in the concrete tree. Making the interface pattern a language construct with compiler support eliminates associated costs, such as cutting file size for runtime parsing of big data visualizations.
+
+\begin{figure}
+\begin{lstlisting}[language=C++,morekeywords={interface,class,var,input,int,float}]
+interface BoxI {
+  var x : float;
+}
+class HBoxLeaf : BoxI {
+  attributes {
+    var y : int;
+    input w : ? int;
+    input h : int = 10;
+  }
+}
 
 
+\end{lstlisting}
+\caption{\textbf{Input tree as graph with labeled nodes and edges}. Specified in the JSON notation.}
+\label{fig:hboxjson}
+\end{figure}
 
+
+\subsection{Interfaces for attributes and information hiding.}
+Our system provides lightweight specification annotations for different types of attributes, and coupled with the interface construct, it supports defining relationships between attributes across different classes.
+
+Each static attribute is annotated with its assignment type and its embedded value type:
+\begin{itemize}
+\item \textbf{Assignment types.}
+The assignment type denotes whether the input tree defines the value, such as in \code{input w}, or whether the attribute grammar defines it, as in \code{var x}. Assignments to an input type are illegal, and multiple assignments to a variable type are also illegal. 
+
+If an input tree fails to provide an input attribute, a runtime error will be thrown. To still provide an interpretation of such trees, input attributes  support the annotation ''?'',  which enables pattern matching through functions \code{maybeReady :: -> boolean} and \code{maybeValue :: -> 'a}.  Alternatively, for the common scenario of using a fixed default value, a default value can instead be defined as in \code{input h : int = 10}. If the input tree does not provide the value, the default value will be automatically substituted.
+
+Canonical attribute grammars can encode input attributes in two ways. First, semantic functions with no parameters encode the lack of dependencies. Second, for finite domains, the set of tree grammar productions can expand to include attribute nodes. The second encoding more faithfully describes our approach because, like our system, it feeds into an automatic tree parser generator. For each tree node, our generated parser scans for the expected set of input attributes.
+
+\item \textbf{Value types.} 
+The system also supports type annotations used for embeddings. Generated code typically compiles as part of a project in a more static language, such as C++, which require a static type discipline. The annotations can be user-defined, such as OpenGL's \emph{vertex buffer object} \code{VBO}, which is not defined within our system.
+
+Our analyzer ignores the value type annotations such as \code{x : float} and \code{y : int} while the low-level code generator passes along the decorations \code{float} and \code{int}.  The embedded design simplifies implementation because value type checking is performed by the host language's compiler. 
+\end{itemize}
+
+In practice, we  use attribute definitions in interfaces for information hiding across classes and lightweight specification of relationships between similar classes. An attribute declared inside of a class is \emph{local} to constraints in the class: only the class's constraints can read or write to the attribute. Conversely, declaring a \emph{var} inside of an interface hints that it is meant to be reused by outside classes, such as part of a tree traversal.
+
+\begin{figure}
+\begin{lstlisting}[language=C++,morekeywords={trait,class,attributes,actions}]
+trait Rectangle {
+  attributes { render : int; }
+  actions { render := paintRect(x,y,w,h, "black"); }
+}
+class HBox(Rectangle) : BoxI { ... }
+\end{lstlisting}
+\caption{\textbf{Trait construct}. Adds shared rendering code to the HBox class.}
+\label{fig:trait}
+\end{figure}
 
 \subsection{Traits: Reusing Cross-cutting Code}
+As with many object systems, we support a trait construct for cross-cutting code that should be shared across classes. It statically expands like a macro, and therefore provides no formal expressive power. For example, Figure~\ref{fig:trait} defines how to render a rectangle given several attributes, and then adds that functionality to class \code{HBox}. If the language was extended with class \code{VBox}, the class definition of \code{VBox} could also use trait \code{Rectangle}.
+
+
+
+
+
+
+\begin{figure}
+\begin{lstlisting}[language=C++,morekeywords={spawn,join,reverse,parallel_for}]
+interface BoxI { }
+class HBoxLeaf : BoxI { }
+class HBoxBinary : BoxI { 
+  children {
+    left: BoxI;
+    right: BoxI;
+  }
+}
+class VBoxLeaf : BoxI { }
+class VBoxBinary : BoxI { 
+  children {
+    left: Box;
+    right: Box;
+  }
+}
+\end{lstlisting}
+\caption{\textbf{Input tree as graph with labeled nodes and edges}. Specified in the JSON notation.}
+\label{fig:hboxjson}
+\end{figure}
+
 \subsection{Loops}
+We extend our language with declarative loops over the attributes of multiple nodes. They are an expressive extension over the uniform recurrence relations of [[CITE]].
+
+
+
+
 \subsection{Embedded Domain Specific Language: Functional Rendering}
 
 
