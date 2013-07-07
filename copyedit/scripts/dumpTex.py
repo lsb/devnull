@@ -5,6 +5,42 @@ import re
 import os
 import subprocess
 import pexpect
+import json 
+
+
+from time import sleep ###hack
+
+###########################
+
+### for runtime stack inspection in case of stalls
+
+import code, traceback, signal
+
+def debug(sig, frame):
+    """Interrupt running process, and provide a python prompt for
+    interactive debugging."""
+    d={'_frame':frame}         # Allow access to frame object.
+    d.update(frame.f_globals)  # Unless shadowed by global
+    d.update(frame.f_locals)
+
+    i = code.InteractiveConsole(d)
+    message  = "Signal recieved : entering python shell.\nTraceback:\n"
+    message += ''.join(traceback.format_stack(frame))
+    i.interact(message)
+
+def listen():
+    signal.signal(signal.SIGUSR1, debug)  # Register handler
+
+listen()
+
+############################
+
+
+
+
+
+
+
  
 if len(sys.argv) != 2:
 	raise Exception('Expected one argument of input file, only got', len(sys.argv))
@@ -18,7 +54,7 @@ def restartParser ():
   if LinkParser:
     LinkParser.close(force=True)
   LinkParser = pexpect.spawn("link-parser")
-  LinkParser.expect('linkparser>')
+  LinkParser.expect('linkparser>', timeout=0.3)
 restartParser()
 
 tokIncomplete = re.compile("No complete linkages found")
@@ -27,39 +63,19 @@ def checkGrammar(sent):
   clean = sent.replace("}","").replace(".","")
   clean = clean if clean[len(clean)-1]=="?" else (clean + ".")
   try:
-    print '========'
-    print clean 
     LinkParser.sendline(clean)
     LinkParser.expect('linkparser>', timeout=0.3)
-    print '--------'
     out = LinkParser.before
     if tokIncomplete.search(out):
-      print 'INCOMPLETE'
+      return (False, out)
     elif tokOk.search(out):
-      print 'COMPLETE'
+      return (True, None)
     else:
-      print "Unknown!!!", out
-    print '~~~~~~~~'
+      return (True, out)
   except:
-    print "Bad link-parser call"
-    print str(LinkParser)
-    #raise Exception('bad link parser call')
-    print '~~~~~~~~'
+    return (True, str(LinkParser))
     restartParser()
-    #return checkGrammar(sent)
   return
-
-
-  command = 'echo -e"!batch\n!verbosity=0\n' + clean + '" | ' + checker
-  out = subprocess.check_output(command, shell=True)
-  print '========'
-  print sent 
-  print '--------'
-  if tokIncomplete.match(out):
-    print 'INCOMPLETE'
-  else:
-    print out
-  print '~~~~~~~~'
 
 def writeDict (words):
   with open('dict', 'w') as f:
@@ -194,7 +210,7 @@ def paragraphsRec(fileName):
         if dir == None:
           dir = os.path.dirname(fileName)
         includeFile = dir + '/' + i + '.tex'
-        print fileName, '->', includeFile
+        #print fileName, '->', includeFile
         for v in paragraphsRec(includeFile):
           yield v
   fileObj.close()
@@ -257,31 +273,53 @@ def originalSentence (sent,includePunctuation=True):
 
 
 
-writeDict(['GPU','multicore','TBB'])
+writeDict(['GPU','multicore','TBB','webpage'])
+
 minWords = 2
-count = 0
-for paragraph in allParagraphs():
-      #sys.stdout.flush()
-      #for line in paragraphToLines(paragraph):
-      #for sent in lineToSentences(line):
+def checkParagraph (paragraph):
+      global minWords
       sent = paragraph
       if len(sent) <= minWords:
-        continue
+        return
       okParagraph = True
       for (stat, (f,p,l,c,cTotal,w,pText), sugg) in spellcheckSentence(sent):
         if stat == False:
           #spelling error
           okParagraph = False
-          print
-          print f.split("/")[-1],(p+l),c,':',w, '->', sugg
+          #print
+          #print f.split("/")[-1],(p+l),c,':',w, '->', sugg
           #print '     "', originalSentence(sent),'"'
+          yield (False, ("spelling", (f,p,l,c,cTotal,w), sugg))
       if okParagraph:
         (_,_,_,_,c,_,p) = sent[0]
         (_,_,_,_,c2,w,_) = sent[-1]
         para = p[c:(c2+len(w))]
-        print 'ok Paragraph, checking for grammar'
+        #print 'ok Paragraph, checking for grammar'
         #print para
         for line in paragraphToLines(paragraph):
           for sent in lineToSentences(line):
-            checkGrammar(originalSentence(sent))
- 
+            (ok, out) = checkGrammar(originalSentence(sent))
+            if not ok:
+              cleanedSent = map(lambda (f,p,line,c,cTotal,w,pText): (f,p,line,c,cTotal,w), sent)
+              yield (False, ("grammar", cleanedSent, out))
+
+def checkParagraphs():
+  for paragraph in allParagraphs():
+    if len(paragraph) == 0:
+      continue
+    (f,para,line,c,cTotal, w,pText) = paragraph[0]
+    yield {'paragraph': pText, 'errors': [err for err in checkParagraph(paragraph)]}
+
+def dumpJson():
+  yield '['
+  count = False
+  for p in checkParagraphs():
+    if count:
+      yield ','
+    yield json.dumps(p)
+    sleep(0.3)
+  yield ']'
+
+for s in dumpJson():
+  #print s
+  print 'step'
