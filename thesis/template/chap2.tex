@@ -442,7 +442,7 @@ Functions can be safely embedded as long as they provide a \emph{pure} interface
 \begin{minipage}{0.5\columnwidth}\centering
 \includegraphics[trim=0 150mm 0 0,clip,width=1.0\columnwidth]{chapter2/parlabscreenshot2}
 \end{minipage}}
-\subfloat[\textbf{3D Multiple Timeseries}]{\label{fig:renderings:ge}
+\subfloat[\textbf{3D Multiple Time Series}]{\label{fig:renderings:ge}
 \begin{minipage}{0.5\columnwidth}\centering
 \includegraphics[trim=0 0 0 0,clip,width=1.0\columnwidth]{chapter2/ge}
 \end{minipage}}\\
@@ -474,7 +474,7 @@ Functions can be safely embedded as long as they provide a \emph{pure} interface
 We specified many common layout language features with our extended form of attribute grammars. Most examples were written with few, if any, modifications to the generated code. This experience shows that our restricted form of attribute grammars are a viable formalism for layout specification. The following subsections present highlights from our case studies in specifying layouts with attribute grammars, and the appendix contains the full code.
 
 \subsection{Rendering}
-
+\label{sec:rendering}
 We found several rendering patterns to be important for many visualizations. A library of functional graphics primitives, such as \code{paintRect} in Figure~\ref{fig:trait}, sufficiently augmented our attribute grammar language in order to achieve them.
 
 \begin{itemize}
@@ -509,7 +509,7 @@ render :=
 \subsection{Non-Euclidean: Sunburst Diagram}
 Visualizations often require non-Euclidean layouts, such as the polar layout for the Sunburst diagram. Instead of propagating and computing over Euclidean values such as x and y coordinates as in \hlang, the visualization can use some other.
 
-For example, in a sunburst diagram, a node should be rendered  far from the center of the chart if it's level is high. In our implementation, each node transitively computes its  radius as a function of its parent's. Likewise, the center of visualization propagates from parent to child, with the root node representing the center:
+For example, in a sunburst diagram (Figure~\ref{fig:renderings:sunburst}), a node should be rendered  far from the center of the chart if its level is high. In our implementation, each node transitively computes its  radius as a function of its parent's. Likewise, the center of visualization propagates from parent to child, with the root node representing the center:
 
 \begin{lstlisting}
 class Radial : Node {
@@ -526,10 +526,206 @@ class Radial : Node {
 The full example is available in Appendix~\ref{???}.
 
 
-\subsection{Charts: Line graphs}
+\subsection{Charting: Line Graphs and Scatter Plots}
+We specified several types of charts with attribute grammars. For example, Figure~\ref{fig:renderings:parlab2} depicts an X/Y scatter plot and Figure~\ref{fig:renderings:line} depicts a line graph. We represent every data point as a leaf node in the tree. Tree traversals will compute details such as the X and Y ranges of a data set, which facilitates features such as normalization and centering.
+
+Time series charts led to two additional encoding tricks. First, multiple time series data should often be represented at the same time, such as for a server farm, the output of each server as the days pass. Figure~\ref{fig:renderings:ge} depicts one such multiple time series chart. Our approach was to represent each line as an intermediate node:
+\begin{lstlisting}
+class Root : Root I {
+  children {
+     lines : [ LineI ];
+  }
+}
+class Line : LineI {
+  children {
+    points: [ PointI ]
+  }
+}
+class Point : PointI { }
+\end{lstlisting}
+Second, we found the above (Section~\ref{sec:rendering}) rendering features such as zooming, panning, and 3D representations to be important for visualizing big time series data.
+
 \subsection{Animation and Interaction: Treemap}
+We declaratively encoded various animation effects with attribute grammars. For example, the fisheye effect enlarges the size of an element the closer the mouse draws near to it. Our core pattern is to encode time varying values as such the mouse position as input attributes and rerun the layout solver when the inputs change.
+
+Beyond human interaction, we also support reaction to time. For example, for the treemap shown in Figure~\ref{fig:renderings:treemap}, users may change the data set shown. Instead of immediately showing the new data set, we introduce a \code{tween} attribute that an animation increments over time from 0 up to 1. The treemap interpolates the layout position based on the time, which yields a smooth transition for each data point:
+\begin{lstlisting}
+class Point : PointI {
+  attributes {
+    input startW : int;
+    input endW : int;
+    var w : float;
+    var tween : float;
+  }
+  actions {
+   ...
+    w := startW * tween + endW * (1.0f - tween);
+    render := paintRect(x, y, w, h, ...
+\end{lstlisting}
+Visualizations like the treemap require recompilation of most of the attributes for such animations, which can become a bottleneck and thus benefits from acceleration by our tool.
+
+\subsection{Grid-based: Tables}
+We now examine one of our most difficult case studies: HTML~[[CITE]] and CSS table layout~[[CITE]]. Tables appear in  most rich document layout languages such as CSS and \LaTeX, and are an instanced of \emph{grid-based layout}, which is popular for representing layouts such as user interfaces and data tables. In conversations with commercial browser developers, we found that the proposed standards for the layout language features were reverse-engineered from earlier implementations. Furthermore, at the time of writing, two such competing standards were proposed, and with unclear notions of completeness or cases of distinction.
+
+We found that specifying tables involved \emph{non-linear} reasoning about \emph{dynamic DAGs}, which we achieved by using abstract data types and  using encoding hints to perform DAG scheduling by reusing our attribute grammar tree scheduler.
+
+Several challenges emerged in our analysis of HTML tables:
+\begin{itemize}
+\item \textbf{Dynamic data structure.} Layout constraints guide the mapping from a cell node to its location in the table. The computed result of attribute constraints therefore determines the underlying graph structure rather than being provided as part of the input. 
+\item \textbf{Computing over a DAG rather than tree.} Each cell of a table has two parent nodes: its row and its column. Static attribute grammars are more typically designed for computations over trees, where each node has at most one parent. Reasoning about dependencies must support this new structure.
+\item \textbf{Non-linear constraints.} Static attribute grammars linearly bound the computation size in terms of the number of attribute instances. A more iterative process is instead used to compute dimensions for CSS's automatic table layout algorithm.  
+\end{itemize}
+
+Ultimately, we wrote table-specific code in the specification (see above) and the runtime, but no table-specific code in our scheduler nor code generator. For an example of logic in the specific, the specification constructs the grid data structure  by manipulating functional lists rather than just numbers. Likewise, to ensure a column's computations over its cells are scheduled after the grid is constructed, we included this dependency in the specification. 
+
+Our runtime edits were to use a breadth-first traversal for traversing a table and, to lookup the children of a column, search table rows for cells with the corresponding column number attribute. We did not have to add table-specific code into the synthesizer (the offline scheduling analysis) nor the code generator. 
+
+We address each problem in turn.
+
+
+\newsavebox{\tabletransitivebox}
+\begin{lrbox}{\tabletransitivebox}% Store first listing
+\begin{lstlisting}[language=C++,morekeywords={spawn,join,reverse,parallel_for}]
+<table>
+  <row>
+    <cell rowSpan="2"></cell>
+    <cell></cell>
+    <cell></cell>
+  </row>
+  <row>
+    <cell colSpan="2"></cell>
+    <cell></cell>
+    <cell></cell>
+    <cell></cell>
+  </row>
+  <row>
+    <cell colSpan="2"></cell>
+    <cell></cell>
+    <cell></cell>
+  </row>
+  <row>
+    <cell></cell>
+    <cell colSpan="2"></cell>
+    <cell></cell>
+  </row>
+  <row>
+    <cell></cell>
+    <cell></cell>
+    <cell></cell>
+  </row>
+\end{lstlisting}
+\end{lrbox}
+
+
+
+\begin{figure}
+\subfloat[\textbf{Table Rendering}]{\label{fig:tabletransitive:rendering}
+\begin{minipage}{0.5\columnwidth}\centering
+\includegraphics[trim=0 0 0 0,clip,width=1.0\columnwidth]{chapter2/tabletransitive}
+\end{minipage}}
+\subfloat[\textbf{Textual encoding of input tree.}]{\label{fig:tabletransitive:html}
+\begin{minipage}{0.5\columnwidth}\centering
+\usebox{\tabletransitivebox}
+\end{minipage}
+}
+\caption{\textbf{Document layout screenshots.}}
+\label{fig:docrenderings}
+\end{figure}
+
+\subsubsection{Dynamic data structure.}
+Figure~\ref{fig:docrenderings} illustrates why the mapping from table cells to table column is dynamically computed. The placement of a cell is complicated by preceding cells that span multiple rows ("rowspan=n") and columns ("colspan=n"). Ultimately, the cell must be placed in the first column such that an earlier cell in a top-down, left-to-right ordering does not overlap it. The figure shows two important cases. First, the second cell of the first row is placed in the third column because its left sibling spans two rows: a cell's column is a function of the \code{rowSpan} attributes of its siblings to the left.  The second case is shown for the bottom right cell. Even though it is the third cell of its row in the parse tree, it is not placed in the third column. The reason is that the red dashed rectangular cell in the second row transitively impacts the placement of the cells after it. The \code{colSpan} attributes of cells in rows above a cell further determine its column.
+
+Our specification computes the column assignment as a loop over the rows. For each row, it computes what columns its cells are placed in as a function of the list of columns that are still occupied by preceding cells. The next row is given the columns that are occupied after adding cells on the current row, etc. Our specification of this behavior is interesting in that it is just calls to functional list manipulation methods written in our host language:
+\begin{lstlisting}
+class TableBox
+  ...
+  loop rows {
+    rows.colAssignment := 
+      fold 
+        emptyColumnList(colCount) 
+        .. 
+        columnsAppendRow(
+          rows$-.colAssignment, 
+          rows$i.cells, 
+          rows$i.rowNum);
+\end{lstlisting}
+The \code{columnsAppendRow} function computes the column position during placement, so subsequent reads can look it up through another list manipulation function.
+
+
+
+
+
+\newsavebox{\tabledyna}
+\begin{lrbox}{\tabledyna}% Store first listing
+\begin{lstlisting}[language=C++,morekeywords={spawn,join,reverse,parallel_for}]
+Schedule {
+  Col.childs[i].relX <- Col.cellsready
+  Col.childs[i].absX <- Col.cellsready
+\end{lstlisting}
+\end{lrbox}
+
+\newsavebox{\tabledynb}
+\begin{lrbox}{\tabledynb}% Store first listing
+\begin{lstlisting}[language=C++,morekeywords={spawn,join,reverse,parallel_for}]
+schedule { 
+  asserta(assignment(col, self, childs_relx_step, self, cellsready)),
+  asserta(assignment(col, self, childs_absx_step, self, cellsready))
+\end{lstlisting}
+\end{lrbox}
+
+
+\begin{figure}
+\subfloat[\textbf{Surface Syntax} (Proposed)]{\label{fig:tabledyndep:clean}
+\begin{minipage}{0.5\columnwidth}\centering
+\usebox{\tabledyna}
+\end{minipage}}
+\subfloat[\textbf{Low-level constraint}]{\label{fig:tabledyndep:raw}
+\begin{minipage}{0.5\columnwidth}\centering
+\usebox{\tabledynb}
+\end{minipage}}
+\caption{\textbf{Specifying dynamic dependencies.}}
+\label{fig:tabledyndep}
+\end{figure}
+
+A column computes the x coordinates for each cell, but column cells are not known before the last \code{columnsAppendRow}() call. To ensure a column computes over its cells after the mapping occurs, we explicitly declare the dynamic data dependency in the specification. First, the grid is stored in an attribute, so we simply propagate the grid to all the table nodes as an attribute (\code{cellsready}). We then state the implicit data dependency (Figure~\ref{fig:tabledyndep}. The scheduler now knows to run column computations over cells only after the \code{cellsready} is computed. Currently, we directly specify the constraints by enabling low-level schedule constraints (Figure~\ref{fig:tabledyndep:raw} and Section~[[[???]]), which might be directly generated from surface syntax (Figure~\ref{fig:tabledyndep:clean}).
+
+\subsubsection{Computing over a DAG}
+Computing over a table means computing over a DAG, not a tree: a cell has both a row and a column as its parents. This impacted both our runtime and our specification strategy. Demonstrating the flexibility of attribute grammars, we did not have to modify the scheduler nor the code generator. Instead, we modified the runtime and the specification.
+
+We modified the runtime to generalize an important invariant from tree traversals to DAG traversals. In a top down traversal of a tree, a node's parent is visited before the node itself. A valid implementation for trees is depth first. However, consider a depth first traversal of a table's parse tree:
+\begin{lstlisting}
+<table>
+  <row>
+    <cell></cell> 
+  </row>
+  <column></column
+</table>
+\end{lstlisting}
+The depth-first traversal would visit the table, the row, the cell, and then the column. The cell is visited before its parent column! 
+
+Our modification was simple: we edited the runtime to visit the nodes of a table with a breadth first traversal. We kept the overall document traversal as depth first for performance reasons. Declarative schedule constraints would also support picking a breadth-first traversal (Section~\ref{???}).
+
+We also modified the specification to pass our attribute grammar static checker. The changes enables relaxing the scheduler's obligation to guarantee that visiting a cell's parent row and column would set all the attributes needed by the cell (unambiguous) and without conflicting with each other. For example, a column defines the \code{relX} attribute of its child cell, and a row, its \code{relY}. By default, our checker would rightfully reject such a specification because, if a cell has only one parent, only one of those attributes would be set.
+
+We extended the specification language for instructing the scheduler that external code defines certain attributes:
+\begin{lstlisting}
+class Col : ColI {
+  phantom {
+    childs.relY;
+    childs.absY;
+...
+class Row : RowI {
+  phantom {
+    childs.relX;
+    childs.absX;
+...
+\end{lstlisting}
+The scheduler now assumes that the external code provides definitions for a column's \code{childs.relY} and \code{childs.absY} and a row's \code{childs.relX} and \code{childs.absX}. Unimportant to the synthesizer, the definitions just happen to come from elsewhere in the same specification, such as class Row defining the phantom attributes not set by Column. %If we wanted to further verify our specification, we could further specify that the assignments of a row and a column to a cell are disjoint sets that, together, hold the assignments needed for a cell, but this is unnecessary for code generation. 
+
+\subsubsection{Non-linear constraints}
+The table specification defines a dynamically determined number of loops over a table's column to determine column widths. Such dynamism is beyond the pure static attribute grammar formalism, but our foreign function interface sufficed while still allowing overall specification and scheduling through attribute grammars.
+
 \subsection{Flow-based: CSS Box Model}
-\subsection{Grid-based: HTML Tables}
 
 \section{Related Work}
 \begin{itemize}
