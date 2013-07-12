@@ -1,4 +1,10 @@
 ##arg1: textfile
+## Ex:   python dumpTex.py ../../thesis/template/template.tex
+##       python dumpTex.py ../../thesis/template/template.tex | tee out.json
+## Runs spell check on each sentence. If sentence passes, also runs link-parser to grammar check.
+## Outputs results in JSON (with character-level tracking)
+## Tries to handle LaTeX macros, including \include{}.
+## Expands some commands such as \emph{hello}, but skips others such as $x + y$ 
 
 import sys
 import re
@@ -53,8 +59,9 @@ def restartParser ():
   global LinkParser
   if LinkParser:
     LinkParser.close(force=True)
-  LinkParser = pexpect.spawn("link-parser")
-  LinkParser.expect('linkparser>', timeout=0.3)
+  os.system('killall -9 link-parser &> /dev/null')
+  LinkParser = pexpect.spawn("link-parser", timeout=0.3)
+  LinkParser.expect('linkparser>')
 restartParser()
 
 tokIncomplete = re.compile("No complete linkages found")
@@ -62,20 +69,21 @@ tokOk = re.compile("Found .* had no P.P. violations\)")
 def checkGrammar(sent):
   clean = sent.replace("}","").replace(".","")
   clean = clean if clean[len(clean)-1]=="?" else (clean + ".")
+  res = (True, None)
   try:
     LinkParser.sendline(clean)
-    LinkParser.expect('linkparser>', timeout=0.3)
+    LinkParser.expect('linkparser>')
     out = LinkParser.before
     if tokIncomplete.search(out):
-      return (False, out)
+      res = (False, out)
     elif tokOk.search(out):
-      return (True, None)
+      res = (True, None)
     else:
-      return (True, out)
+      res = (True, out)
   except:
-    return (True, str(LinkParser))
+    res = (True, str(LinkParser))
     restartParser()
-  return
+  return res
 
 def writeDict (words):
   with open('dict', 'w') as f:
@@ -114,9 +122,9 @@ def spellcheckSentence(sent):
       yield (False, sent[i], [])
 
 tokExpandCommands = re.compile(r'\\(ref|subref|sched|caption|emph|textbf|title|section|subsection|subsubsection|subsubsubsection)')
-tokCommand = re.compile(r'(\\begin{tabular}.*?\\end{tabular})|(\\begin{lstlisting}.*?\\end{lstlisting})|(\\begin{grammar}.*?\\end{grammar})|(\\((\\\\)| |([a-zA-Z0-9]*(\*|({.*?})|\[.*?\])*)))', re.DOTALL)
+tokCommand = re.compile(r'(\\begin{tabular}.*?\\end{tabular})|(\\begin{lstlisting}.*?\\end{lstlisting})|(\\begin{grammar}.*?\\end{grammar})|(\\((\\\\)| |([a-zA-Z0-9:]*(\*|({.*?})|\[.*?\])*)))', re.DOTALL)
 tokText = re.compile(r'[a-zA-Z\-\'-\+#]+|((\$)?[0-9]+(,|[\.xX+]|(\\%))?)')
-tokNoise = re.compile(r'(\$.*\$)|[{},:\n\r \t.!<>;`|*"#=@&~\[\]\+\?\(\)/]|(%.*(\n|$))')
+tokNoise = re.compile(r'(\$.*\$)|[${},:\n\r \t.!<>;`|*"#=@&~\[\]\+\?\(\)/]|(%.*(\n|$))')
 
 def words (paragraph, firstLine):
   line = 0 #line in paragraph 
@@ -154,6 +162,8 @@ def words (paragraph, firstLine):
         lineOffset = lineOffset + len(splits[0]) 
       #print  'noise', paragraph[hit.start():hit.end()].strip()
       continue
+    #known errors:
+    #$i: 
     raise  Exception('unknown', paragraph[totalOffset:(totalOffset+5)], paragraph[(totalOffset-20):(totalOffset+20)])
 
 tokParagraph = re.compile(r'\n(\n+)')
@@ -273,7 +283,7 @@ def originalSentence (sent,includePunctuation=True):
 
 
 
-writeDict(['GPU','multicore','TBB','webpage'])
+writeDict(['GPU','multicore','TBB','webpage','dataflow','JSON'])
 
 minWords = 2
 def checkParagraph (paragraph):
@@ -289,7 +299,7 @@ def checkParagraph (paragraph):
           #print
           #print f.split("/")[-1],(p+l),c,':',w, '->', sugg
           #print '     "', originalSentence(sent),'"'
-          yield (False, ("spelling", (f,p,l,c,cTotal,w), sugg))
+          yield {"e": "spell", "i": [p,l,c,cTotal,w], "s": sugg}
       if okParagraph:
         (_,_,_,_,c,_,p) = sent[0]
         (_,_,_,_,c2,w,_) = sent[-1]
@@ -300,15 +310,15 @@ def checkParagraph (paragraph):
           for sent in lineToSentences(line):
             (ok, out) = checkGrammar(originalSentence(sent))
             if not ok:
-              cleanedSent = map(lambda (f,p,line,c,cTotal,w,pText): (f,p,line,c,cTotal,w), sent)
-              yield (False, ("grammar", cleanedSent, out))
+              cleanedSent = map(lambda (f,p,line,c,cTotal,w,pText): [p,line,c,cTotal,w], sent)
+              yield {"e": "gram", "i": cleanedSent, "s": out}
 
 def checkParagraphs():
   for paragraph in allParagraphs():
     if len(paragraph) == 0:
       continue
     (f,para,line,c,cTotal, w,pText) = paragraph[0]
-    yield {'paragraph': pText, 'errors': [err for err in checkParagraph(paragraph)]}
+    yield {'file': f, 'paragraph': pText, 'errors': [err for err in checkParagraph(paragraph)]}
 
 def dumpJson():
   yield '['
@@ -316,10 +326,12 @@ def dumpJson():
   for p in checkParagraphs():
     if count:
       yield ','
+    else:
+      count = True
     yield json.dumps(p)
     sleep(0.3)
   yield ']'
 
 for s in dumpJson():
-  #print s
-  print 'step'
+  print s
+  #print 'step'
