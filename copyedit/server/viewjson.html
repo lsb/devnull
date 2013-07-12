@@ -1,0 +1,159 @@
+<html>
+  <head>
+    <title>Pretty print spelling and grammar errors</title>
+    <script src="jquery-1.7.1.min.js"></script>
+    <script>
+        function $insertDB (elt, db) { db.pipe(D.swap($(elt)[0])); }
+	</script>
+	<script src="promptjs/p.js"></script>
+	<script src="promptjs/pc.js"></script>
+	<script src="promptjs/p_tests.js"></script>
+	<script>
+	var Z = P();
+	</script>
+<script>
+VERBOSE = false;
+THROTTLE = (1.0/9) * 1000; //min delay between XHRs
+</script>
+	<script src="promptjs/d.js"></script>
+	<style>
+	
+p.file {
+	margin-top: 2em;
+}	
+.fileName {
+	font-size: 2em;
+	display: block;
+}
+.dirName {
+	color: #AAA;
+	font-size: 1.0em;
+}
+	
+p.paragraph { 
+	padding: 1em; 
+	border: 1px solid #CCC; 
+	margin: 1em; 
+}
+p.paragraph .real {
+	display: block;
+	margin-bottom: 1em;
+	padding-bottom: 1em;
+	border-bottom: 1px dotted #CCC;
+}
+.spell > span { 
+	display: inline-block;
+	font-size: 1.0em;	
+
+	background-color: blue;
+	color: blue;
+	width: 1em;
+	height: 1em;
+	overflow: hidden;
+	opacity: 0.08;
+}
+.spell > span:hover {
+	background-color: white;
+	color: blue;
+	width: auto;
+	overflow: auto;
+	opacity: 1.0;
+}
+
+p.real { color: black; }
+.spell, .gram { color: #000 }
+.spell:hover, .gram:hover { color: #000 }
+
+.spell, .gram { margin: 1em; border-bottom-width: 2px; border-bottom-style: dotted;  }
+.spell { border-bottom-color: red; }
+.gram { border-bottom-color: green; }
+.lblSpell, .lblGram { font-weight: bold; }
+.lblSpell { color: maroon; }
+.lblGram { color: green; }
+
+	</style>
+	<script>
+
+	function formatParagraph (o) { // jsonParagraph -> DOM
+		var res;
+		  if (o.errors.length == 0) {
+		    res = D.$p(o.paragraph);
+		  } else {
+		  	var isSpellingError = o.errors[0].e == 'spell';
+		  	var lbl = $(D.$span(isSpellingError ? "Spelling:" : "Grammar:"))
+		  				.attr('class',isSpellingError ? "lblSpell" : "lblGram")[0];		  
+		    res = D.$p.apply({}, [$(D.$span(o.paragraph)).attr('class','real')[0], lbl].concat(o.errors.map(function (err) {
+		    	if (err.e == "spell") {
+		    		var elt = 
+		    			err.s.length > 0 ?
+		    			 	D.$span(err.i[4], D.$span( D.$span.apply({}, err.s) ))
+		    			 	: D.$span(err.i[4])
+		    		return $(elt).attr('class','spell')[0];		    		        
+		    	} else if (err.e == "gram") {
+
+		    		var sentence = err.s.split("\n")[0];
+		    		
+		    		return $(D.$span(sentence)).attr('class','gram')[0];
+		    	} else {
+		    		throw 'unknown err: ' + err.e;
+		    	}
+		    })));
+		  }
+		return $(res).attr('class','paragraph')[0];
+	}
+
+	
+function bindDOM() {	
+	var BASE_URL = document.URL.replace("#","").replace("viewjson.html","") + "/";
+	var FILE =  'out.json';
+	
+	var jsonP = Z.unit(BASE_URL + FILE).pipeAsync(D.xhrJSON).print('== jsonP');
+	
+	
+	var docP = jsonP.pipe(function (arr) {
+	
+		var paragraphs = arr.map(function (o) { return {m: o, v: formatParagraph(o)}; });
+
+		//add file breaks
+		var pages = paragraphs.reduce(function (acc, o) {
+			if (acc.lastFile != o.m.file) {
+
+				var files = o.m.file.split('/');
+				if (files.length > 0) {
+					var lastStr = files.pop();
+					var last = $(D.$span(lastStr)).attr('class', 'fileName')[0];
+					var dir = $(D.$span(files.join('/') + '/')).attr('class', 'dirName')[0];
+					elt = D.$span(dir, last);
+				} else {
+					elt = D.$span(o.m.file);
+				}			
+			
+			
+				acc.arr.push({m: {file: o.file}, v: $(D.$p(elt)).attr('class','file')[0]});
+			}
+			acc.arr.push(o);
+			return {arr: acc.arr, lastFile: o.m.file};		
+		}, {arr: [], lastFile: false});
+		
+		return D.$div.apply({}, pages.arr.map(function (o) { return o.v; }));
+	}).print('== docP');
+
+
+
+    $insertDB('#doc', docP);
+
+}
+
+
+
+window.addEventListener('load',bindDOM);
+	
+	</script>
+  </head>
+  <body>
+  ok
+  
+  <h1>Doc</h1>
+  <div id="doc"></div>
+  </body>
+</html>
