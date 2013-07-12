@@ -567,7 +567,7 @@ Visualizations like the treemap require recompilation of most of the attributes 
 \subsection{Grid-based: Tables}
 We now examine one of our most difficult case studies: HTML~[[CITE]] and CSS table layout~[[CITE]]. Tables appear in  most rich document layout languages such as CSS and \LaTeX, and are an instanced of \emph{grid-based layout}, which is popular for representing layouts such as user interfaces and data tables. In conversations with commercial browser developers, we found that the proposed standards for the layout language features were reverse-engineered from earlier implementations. Furthermore, at the time of writing, two such competing standards were proposed, and with unclear notions of completeness or cases of distinction.
 
-We found that specifying tables involved \emph{non-linear} reasoning about \emph{dynamic DAGs}, which we achieved by using abstract data types and  using encoding hints to perform DAG scheduling by reusing our attribute grammar tree scheduler.
+We found that specifying tables involved \emph{non-linear} reasoning about \emph{dynamic DAGs}, which we achieved by using abstract data types and  using encoding hints to perform DAG scheduling by reusing our attribute grammar tree scheduler. More dynamic formalisms such as a higher-order attribute grammars~\cite{??} provide flexible alternatives, but it is not clear how to use them to address the performance criteria of the subsequent chapters.
 
 Several challenges emerged in our analysis of HTML tables:
 \begin{itemize}
@@ -726,6 +726,45 @@ The scheduler now assumes that the external code provides definitions for a colu
 The table specification defines a dynamically determined number of loops over a table's column to determine column widths. Such dynamism is beyond the pure static attribute grammar formalism, but our foreign function interface sufficed while still allowing overall specification and scheduling through attribute grammars.
 
 \subsection{Flow-based: CSS Box Model}
+Document layout languages generally feature a \emph{flow-based} layout model where the position of one element is largely a function of the previous one. For example, line wrapping places one word after another in a paragraph, and a column will stack one paragraph after another. However, ambiguity quickly arises once constraints are added to such systems. We found that, before being able to address our interest in parallelizing the CSS language, that creating a functional specification of it was already a challenge to itself.  This section focuses on the ability to express the CSS specification, and defers discussion of functional correctness (Chapter~??) and safe parallelization (Chapter~??).
+
+Challenging specification, the CSS standard provides only a few explicit formulas such as  \code{min(max(intrinsMinWidth,maxWidth),intrinsPrefWidth)} for the shrink-to-fit calculation. It generally does not fully define the intrinsic dimensions to plug into the formula. We incorporated what we found, and for the rest, spent significant time reengineering the semantics by examining the standard and experimenting with existing browsers. While it is unclear how to evaluate faithfulness, we encoded enough features to render a resemblance of the Wikipedia main page (Figure~\ref{fig:rendering:css}) and a popular blog.
+
+Our attribute grammar describes the layout solving features of the informally written CSS 2.1 standard. It also includes automatic table layout, which was only more completely defined in later CSS standards. It does not include preprocessing steps, such as the CSS cascade that annotates the HTML tree with attributes, nor anonymous content generation, which normalizes the annotated tree to guarantee that spans of sibling nodes are homogeneous. The former is largely a combination of a simple extension to regular expressions and prioritization constraints. We found we could include parts of the cascade in our approach, such as handling units, and thus do.  Normalization is a bottom-up tree rewriting pass, and an implementation optimization avoids performing it before layout and instead makes it an on-demand part of layout solving. We primarily focus in the core box model: normal flow (blocks and inlines), out of flow (relative and absolute positioning, floats), and borders, padding, and margins.
+
+Our specification largely follows the style of the above grammars. Part of the intuition for the feasibility of specifying CSS in this way is that CSS was designed with restrictions that avoid requiring slow evaluation with techniques such as iterative constraint solving. In our encoding, each CSS display type is represented by one or more classes in our system. CSS's normalization algorithm largely leads to our set of interfaces, such as grouping the \code{inline} and \code{inline-block} display types under interface \code{inline}. We make heavy use of traits and interfaces, which compromise 23\% and 32\% of the code, respectively. The automatic table layout algorithm was an extension of the above techniques. Finally, similar to the issue with table cells having two parents, a row and a column, out of flow elements also required encodings to support DAG behavior. 
+
+Several differences distinguish our experience with specifying CSS layout from the other case studies. Many features were difficult to specify because of many cases or cross-cutting in their semantics. Discussed in Chapter~\cite{??}, we rely upon automatic checking to assist development, and discussed in Chapter~\cite{??}, we specify schedule sketches to improve compiler speed and more quickly experiment with parallelization schemes. To further simplify development, we wrote several increasingly large specifications and manually integrated them.
+
+One particularly challenging feature to disentangle relates to ambiguity. CSS  solves seemingly inconsistent input constraints instead of returning an error. For example, if \hlang was extended to support input heights on intermediate nodes, the following conflict would require a graceful interpretation rather than refusing to render:
+\begin{lstlisting}
+<hbox height="5">
+  <hbox height="500"></hbox>
+</hbox>
+\end{lstlisting}
+By the original attribute grammar, the outer \code{<hbox>} should be the size of the biggest child, which would be 500. However, that conflicts with the input constraint of the outer box only being 5 tall. Our CSS grammar inspects for the presence of input attributes and prioritizes them. The analogous resolution for the \hlang example is the following:
+\begin{lstlisting}
+loop children { 
+  h := 
+    fold (maybeReady(height) ? maybeValue(height) : 0)
+    ..
+    maybeReady(height) ? maybeValue(height) : max($-.h, child.h) 
+}
+\end{lstlisting}
+The grammar uses "5" and "500" because they were explicitly specified instead of solving for them.  
+
+We found other features to be difficult because they purposefully stray from the direct mathematical interpretation. For example, CSS supports input constraints where a node's width is defined as a proportion of its parent's. If we na\"{i}vely extended \hlang with such a feature, evaluation of the following layout would lead to a degenerate solution:
+\begin{lstlisting}
+<hbox>
+  <hbox width="50%">
+     <hbox w="20"></hbox>
+  </hbox>
+</hbox>
+\end{lstlisting}
+The root node shrinks to fit the middle node, but the middle node must be 50\% of the parent. Direct interpretation leads to a solution of 0 for both widths, but CSS instead leaves the result up to the layout engine implementation. The first reason is that the result looks unappealing: the containers of the leaf node do not appear. The second reason is that, while iterative solvers may avoid some such situations, but at the expense of performance. Implementations instead use non-iterative heuristics, but as seen with tables, implementors struggle to understand them.
+
+In summary, our attribute grammar formalism was sufficiently flexible to specify a non-trivial subset of the widely used CSS language. We encountered several key difficulties, and discuss those relating to correctness, safe and effective parallelization, and compiler speed in Chapters~\ref{???} and~\ref{???}.
+
 
 \section{Related Work}
 \begin{itemize}
