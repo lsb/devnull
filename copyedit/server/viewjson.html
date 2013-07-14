@@ -165,11 +165,15 @@ function summarize () {
 		    			var res = D.$span(sent + '.'); 
 		    			$(res).attr('class','on');
 		    			$(res).click(function (event) {
-		    				var toggleOn = $(this).attr('class').indexOf('off') == -1 ? true : false;
-			  				toggleOn = !toggleOn;
-			  				$(this).attr('class', (toggleOn ? 'on' : 'off'));
-			  				summarize();
-		    				event.stopPropagation();
+		    				if ($(res).attr('class').indexOf('off') == -1) {
+								var toggleOn = $(this).attr('class').indexOf('off') == -1 ? true : false;
+								toggleOn = !toggleOn;
+								$(this).attr('class', (toggleOn ? 'on' : 'off'));
+								summarize();
+		    					event.stopPropagation();
+		    				} else {
+		    					//bubble to paragraph click
+		    				}
 		    			});
 		    			return res;
 		    		})))
