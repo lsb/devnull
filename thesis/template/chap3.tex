@@ -108,7 +108,7 @@ void visit2 (Prod &p) {
 
 
 
-\subsection{Specifying Sequential Schedules}  
+\subsection{Sequential Schedules}  
 We start by examining how to specify a safe static schedule for \hlang that respects any possible dynamic dependencies (Figure~\ref{fig:deps:full}).
 %Research into statically scheduled sequential attribute grammars revealed a variety of scheduling options. For example, some computations can be solved in one traversal over a tree and therefore merged into a parser, while others require multiple traversals. We focus on several important options and the automated reasoning supported for them.
 
@@ -141,6 +141,7 @@ preorder
 \end{lstlisting}
 It specifies a sequence ('';'') of two traversals of node visit order \code{postorder} and \code{preorder}. For each type of node visited within a traversal, the schedule specifies the sequential sequence of attributes to evaluate. We note that, due to the desugaring of our class system in Section~\ref{sec:desugaring}, the dispatches in the above examples are based on grammar productions in the desugared representation. In terms of the fronted language, the dispatches are based on node class.
 
+
 Generally, a single attribute grammar may be schedule in many ways. For example, the width and height computations share no dependencies, so the first postorder traversal might be partitioned into two postorder traversals:
 \begin{lstlisting}[mathescape,morekeywords={preorder,postorder}]
 postorder
@@ -158,10 +159,21 @@ preorder
 \end{lstlisting}
 Rescheduling in this way may improve performance on small devices with little memory because the schedule cuts the working set size in half for each traversal. Note, however, that the schedule only optimizes execution; it does not change the result of evaluation.
 
-\subsection{Compilation}
-Compilation only requires an attribute grammar and the schedule. The traversal staging \code{postorder _ ; preorder _} directly translates to the executable fragment in Figure~\ref{fig:hboxseq:sequence}. Likewise, the mapping from traversal productions to statement sequences, such as \code{HBOX} $\rightarrow \epsilon$ \{ \code{HBOX.w HBOX.h} \}, directly translate to the visit functions of Figure~\ref{fig:hboxseq:compiled}. The translation matches an attribute in the schedule with the lefthand side attribute of an equation in the attribute grammar and outputs the full assignment statement in its place. 
 
-Our code generation pipeline is further complicated but conceptually similar. The schedule is combined with the attribute grammar to form an intermediate representation, and different code generators target different backends, such as JavaScript, OpenCL, and C++. Furthermore, some of the reductions of Section~\ref{sec:desguaring} require augmenting or rewriting the intermediate representation, such as reinserting loops that were unrolled during scheduling (Section~\ref{???}). Our end-to-end compiler design is slightly different due to the synthesis algorithm (Chapter~\ref{chap:4})  and schedule autotuning (Section~\ref{sec:schedtuning}), but code generation for a schedule follows a more conventional process.
+\begin{figure}
+\centering
+\includegraphics[trim=0 0 0 0,clip,width=0.7\columnwidth]{chapter3/nested}
+\caption{\textbf{Nested traversal for line breaking}. The two paragraphs are traversed in parallel as part of a preorder traversal. A sequential recursive traversal places the words within a paragraph. Circles denote nested regions and arrows show data dependencies between nodes and/or regions.}
+\label{fig:nested}
+\end{figure}
+
+Sequential execution supports a traversal type that can compute more than \code{postorder} or \code{preorder}, which we call a \code{recursive} traversal. We use it, for example, for line breaking in our document layout case study. Consider inserting line breaks into the following stylized paragraph of XML strings (Figure~\ref{fig:nested}):
+%
+$$\texttt{lorom <italic><huge>ipsum dolor</huge></italic> sit}$$
+%
+Due to \texttt{<huge>}, the paragraph may need a line break between ``ipsum'' and ``dolor.''  Identifying the line break position involves visiting the subtree  \texttt{<italic>...</italic>}; the resulting line break position is a data dependency influencing line breaks in the remainder of the text. The sequence of arrows in the big circle of Figure~\ref{fig:nested} show a trace of performing a recursive traversal over the paragraph. The traversal visits a node $n$, then visits $n$'s first child, revisits $n$, and repeats this process for the remaining children before returning to the parent. 
+
+The relationship between \code{recursive} traversals and \code{postorder} and \code{preorder} merits examination. First, a sequence of a preorder traversal followed by a postorder traversal may be merged into one recursive traversals. Traversing a tree induces overhead costs, so such fusion may be beneficial. The reverse  relationship is not true, however. As happens with the case of line breaking, long-running sequential dependencies may prevent splitting a recursive traversal into a preorder and postorder traversal. These dependencies arise because the the same node is visited multiple times in a traversal: once before a child subtree is traversed and again after. The result of computing over one subtree may therefore be used to compute another, which supports long-running sequential dependencies. 
 
 
 \newsavebox{\decomplang}
@@ -261,11 +273,31 @@ parPost(visit1, start); parPre(visit2, start);
 \end{figure}
 
 
-\subsection{Parallel Schedules}
-A schedule exposes structured parallelism within a traversal and across them. 
+\subsection{Parallel Schedules: Same Traversal}
+A schedule exposes structured parallelism both within a traversal and across them. 
 
 For an example of parallelism within a traversal, the first postorder traversal for \hlang features latent parallelism. The widths and heights for one subtree can be computed independently of the widths and heights of another distinct subtree. Figure~\ref{fig:depsparallel:postorder} shows an example where different (logical) threads may compute on the leaf nodes and implicit barriers force a join at every intermediate node. Likewise, the second traversal (Figure~\ref{fig:depsparallel:preorder}) may be changed to a parallel preorder traversal where ever intermediate node acts as a logical fork. Figure~\ref{fig:hboxparallel:traversals} depicts na\"{i}ve parallel implementations using Cilk's~\cite{??} \code{spawn} and \code{join} primitives. We formulate the schedule by changing the specification from \code{postorder} and \code{preorder} to \code{parPost} and \code{parPre} (Figure~\ref{fig:hboxparallel:schedule}).
 
+
+Our \emph{nested} traversal feature supports exploiting parallelism within a traversal even if some nodes require sequential evaluation.  With it, the tree is partitioned into an outer region and disjoint inner regions.  The outer and inner regions are evaluated with different traversals, and both may exploit parallelism.  We can think of the inner regions as macro-nodes that are evaluated in full (with their particular traversal type) when the outer traversal encounters them.  
+
+To motivate the need for nested traversals, we revisit line breaking.  Even though line breaking of a single paragraph is sequential, distinct paragraphs of text can be handled in parallel.  To avoid locally sequential computations from forcing the entire tree traversal to be sequential, we allow the outer region to be parallel, while each paragraph forms an inner region that is handled with the sequential recursive traversal. Figure~\ref{fig:nested} shows how parallel evaluation may be used to compute across different \sched{recursive} paragraphs. Likewise, it shows a hypothetical \code{VBox} subtree that uses parallel postorder evaluation for traversing its subtree as soon as the outer parallel preorder traversal reaches it.
+
+%A nested traversal supports parallelism. First, the outer traversal may itself be parallel, such as the two paragraphs in Figure~\ref{fig:nested} being evaluated concurrently as part of an overall preorder traversal. Second, each macro-node may itself be evaluated with a parallel traversal internally whenever the outer traversal reaches it. For example, parallel evaluation may be used within the preorder and postorder macro-nodes in Figure~\ref{fig:nested}.
+
+To partition a tree into regions, the schedule maps each grammar production (and thus each node of the tree) to a traversal type in the synthesized schedule.  A subtree composed from nodes of the same traversal types form an inner region.  For example, a nested traversal of paragraphs with sequential traversals of nested text subtrees is described as follows: 
+
+\begin{lstlisting}[mathescape,morekeywords={parPre,parPost,nested,recursive,recur}]
+parPre 
+  P $\rightarrow$ W { W.relativeX }
+  { recursive $\mapsto$   
+      W$_0$ $\rightarrow$ W$_1$ W$_2$ {
+        W$_1$.relativeX recur W$_1$ 
+        W$_2$.relativeX recur W$_2$ } }
+\end{lstlisting}
+
+
+\subsection{Parallel Schedules: Across Travesals}
 We may exploit parallelism across traversals as well. For example, just as we created a different but functionally equivalent sequential schedule for \hlang, we can do the same manipulation to yield a new parallel schedule:
 \begin{minipage}{1\columnwidth}
 \begin{lstlisting}[mathescape,morekeywords={parPre,parPost}]
@@ -279,19 +311,23 @@ We may exploit parallelism across traversals as well. For example, just as we cr
 ; parPre $\ldots$ $\emph{/* same as before */}$
 \end{lstlisting}
 \end{minipage}
-The ``\|\|'' construct specifies that one traversal may be run concurrently with another. Neither traversal traversal depends on attributes written by the other, so the parallelizaton is safe. Even if we cannot exploit parallelism within a traversal, using ''\|\|'' enables us to exploit parallel across them. 
+The ``$||$'' construct specifies that one traversal may be run concurrently with another. Neither traversal traversal depends on attributes written by the other, so the parallelizaton is safe. Even if we cannot exploit parallelism within a traversal, using ''$||$'' enables us to exploit parallel across them. 
 
 
-\section{Structured Parallelism in Visitors} 
-\subsection{td, bu, in order} (related to distributed?)
-\subsection{concurrent} (old paper: unstructured within visit)
-\subsection{multipass} (any old paper? unstructured within visit)
-\subsection{nested}
 
 
-\section{Schedule Compilation}
-Phrase as rewrites working in an EDSL w/ templates
-\subsection{Rewrite rules}
+
+
+
+
+
+\subsection{Compilation}
+Compilation only requires an attribute grammar and the schedule. The traversal staging \code{postorder _ ; preorder _} directly translates to the executable fragment in Figure~\ref{fig:hboxseq:sequence}. Likewise, the mapping from traversal productions to statement sequences, such as \code{HBOX} $\rightarrow \epsilon$ \{ \code{HBOX.w HBOX.h} \}, directly translate to the visit functions of Figure~\ref{fig:hboxseq:compiled}. The translation matches an attribute in the schedule with the lefthand side attribute of an equation in the attribute grammar and outputs the full assignment statement in its place. 
+
+Our code generation pipeline is further complicated but conceptually similar. The schedule is combined with the attribute grammar to form an intermediate representation, and different code generators target different backends, such as JavaScript, OpenCL, and C++. Furthermore, some of the reductions of Section~\ref{sec:desguaring} require augmenting or rewriting the intermediate representation, such as reinserting loops that were unrolled during scheduling (Section~\ref{???}). Our end-to-end compiler design is slightly different due to the synthesis algorithm (Chapter~\ref{chap:4})  and schedule autotuning (Section~\ref{sec:schedtuning}), but code generation for a schedule follows a more conventional process.
+
+
+
 \section{Schedule Verification}
 \subsection{Overview}
 \begin{itemize}

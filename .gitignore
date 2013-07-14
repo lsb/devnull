@@ -54,3 +54,7 @@ copyedit/scripts/dict
 *.toc
 
 *.toc
+
+thesis/template/template.synctex.gz(busy)
+
+thesis/template/template.toc
