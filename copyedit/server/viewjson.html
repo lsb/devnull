@@ -158,7 +158,10 @@ function summarize () {
 		  				.attr('class',isSpellingError ? "lblSpell" : "lblGram")[0];
 		    var textD = 
 		    	$(D.$span.apply({},
-		    		o.paragraph.split('.').map(function (sent) { 
+		    		o.paragraph.split('.').map(function (sent, i, arr) { 
+		    			if (i == arr.length - 1 && (sent.trim() == '')) {
+							return D.$a();
+		    			}
 		    			var res = D.$span(sent + '.'); 
 		    			$(res).attr('class','on');
 		    			$(res).click(function (event) {
