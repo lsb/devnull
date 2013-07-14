@@ -41,6 +41,11 @@ p.paragraph .real {
 	padding-bottom: 1em;
 	border-bottom: 1px dotted #CCC;
 }
+p.paragraph.off {
+	opacity: 0.3;
+	background-color: silver;
+}
+
 .spell > span { 
 	display: inline-block;
 	font-size: 1.0em;	
@@ -64,24 +69,64 @@ p.real { color: black; }
 .spell, .gram { color: #000 }
 .spell:hover, .gram:hover { color: #000 }
 
-.spell, .gram { margin: 1em; border-bottom-width: 2px; border-bottom-style: dotted;  }
+.spell, .gramSentence { margin: 1em; border-bottom-width: 2px; border-bottom-style: dotted;  }
 .spell { border-bottom-color: red; }
 .gram { border-bottom-color: green; }
 .lblSpell, .lblGram { font-weight: bold; }
 .lblSpell { color: maroon; }
 .lblGram { color: green; }
 
+.gram {
+	border-bottom: 1px dotted #7F7; 
+}
+.gram { 
+	max-width: 50em;
+	height: 1em; 
+	overflow: hidden; 
+	color: green;
+	opacity: 0.7;
+	margin: 1em;
+}
+.gram:hover { 
+	height: auto; 
+	opacity: 1.0;
+}
+
+#summary .on, #summary .off {
+	display: block;
+}
 	</style>
 	<script>
 
-	function formatParagraph (o) { // jsonParagraph -> DOM
+function summarize () {
+
+	var on = [];
+	var off = [];
+	$("p.paragraph").map(function (i, d) {
+		if ($(this).attr('class').indexOf('off') == -1) {
+			on.push(i);
+		} else {
+			off.push(i);
+		}
+	});
+	
+	var d = D.$span(
+		$(D.$h2('Paragraphs:'))[0],
+		$(D.$span('On: ' + on.join(', '))).attr('class','on')[0], 
+		$(D.$span('Off: ' + off.join(', '))).attr('class','off')[0]);
+	$(d).attr('id','summary');	
+	$insertDB('#summary', Z.unit(d));
+}
+
+	function formatParagraph (o, i) { // jsonParagraph -> DOM
 		var res;
 		  if (o.errors.length == 0) {
 		    res = D.$p(o.paragraph);
 		  } else {
 		  	var isSpellingError = o.errors[0].e == 'spell';
 		  	var lbl = $(D.$span(isSpellingError ? "Spelling:" : "Grammar:"))
-		  				.attr('class',isSpellingError ? "lblSpell" : "lblGram")[0];		  
+		  				.attr('class',isSpellingError ? "lblSpell" : "lblGram")[0];
+		  				
 		    res = D.$p.apply({}, [$(D.$span(o.paragraph)).attr('class','real')[0], lbl].concat(o.errors.map(function (err) {
 		    	if (err.e == "spell") {
 		    		var elt = 
@@ -90,17 +135,34 @@ p.real { color: black; }
 		    			 	: D.$span(err.i[4])
 		    		return $(elt).attr('class','spell')[0];		    		        
 		    	} else if (err.e == "gram") {
-
-		    		var sentence = err.s.split("\n")[0];
+		    		var sentence = err.s.split(/\n/).shift();
+		    		var messageD = D.$pre(err.s.substr(sentence.length));//output.map(function (line) { return D.$pre(line); }));
+		    		sentenceD = D.$span(sentence);
 		    		
-		    		return $(D.$span(sentence)).attr('class','gram')[0];
+		    		$(sentenceD).attr('class','gramSentence');
+		    		$(messageD).attr('class','gramMessage');
+		    		
+		    		return $(D.$div(sentenceD, messageD)).attr('class','gram')[0];
 		    	} else {
 		    		throw 'unknown err: ' + err.e;
 		    	}
 		    })));
 		  }
-		return $(res).attr('class','paragraph')[0];
+		
+		var toggleOn = true;
+		
+		return $(res)
+			.attr('id', 'paragraph_' + i)
+			.attr('class','paragraph')
+			.click(function(){
+			  toggleOn = !toggleOn;
+			  $(this).attr('class', 'paragraph' + (toggleOn ? '' : ' off'));
+			  summarize();
+		})[0];
 	}
+
+
+
 
 	
 function bindDOM() {	
@@ -109,10 +171,12 @@ function bindDOM() {
 	
 	var jsonP = Z.unit(BASE_URL + FILE).pipeAsync(D.xhrJSON).print('== jsonP');
 	
+	DOC = jsonP.pipe(function (v) { DOC = v; });
+	
 	
 	var docP = jsonP.pipe(function (arr) {
 	
-		var paragraphs = arr.map(function (o) { return {m: o, v: formatParagraph(o)}; });
+		var paragraphs = arr.map(function (o, i) { return {m: o, v: formatParagraph(o, i)}; });
 
 		//add file breaks
 		var pages = paragraphs.reduce(function (acc, o) {
@@ -128,8 +192,26 @@ function bindDOM() {
 					elt = D.$span(o.m.file);
 				}			
 			
-			
-				acc.arr.push({m: {file: o.file}, v: $(D.$p(elt)).attr('class','file')[0]});
+				var lastFileD = $(D.$p(elt)).attr('class','file')[0];
+				
+				var toggleOn = true;
+				$(lastFileD).click(function () {
+					toggleOn = !toggleOn;
+					var rSib = this.nextSibling;
+					while (rSib) {
+						console.log('rSib', rSib);
+						if ($(rSib).attr('class').indexOf('paragraph') != -1) {
+							$(rSib).attr('class', 'paragraph' + (toggleOn ? '' : ' off'));
+							rSib = rSib.nextSibling;
+						} else {
+							rSib = false;
+						}
+					}
+					summarize();
+				});
+				
+				
+				acc.arr.push({m: {file: o.file}, v: lastFileD});
 			}
 			acc.arr.push(o);
 			return {arr: acc.arr, lastFile: o.m.file};		
@@ -151,9 +233,7 @@ window.addEventListener('load',bindDOM);
 	</script>
   </head>
   <body>
-  ok
-  
-  <h1>Doc</h1>
+  <div id="summary"></div>
   <div id="doc"></div>
   </body>
 </html>
