@@ -65,7 +65,17 @@ p.paragraph.off {
 	opacity: 1.0;
 }
 
-p.real { color: black; }
+.real { 
+	color: black; 
+	line-height: 1.5em;
+}
+.real span:hover { 
+	border: 1px dotted red; 
+}
+.real span.off {
+	background-color: silver;
+}
+
 .spell, .gram { color: #000 }
 .spell:hover, .gram:hover { color: #000 }
 
@@ -100,6 +110,7 @@ p.real { color: black; }
 
 function summarize () {
 
+	//paragraphs
 	var on = [];
 	var off = [];
 	$("p.paragraph").map(function (i, d) {
@@ -110,10 +121,29 @@ function summarize () {
 		}
 	});
 	
+	//sentences
+	var onParas = $("p.paragraph").map(function (i, d) { return [[i,this]]; })
+	var offSents = [];
+	Array.prototype.filter.call(onParas, 
+		function (arr) { var d = arr[1]; return $(d).attr('class').indexOf('off') == -1; })
+		.map(function (arr) {
+			var paragraphId = arr[0]; var paragraphD = arr[1];
+			$('.real span', paragraphD).map(function (i, d) {
+				if ($(this).attr('class').indexOf('off') != -1) {
+					offSents.push({para: paragraphId, sent: i});
+				}
+			});
+		});
+	
 	var d = D.$span(
 		$(D.$h2('Paragraphs:'))[0],
 		$(D.$span('On: ' + on.join(', '))).attr('class','on')[0], 
-		$(D.$span('Off: ' + off.join(', '))).attr('class','off')[0]);
+		$(D.$span('Off: ' + off.join(', '))).attr('class','off')[0],
+		$(D.$h2('Sentences:'))[0],
+		$(D.$span('Off: ' + 
+			offSents.map(function (o) { return '(' + o.para + ':' + o.sent + ')'; })			
+					.join(', ')))
+			.attr('class','off')[0]);
 	$(d).attr('id','summary');	
 	$insertDB('#summary', Z.unit(d));
 }
@@ -126,8 +156,22 @@ function summarize () {
 		  	var isSpellingError = o.errors[0].e == 'spell';
 		  	var lbl = $(D.$span(isSpellingError ? "Spelling:" : "Grammar:"))
 		  				.attr('class',isSpellingError ? "lblSpell" : "lblGram")[0];
-		  				
-		    res = D.$p.apply({}, [$(D.$span(o.paragraph)).attr('class','real')[0], lbl].concat(o.errors.map(function (err) {
+		    var textD = 
+		    	$(D.$span.apply({},
+		    		o.paragraph.split('.').map(function (sent) { 
+		    			var res = D.$span(sent + '.'); 
+		    			$(res).attr('class','on');
+		    			$(res).click(function (event) {
+		    				var toggleOn = $(this).attr('class').indexOf('off') == -1 ? true : false;
+			  				toggleOn = !toggleOn;
+			  				$(this).attr('class', (toggleOn ? 'on' : 'off'));
+			  				summarize();
+		    				event.stopPropagation();
+		    			});
+		    			return res;
+		    		})))
+		    	.attr('class','real')[0];
+		    res = D.$p.apply({}, [textD, lbl].concat(o.errors.map(function (err) {
 		    	if (err.e == "spell") {
 		    		var elt = 
 		    			err.s.length > 0 ?
@@ -149,12 +193,11 @@ function summarize () {
 		    })));
 		  }
 		
-		var toggleOn = true;
-		
 		return $(res)
 			.attr('id', 'paragraph_' + i)
 			.attr('class','paragraph')
 			.click(function(){
+			  var toggleOn = $(this).attr('class').indexOf('off') == -1 ? true : false;
 			  toggleOn = !toggleOn;
 			  $(this).attr('class', 'paragraph' + (toggleOn ? '' : ' off'));
 			  summarize();
@@ -194,9 +237,10 @@ function bindDOM() {
 			
 				var lastFileD = $(D.$p(elt)).attr('class','file')[0];
 				
-				var toggleOn = true;
 				$(lastFileD).click(function () {
+			  		var toggleOn = $(this).attr('class').indexOf('off') == -1 ? true : false;
 					toggleOn = !toggleOn;
+					$(this).attr('class','file' + (toggleOn ? '' : ' off'));
 					var rSib = this.nextSibling;
 					while (rSib) {
 						console.log('rSib', rSib);
@@ -223,6 +267,13 @@ function bindDOM() {
 
 
     $insertDB('#doc', docP);
+    
+    var toggleAllOn = true;
+    $('#toggleAll').click(function () {
+    	toggleAllOn = !toggleAllOn;
+    	$('.paragraph').attr('class','paragraph' + (toggleAllOn ? '' : ' off'));
+    	summarize();    
+    });
 
 }
 
@@ -234,6 +285,10 @@ window.addEventListener('load',bindDOM);
   </head>
   <body>
   <div id="summary"></div>
+  <div>
+  	<h2>Commands:</h2>
+  	<input id="toggleAll" type="button" value="toggle all"/>
+  </div>
   <div id="doc"></div>
   </body>
 </html>
