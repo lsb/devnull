@@ -39,12 +39,20 @@ Instead, a schedule statically specifies most of the scheduling decisions.  It s
 void preorder(void (*visit)(Prod &), Prod &p) {
   visit(p);
   for (Prod rhs in p) 
-    parPre(visit, rhs);
+    preorder(visit, rhs);
 }
 void postorder(void (*visit)(Prod &), Prod &p) {
   for (Prod rhs in p) 
-    parPost(visit, rhs);
+    postorder(visit, rhs);
   visit(p);
+}
+void recursive(void (*visit)(Prod &, int), Prod &p) {
+    int step = 0;
+    visit(p, step++);
+    for (Prod rhs in p) {
+      recursive(visit, rhs);
+      visit(p, step++); //repeat visit to p
+    }
 }
 \end{lstlisting}
 \end{minipage}
@@ -98,7 +106,7 @@ void visit2 (Prod &p) {
 
 \begin{figure}
 \subfloat[\textbf{Sequential sequence of traversals}]{\label{fig:hboxseq:sequence} \usebox{\seqtraversalsequence} } \\
-\subfloat[\textbf{Two sequential traversal pattern}]{\label{fig:hboxseq:traversals} \usebox{\seqtraversals} } \\
+\subfloat[\textbf{Three sequential traversal patterns}]{\label{fig:hboxseq:traversals} \usebox{\seqtraversals} } \\
 \subfloat[\textbf{Scheduled and compiled visits for ~\hlang{}.}]{\label{fig:hboxseq:compiled} \usebox{\hboxvisitors} } \\
 \caption{\textbf{Sequentially scheduled and compiled layout engine for \hlang{}.}}
 \label{fig:hboxseq}
@@ -183,18 +191,18 @@ The relationship between \code{recursive} traversals and \code{postorder} and \c
 \renewcommand{\ulitleft}{\bfseries}
 \renewcommand{\superscript}[1]{\ensuremath{^{\textrm{#1}}}}
 \renewcommand{\subscript}[1]{\ensuremath{_{\textrm{\uppercase{#1}}}}}
-\renewcommand{\syntleft}{\normalfont\itshape}
-\renewcommand{\syntright}{}
+\renewcommand{\syntleft}{\normalfont\itshape\texttt{<}}
+\renewcommand{\syntright}{\texttt{>}}
 \begin{grammar}
-<Sched> \deriv{} \emph{Sched} ; \emph{Sched}  ~ | ~ \emph{Sched} $\vert\vert$ \emph{Sched}  ~|~ \emph{Trav}
+<Sched> \deriv{} <Sched> ; <Sched>  ~ | ~ <Sched> $\vert\vert$ <Sched>  ~|~ <Trav>
 
-<Trav> \deriv{} <TravAtomic> \emph{Visit}*\{(<TravAtomic> $\mapsto$ \emph{Visit}*)*\}?
+<Trav> \deriv{} <TravAtomic> <Visit>*\{(<TravAtomic> $\mapsto$ <Visit>*)*\}?
 
 <TravAtomic>  \deriv{} "preorder" ~ | ~ "postorder" ~ | ~ "parPre"  ~ | ~  "parPost"  ~ | ~  "recursive" ~ 
 
-<Visit> \deriv{} <Prod>  \{ \emph{Step}* \}
+<Visit> \deriv{} <Prod>  \{ <Step>* \}
 
-<Step> \deriv{} \emph{Attrib} ~ | ~ "recur" \emph{V} 
+<Step> \deriv{} \emph{attrib} ~ | ~ "recur" \emph{v}
 \end{grammar}
 %<Sched, Trav, Visit, Step> \deriv{} \ldots ~ | ~ $\hole$        
 \end{minipage}

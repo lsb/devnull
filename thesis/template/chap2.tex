@@ -189,13 +189,55 @@ The dynamic evaluation strategy provides a small explanation for the natural sem
 
 
 
+\begin{figure}
+\renewcommand{\litleft}{\bfseries}
+\renewcommand{\ulitleft}{\bfseries}
+\renewcommand{\superscript}[1]{\ensuremath{^{\textrm{#1}}}}
+\renewcommand{\subscript}[1]{\ensuremath{_{\textrm{\uppercase{#1}}}}}
+\renewcommand{\syntleft}{\normalfont\itshape\texttt{<}}
+\renewcommand{\syntright}{\texttt{>}}
+\begin{grammar}
+<Top> \deriv{} <Top>* | <Trait> | <Class> | <Interface>
+
+<Interface> \deriv{} "interface" \emph{id} <AttribDecl>*
+
+<AttribDecl> \deriv{} "var" \emph{id} : \emph{id} 
+\alt  "input" \emph{id} :  \emph{id} 
+\alt "input"  \emph{id} : "?"  \emph{id}  
+\alt "input"   \emph{id} :  \emph{id}  = \emph{val})
+
+<Trait> \deriv{} "trait" \emph{id} <Child>* <AttribDecl>*<TopConstraint>*
+
+<Class> \deriv{} "class" \emph{id} ( \emph{id}* ) : \emph{id} <Child>* <AttribDecl>* <TopConstraint>*
+
+<Child> \deriv{} \emph{id} : ( \emph{id}  ~|~   [ \emph{id} ] )
+
+<TopConstraint> \deriv{}  <Constraint>
+\alt "loop" \emph{id} (<Constraint> ~|~ <Lhs> :=  "fold" <Expr> .. <Expr>)*
+
+<Constraint> \deriv{} <Lhs> := <Expr>
+
+<Expr> \deriv{} <Rhs> | \emph{unop} <Expr> | <Expr> \emph{binop} <Expr>
+
+<Rhs> \deriv{} <Lhs>  ~|~ "self" <Suffix> . \emph{id} ~|~  \emph{id} <Suffix> . \emph{id}
+
+<Lhs> \deriv{} \emph{id} ~|~ \emph{id . id}
+
+<Suffix> \deriv{} "\$i" | "\$-" | "\$$"
+\end{grammar}
+\caption{\textbf{EBNF Syntax for key forms in the functional specification language.} We omit semicolons and other decorations; see the examples for more detailed forms.}
+\label{fig:coresyntax}
+\end{figure}
+
+
 \section{Desugaring Loops and Other Modern Constructs}
 \label{sec:desugaring}
 
 The attribute grammar formalism was invented for describing semantics~[[CITE]] and before many modern constructs became mainstream: we had to design extensions for improved expressiveness and maintainability. Our extensions exploit concepts from structured, object-oriented, and functional programming. Other language designers have build such extensions as well~[[CITE]]: our challenge was to make expressive extensions that facilitate effective parallelization and do not overly complicate language and tool implementation. This section documents the language features and how they simplify implementation, and leaves performance optimization to the next chapter.
 
-Our key insight is that pre- and post-processing supports desugaring a feature-rich attribute grammar into the canonical attribute grammar notation. Tools then operate at the most appropriate stage, such as our scheduler on the small, canonical attribute grammar representation. Likewise, our code generators take a generated schedule and relate it back to a representation from early in the preprocessing stage. Many of the below features are built as explicit compiler stages, but over time, we found that declarative tree rewriting systems such as ANTLR and OMeta support automating individual stages.
+Our key insight is that pre- and post-processing supports desugaring a feature-rich attribute grammar into the canonical attribute grammar notation. Tools then operate at the most appropriate stage, such as our scheduler on the small, canonical attribute grammar representation. Likewise, our code generators take a generated schedule and relate it back to a representation from early in the preprocessing stage. Many of our features are built as explicit compiler stages, but over time, we found that declarative tree rewriting systems such as ANTLR and OMeta support automating individual stages.
 
+The subsections below illustrate the various features and how they relate to attribute grammars. Figure~\ref{fig:coresyntax} shows the syntax of our functional specification language. Section~\ref{??} shows the optional extension for behavioral specification and Section~\ref{??} for SIMD rendering macros. 
 
 
 \newsavebox{\ifacegrammar}
