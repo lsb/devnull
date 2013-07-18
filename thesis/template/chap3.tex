@@ -175,7 +175,7 @@ Rescheduling in this way may improve performance on small devices with little me
 \label{fig:nested}
 \end{figure}
 
-Sequential execution supports a traversal type that can compute more than \code{postorder} or \code{preorder}, which we call a \code{recursive} traversal. We use it, for example, for line breaking in our document layout case study. Consider inserting line breaks into the following stylized paragraph of XML strings (Figure~\ref{fig:nested}):
+Sequential execution supports a traversal type that can compute more than \code{postorder} or \code{preorder}, which we call a \code{recursive} traversal (Figure~\ref{fig:hboxseq:traversals}). We use a recursive traversal, for example, for line breaking in our document layout case study. Consider inserting line breaks into the following stylized paragraph of XML strings (Figure~\ref{fig:nested}):
 %
 $$\texttt{lorom <italic><huge>ipsum dolor</huge></italic> sit}$$
 %
@@ -307,6 +307,7 @@ parPre
 
 \subsection{Parallel Schedules: Across Travesals}
 We may exploit parallelism across traversals as well. For example, just as we created a different but functionally equivalent sequential schedule for \hlang, we can do the same manipulation to yield a new parallel schedule:
+
 \begin{minipage}{1\columnwidth}
 \begin{lstlisting}[mathescape,morekeywords={parPre,parPost}]
 (   parPost
@@ -319,7 +320,7 @@ We may exploit parallelism across traversals as well. For example, just as we cr
 ; parPre $\ldots$ $\emph{/* same as before */}$
 \end{lstlisting}
 \end{minipage}
-The ``$||$'' construct specifies that one traversal may be run concurrently with another. Neither traversal traversal depends on attributes written by the other, so the parallelizaton is safe. Even if we cannot exploit parallelism within a traversal, using ''$||$'' enables us to exploit parallel across them. 
+The ``$||$'' construct specifies that one traversal may be run concurrently with another. Neither traversal traversal depends on attributes written by the other, so the parallelizaton is safe. Even if we cannot exploit parallelism within a traversal, using ``$||$'' enables us to exploit parallel across them. 
 
 
 
