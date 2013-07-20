@@ -9,14 +9,14 @@ Our first challenge in this chapter is to restrict the scheduling language enoug
 
 Another artifact of layout specifications being magnitudes bigger than stencil formulas is that the correctness concerns change. For stencil computations, the verification challenge lies more in correctly optimizing the implementation of a traversal schedule. Layout computations encounter a challenge before that point: the size of the functional specification and the ensuing tangle of data dependencies require ensuring  that the parallel schedule itself is safe to implement. We use a variant of existing static dependency analyses of attribute grammars to verify that the schedule is race-free. 
 
-Our use of static analysis for the attribute grammars leads to an important result for layout languages: we show how to statically verify three important properties about them.  
+
+The dependencies that complicate reasoning about correctness of parallel code actually also complicate sequential code. Our use of static analysis for the attribute grammars leads to an important result for layout languages: we show how to statically verify three important properties about them.  
 \begin{itemize}
 \item \textbf{Totality} The layout language defines a solution for every syntactically well-formed input tree; it is unambiguous. 
 \item \textbf{Determinism} As discussed  in the previous paragraph, parallelization is safe.
 \item \textbf{Linearity (Single Assignment)} Every attribute is assigned to exactly once. Layout languages often perform \emph{reflow} to iteratively solve constraints or incremental computation, so this property bounds the need for it. 
 \end{itemize}
-The first property demonstrates the ability to reason about \emph{functional correctness} and the last two about \emph{behavioral correctness}. Put together, we verify that a language is unambiguous, supports parallelization, and with bounded asymptotic complexity. 
-
+The first property demonstrates the ability to reason about \emph{functional correctness} and the last two about \emph{behavioral correctness}. Put together, we verify that a language is unambiguous, supports parallelization, and with bounded asymptotic complexity.  
 
 \section{Language of Static Schedules}
 %Our approach builds upon the ideas of multipass attribute grammars and statically ordered attribute grammars~\cite{oag}. Before showing our technique, we review how to use these ideas on how to more efficiently evaluate attribute grammars than the na\"{i}ve dynamic approach of Chapter~\ref{chap:2}. Furthermore, we review how they enable proving properties about the attribute grammars such as unambiguity, and (inefficient) parallelization strategies. 
@@ -336,24 +336,102 @@ Compilation only requires an attribute grammar and the schedule. The traversal s
 Our code generation pipeline is further complicated but conceptually similar. The schedule is combined with the attribute grammar to form an intermediate representation, and different code generators target different backends, such as JavaScript, OpenCL, and C++. Furthermore, some of the reductions of Section~\ref{sec:desguaring} require augmenting or rewriting the intermediate representation, such as reinserting loops that were unrolled during scheduling (Section~\ref{???}). Our end-to-end compiler design is slightly different due to the synthesis algorithm (Chapter~\ref{chap:4})  and schedule autotuning (Section~\ref{sec:schedtuning}), but code generation for a schedule follows a more conventional process.
 
 
-
-\section{Schedule Verification}
-\subsection{Overview}
-\begin{itemize}
-\item properties to prove: schedule followed (and complete), dependencies realizable 
-\item structure of proof
-\end{itemize}
-\subsection{Axioms}
-\begin{itemize}
-\item axioms
-\item examples from each
-\end{itemize}
-\subsection{Proof}
-
 \section{Automatically Staging Memory Allocation for SIMD Rendering}
 \input{chap6staging}
 
 \section{Scheduling Loops}
+
+TODO
+
+
+
+
+
+
+\section{Verification}
+
+We automatically check an attribute grammar and its schedule for safety. This section focuses on two aspects of our approach: the properties to verify and the modular design of the verification procedure. The properties are significant in that they cover both functional and behavioral correctness, and are typically desired but not proven for layout languages and pattern programs. Furthermore, we check the properties through axiomatic reasoning parameterized by a local dependency analysis. This proof structure simplifies extending the language of statements and of schedules as most additions correspond to an isolated and com posable axiom. Later, in Chapter~\ref{chap:4}, we show a simple approach to changing the verifier into a synthesizer and thereby achieve fully automatic or computer-assisted parallelization.
+
+Our approach automatically checks three properties. 
+\begin{itemize}
+\item \textbf{Totality} The specification defines one and only one solution for every well-formed input tree. 
+\item \textbf{Determinism} The schedule evaluates the constraints of the attribute grammar without any data races.
+\item \textbf{Linearity (Single Assignment)} Every attribute is assigned exactly once. Layout languages often perform \emph{reflow} to iteratively solve constraints or incremental computation, verifies that reflow is strictly an optimization.
+\end{itemize}
+In this chapter, we illustrate how to check race freedom. The check for linearity is similar , and totality is a consequence of the determinism and linearity properties.
+
+We focus on a modular checking strategy for two reasons. First, we encountered implementation challenges without it. Our initial attempts to adapt the OAG~\cite{oag} algorithm, which is a search over a global dependency graph, suffered from many implementation bugs before we abandoned it. Our new approach instead decouples verification from synthesis and pattern checking from dependency analysis. Second, challenging our OAG implementation and the basic premise of our approach, we need to support adding new types of traversals. New schedule combinators, such as nested traversals, and individual patterns, such as recursive, should be simple to add as new types of parallel patterns are understood. Adding a parallel pattern should not require refactoring the entire verifier or synthesizer. Our new approach phrases each pattern as an independent axiom and automatically incorporates it into the checking procedure.
+
+
+\input{chapter3/algorithm}
+
+\subsection{Axiomatic Correctness Checking}
+
+%%%%%%
+
+Correctness axioms for checking an entire schedule are in Figure~\ref{fig:deductions}. The judgements recursively check a composition of traversals until reaching the traversal-specific checks of Figure~\ref{fig:checkers}. Checking tames worst-case time linear in the number of attributes and the number of their local dependencies. As a reminder, Figure~\ref{fig:hboxparallel:decomplang} defines the language of schedules.
+
+We use a small amount of notation. Variables $p$ and $q$ denote schedules (\lstinline{<Sched>}), $A$ and $B$ are sets of attributes, and $\alpha$ and $\beta$ are traversal types (\lstinline{<travAtomic>}). Attribute $a_{W, V{\rightarrow}W}$ is decorated with its production ($V{\rightarrow}W$) and the non-terminal within it ($W$). We write  $a_{*, V{\rightarrow}W}$ if $a$ can be associated with a non-terminal on either side of the production.
+
+The rules to check composition and individual traversals are as follows:
+
+\paragraph*{Sequential and parallel composition: ``\sched{;}'' and ``\sched{||}''}The simplest composition check is for sequencing: Hoare triple ``\sched{\{A\} p ; q \{C\}}'' (rule $\rrule{{seq}}$).  If attributes $A$ are solved before traversal ``\sched{p ; q}'', then attributes $C$ will be solved after. The conditions above the judgement bar state this is true if $p$ can always compute attributes $B$ given attributes $A$, and $q$ can always then compute $C$. The judgement is recursive. Analogous reasoning explains  ``\sched{||}'' (rule $\rrule{{par}}$).
+
+%\paragraph*{}
+%We split checking one traversal over the tree into two rules:
+
+\paragraph*{Nested composition: $\mapsto$}
+Rule $\rrule{{nest}_\alpha}$ checks outer traversal type $\alpha$ over regions where each one may have its own traversal type $\gamma$. Consider an outer traversal type of  \sched{parPre}: as it progresses top-down, every region might be guaranteed to have attributes of its root node solved before evaluation proceeds within it. For each region (the set of productions mapped to region traversal type $\gamma$), the rule calls $\texttt{alwaysCommunicate}_{\texttt{parPre}}$ to find the set $C_\gamma$ of  attributes that are externally set before the region is traversed. Rule $\rrule{{nest}_\alpha}$ calls checks for every region under the assumption that $C_\gamma$ is already solved.
+
+The first line of rule $\rrule{{nest}_\alpha}$ means that, for any outer traversal $\alpha$, attributes scheduled for the outer region are  treated as if they were in their own region ($\gamma = \alpha$). Traversals that do not use nesting are degenerate:  all the productions belong to one region ($\gamma = \alpha$).
+
+\paragraph*{Traversal over a region (e.g., parPre)}
+The schedule for a traversal of type $\beta$ over a region is correct if every production visit schedule is correct (rule $\rrule{{check}_\beta}$). A production visit schedule $Prod_i~\{~Step_j*~\}$ is correct when there is an order for computing its scheduled attributes $Step_j*$ along which all of the data dependencies of the corresponding semantic functions are satisfied. %The order exists if the transitive closure of attributes with satisfiable dependencies covers $B$. 
+
+Traversals that do not perform nesting, such as a single occurrence of \sched{parPre}, are handled as degenerate nested composition with one region: the entire tree.
+
+\paragraph*{Production visit}
+
+A fast and simple checking algorithm would be to mark each attribute  of a production as dirty or clean inside a structure that persists across checks of different visits to the same production. For each successive attribute in a visit's sequence, if all of its dependencies are met (dirty), mark the attribute, and otherwise fail the check. Non-local dependencies can be handled as below.
+
+
+To optimize the synthesis algorithm of Chapter~\ref{chap:4}, we use a slightly indirect algorithm to check the correctness of visiting a production.  The intuition is that it relaxes the specification of visit's attributes by treating the ordered sequence as an unordered set and checks the reachability of the set's dependency graph. 
+
+Figure~\frefb{fig:checkers}{fig:parprecheck} shows an unoptimized reachability computation for visiting a production inside a \sched{parPre} region. It is the standard transitive closure, except for two subtleties:
+
+First, only attributes that are meant to be scheduled are considered reachable ($B$ membership check in line 7). Incorrectly including unscheduled attributes would erroneously allow attributes with unresolved dependencies to also be included.  
+
+Second, attributes computed by visits to adjacent productions must be distinguished. Adjacent productions may be in the same region or in another. In a \sched{parPre} region, consider when $W$ is always an intermediate node of the region and attribute $a_{W,W{\rightarrow}X} \in B$ is always set by a parent production $V{\rightarrow}W$ in the same region. For this intra-region case, $a_{W,W{\rightarrow}X}$ is guaranteed to be reachable at the beginning of the visit to $W{\rightarrow}X$.  However, if $W$ can be the root node of the region, we must also check $a_{W,V{\rightarrow}W}$ is set by adjacent regions before the root is visited. %The checks for the intra-region case and the \texttt{alwaysCommunicate} inter-region case are in lines 4-5 of $\rrule{{nest}_\alpha}$.
+
+%\paragraph*{Sketches}
+%Rule $\rrule{{sketch}}$ separates checking the correctness of a schedule from whether a sketch matches it. First, a schedule must be correct irrespective of the accompanying sketch. Second, the schedule must syntactically match the schedule ($unify$). Later, we provide semantically constrained sketches that are checked by Prolog's more general unifier (Section~\ref{sec:prolog}). 
+
+Checking an explicit sequence reduces to checking that the transitive closure can be performed in the specified order rather then the declarative definition in Figure~\ref{fig:checkers} . The synthesizer of Chapter~\ref{chap:4} does not need to check for ordering, so we omit this check.
+
+
+%%%%%%
+\subsection{Property Proofs}
+The axioms check for determinism, which can be adapted to check the two other properties.
+
+First, the axioms check determinism, which means that rerunning the schedule will yield the same result.  We can check determinism by ensuring that a schedule computes the attributes of an attribute grammar without races. More precisely, it tracks what attributes are guaranteed to have been computed by any particular point of the schedule, and uses that to check that every step of the computation only relies on what is guaranteed to have been computed.
+
+Linearity requires that that every instance of an attribute is only assigned to once. We can check linearity by extending the axioms in two ways. First, they must check that for any given attribute $X_a$, it is either defined by all productions $X \rightarrow W$ or by all productions $W \rightarrow X$. Second, for every attribute assigned in production $X \rightarrow W$, it must only be scheduled for one visit. 
+
+Totality guarantees that every well-formed input tree yields one and only one result. It is a property of the language because any schedule must reach the same result. In contrast, determinism is a property of a schedule because, for the same language, rerunning one schedule may always return the same result while the same might not be guaranteed for another schedule. The proof of totality lies in the proof of linearity. Given a linear schedule, the dynamic dependency graph of every input document is directed and acyclic. The DAG property guarantees that the value of each node is a pure function of the values of the dominating nodes, and therefore the language has a (total) functional interpretation. Checking totality adds an additional step beyond checking linearity: totality requires that every attribute in the grammar appears in the schedule.
+
+\subsection{Verification is O(|A|)}
+Verifying a schedule for race-freedom takes time linear in the number of attributes. Our  description of the checker in Figures~\ref{fig:deductions} and~\ref{fig:checkers} does not show the optimizations that lead to this bound so we highlight the key ideas here.
+
+First, the number of axioms to check is linear in the number of attributes. Every traversal computes at least one attribute, which implies that the number of traversals is bounded by the number of attributes. Only non-empty visits must be checked, and their number is likewise bounded by the number of attributes.
+
+Second, the time to check an axiom is linearly bounded by the number of attributes (and their dependencies) to be scheduled by that axiom. For example, checking the visit to a production is effectively a topological sort of the local dependency graph restricted to the attributes evaluated during the visit. Topologically sorting dependency graph $G = (E, V)$ is $O(|E| + |V|)$. An attribute can have at most $|A|$ local dependencies so verification takes time $O(|A|)$.  For simplicity, our implementation does not use the topological sort optimization, and we only encountered performance issues on one case study due to that.
+
+Similar reasoning applies to quickly checking the two other properties. Linear checking of linearity follows the same proof structure. Each attribute is labeled based on the type of production that solves it and rule $\rrule{{check}_\beta}$ checks that the labels of attributes in $Step_j$ match production $Prod_i$. The time to check the axiom is therefore still bounded by the number of scheduled attributes. Finally, totality checks that the computed set of attributes matches the total set, and comparing two sets is also linear in the number of attributes.
+
+
+
+
+
 
 
 \section{Evaluation: Layout as Structured Parallel Visits}
