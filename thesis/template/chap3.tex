@@ -117,6 +117,7 @@ void visit2 (Prod &p) {
 
 
 \subsection{Sequential Schedules}  
+\label{subseq:seqscheds}
 We start by examining how to specify a safe static schedule for \hlang that respects any possible dynamic dependencies (Figure~\ref{fig:deps:full}).
 %Research into statically scheduled sequential attribute grammars revealed a variety of scheduling options. For example, some computations can be solved in one traversal over a tree and therefore merged into a parser, while others require multiple traversals. We focus on several important options and the automated reasoning supported for them.
 
@@ -339,10 +340,115 @@ Our code generation pipeline is further complicated but conceptually similar. Th
 \section{Automatically Staging Memory Allocation for SIMD Rendering}
 \input{chap6staging}
 
-\section{Scheduling Loops}
 
-TODO
 
+\section{Statically Scheduling Loops}
+\label{sec:loopscheduling}
+Many of the difficulties in computer science stem from handling loops.  Our question is how to statically schedule uses of the declarative construct of Section~\ref{subsec:loops}. The construct extends the language of statements to include non-nested loops, and an attribute computed in one step of one loop may depend on that of another. To avoid implementation complexity, we want to schedule loops through a reduction to a language without loops. Our insight is that we can finitely unroll any loop a fixed number of times in such a way that its schedule generalizes to a loop over an arbitrary number of items at runtime.
+ 
+Our problem is distinct from that of classical attribute grammar languages for two reasons. First, modern formalisms focusing on expression generally rely upon dynamic scheduling. Second, for the formalisms that provide static scheduling, loops would be over the tree rather than as part of the statement language. For example, a list of values would be encoded as a chain:
+
+
+\begin{minipage}{1\columnwidth}
+\renewcommand{\litleft}{\bfseries}
+\renewcommand{\ulitleft}{\bfseries}
+\renewcommand{\superscript}[1]{\ensuremath{^{\textrm{#1}}}}
+\renewcommand{\subscript}[1]{\ensuremath{_{\textrm{\uppercase{#1}}}}}
+\renewcommand{\syntleft}{\normalfont\itshape\texttt{<}}
+\renewcommand{\syntright}{\texttt{>}}
+\begin{grammar}
+<BinaryNode> \deriv{} <ValueList> <BinaryNode> <BinaryNode> ~|~ $\epsilon$
+
+<ValueList> \deriv{} \emph{number} <ValueList>  ~|~ $\epsilon$
+\end{grammar}
+\end{minipage}
+
+
+The position of a number in a \code{ValueList} chain corresponds to the tree level, and so a loop over them will occur as multiple steps of a global tree traversal. However, such loops are generally localized and one instance should be computable as part of the same step. Local loops simplify parallelization and can reduce the number of required tree traversals. Finally, local loops increase the expressivity of a traversal by eliminating what would otherwise represent a non-local dependency that could challenge scheduling as a structured tree traversal. 
+
+In terms of the above encoding, our support of loops corresponds to extending ordered attribute grammars with a Kleene star. We could use it to modify the above program to keep a list of values local to a production:
+
+\begin{minipage}{1\columnwidth}
+\renewcommand{\litleft}{\bfseries}
+\renewcommand{\ulitleft}{\bfseries}
+\renewcommand{\superscript}[1]{\ensuremath{^{\textrm{#1}}}}
+\renewcommand{\subscript}[1]{\ensuremath{_{\textrm{\uppercase{#1}}}}}
+\renewcommand{\syntleft}{\normalfont\itshape\texttt{<}}
+\renewcommand{\syntright}{\texttt{>}}
+\begin{grammar}
+<BinaryNode> \deriv{} \emph{number}* <BinaryNode> <BinaryNode> ~|~ $\epsilon$
+\end{grammar}
+\end{minipage}
+
+The language of constraints are recurrence relations~\cite{??}. Attribute dependencies may lead to subtle interactions with traversal patterns, however. For example, in a \code{recursive} traversal (Section~\ref{subseq:seqscheds}), each loop step may requiring recurring through a subtree before performing the loop step for the next subtree.
+
+Our approach is to divide the problem into two steps. First, we transform an attribute grammar with loops into one without them by unrolling several steps of the loop. Second, after scheduling the loopless grammar, we recover loops from the schedule. Our approach guarantees that, if the synthesizer reports a loopless schedule, dependency-preserving loops will be recovered from it.
+
+\subsection{Reduction to OAGs by Unrolling}
+We show how to schedule the following loop:
+
+\begin{lstlisting}
+interface TopI {
+  var count : int;
+  var i : int;
+  input fixeda : int;
+  input fixedb : int;
+}
+class TopC : TopI {
+  children {  childs : [ TopI ]; }
+  actions {
+    loop childs {
+      childs.count := fold 0 .. childs$-.count + 1;
+      childs.i := 
+        fold 
+        fixeda 
+        ..         
+        childs$-.i  + childs$i.fixedb + childs$$.count;
+    }
+  }
+}
+\end{lstlisting}
+
+Our reduction unrolls the loop into the following:
+\begin{lstlisting}
+interface TopI {
+  var i : int;
+  input fixeda : int;
+  input fixedb : int;
+  input fixedc : int;
+}
+class TopC : TopI {
+  attributes {
+    var childs0_count, childs1_count, childs2_count, childsn_count : int;
+    var childs0_i, childs1_i, childs2_i, childsn_i : int;
+  }
+  children {  
+    childs0, childs1, childs2, childsn : TopI;
+  }
+  actions {   
+    childs0_count := f();
+    childs0.count := f(childs0_count);
+    childs1_count := f(childs0_count);
+    childs1.count := f(childs1_count);
+    childs2_count := f(childs1_count);
+    childs2.count := f(childs2_count);
+    childsn_count := f(childs2_count);
+    childsn.count := f(childsn_count);
+
+    childs0_i := f(fixeda, childs0_fixedb, childsn_count);
+    childs0.i := f(childs0_i);
+    childs1_i := f(childs0_i, childs1.fixedb);
+    childs1.i := f(childs1_i);
+    childs2_i := f(childs1_i, childs2.fixedb);
+    childs2.i := f(childs2_i);
+    childsn_i := f(childs2_i, childsn.fixedb);
+    childsn.i := f(childs2_n);
+  }
+}        
+\end{lstlisting}
+
+
+\subsection{Recovery by Commuting Abstractions}
 
 
 
@@ -419,7 +525,7 @@ Linearity requires that that every instance of an attribute is only assigned to 
 
 Totality guarantees that every well-formed input tree yields one and only one result. It is a property of the language because any schedule must reach the same result. In contrast, determinism is a property of a schedule because, for the same language, rerunning one schedule may always return the same result while the same might not be guaranteed for another schedule. The proof of totality lies in the proof of linearity. Given a linear schedule, the dynamic dependency graph of every input document is directed and acyclic. The DAG property guarantees that the value of each node is a pure function of the values of the dominating nodes, and therefore the language has a (total) functional interpretation. Checking totality adds an additional step beyond checking linearity: totality requires that every attribute in the grammar appears in the schedule.
 
-\subsection{Verification is O(|A|)}
+\subsection{Verification is $O(|A|)$}
 Verifying a schedule for race-freedom takes time linear in the number of attributes. Our  description of the checker in Figures~\ref{fig:deductions} and~\ref{fig:checkers} does not show the optimizations that lead to this bound so we highlight the key ideas here.
 
 First, the number of axioms to check is linear in the number of attributes. Every traversal computes at least one attribute, which implies that the number of traversals is bounded by the number of attributes. Only non-empty visits must be checked, and their number is likewise bounded by the number of attributes.

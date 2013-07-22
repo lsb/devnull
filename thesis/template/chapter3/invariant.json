@@ -1,0 +1,17 @@
+  {
+    "interfaces": {
+      "topi": {
+          "vars": ["i"],
+          "inputs": ["display", "refname"]
+        }
+    },
+    "traits": {
+},
+    "classes": {
+      "topc": {
+          "interface": "topi",
+          "vars": [],
+          "inputs": ["fixed"]
+        }
+    }
+  }

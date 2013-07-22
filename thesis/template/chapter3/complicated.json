@@ -1,0 +1,17 @@
+  {
+    "interfaces": {
+      "topi": {
+          "vars": ["count", "i"],
+          "inputs": ["fixeda", "display", "refname", "fixedb"]
+        }
+    },
+    "traits": {
+},
+    "classes": {
+      "topc": {
+          "interface": "topi",
+          "vars": [],
+          "inputs": []
+        }
+    }
+  }

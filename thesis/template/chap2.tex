@@ -437,6 +437,7 @@ class HBox : BoxI {
 \end{figure}
 
 \subsection{Loops}
+\label{subsec:loops}
 We extend our language with declarative loops over the attributes of multiple nodes. They are an expressive extension over the uniform recurrence relations of [[CITE]].
 
 The loop construct, \code{loop}, specifies a block of loop body statements. It acts over a sequence of nodes declared with the same interface, such as \code{childs : [ BoxI ]} in Figure~\ref{fig:loops}. The looping order is restricted to forward iteration, though our approach generalizes to other loop orders.
@@ -461,9 +462,19 @@ loop childs {
   childs.counter2 := fold 0 .. childs$-.counter1 + 1;
 }
 \end{lstlisting}
-The programmer does not need to order the statements.  For example, our system infers that the imperative code that implements the above declarations is just one imperative loop that fuses them together. The incorrect alternative of implementing the declarations as a different imperative loop for each would lead to unfulfilled data dependencies. The freedom in statement order supports automatic parallelization, but also allowed programmers choice in how to structure the program once machine considerations were removed.
+The programmer does not manually order the statements.  For example, our system infers that the imperative code that implements the above declarations is just one imperative loop that fuses them together. The incorrect alternative of implementing the declarations as a different imperative loop for each would lead to unfulfilled data dependencies. 
 
-We reduced scheduling loops to scheduling canonical attribute grammars. Our insight is that, for a restricted language of relative indices, we can schedule several unrolled loop steps and generalize the schedule to the rest. Section~\ref{???} discusses this in more detail. 
+We reduced scheduling loops to scheduling canonical attribute grammars. Our insight is that, for a restricted language of relative indices, we can schedule several unrolled loop steps and generalize the schedule to the rest. Section~\ref{sec:loopscheduling} discusses this in more detail. 
+
+The declarative nature of the loop construct provides two key benefits. First, coupled with the restricted indexing language, underspecification of the statement order provides freedom for automatic parallelization (Section~\ref{sec:loopscheduling}). Second, it allows programmers to choose how to structure the program. For example, separating loop statements as above might improve legibility if they are for two different purposes, but as the computation is more intertwined, the programmer has the freedom to choose the following formulation instead:
+\begin{lstlisting}
+loop childs {
+  childs.counter2 := fold 0 .. childs$-.counter1 + 1;
+  childs.counter1 := fold 0 .. childs$-.counter2 + 1;
+}
+\end{lstlisting}
+The formulation brought the two statements together and changed their lexical order. Our language guarantees that such a refactoring does not change the semantic meaning of the code.
+
 
 \subsection{Embedded Domain Specific Language: Functional Rendering}
 We designed our system for interaction with other tools and languages. A key ability is to invoke externally-defined functions, such as \code{max()}  of Figure~\ref{fig:loops} for the maximum of two numbers and \code{paintRect()} of Figure~\ref{fig:trait} to draw a rectangle to the screen. Attribute grammars are compiled to run in some host system, such as JavaScript or OpenCL, and any function in scope to the generated code may be called.
