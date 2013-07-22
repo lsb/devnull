@@ -122,9 +122,9 @@ function summarize () {
 	});
 	
 	//sentences
-	var onParas = $("p.paragraph").map(function (i, d) { return [[i,this]]; })
+	var paras = $("p.paragraph").map(function (i, d) { return [[i,this]]; })
 	var offSents = [];
-	Array.prototype.filter.call(onParas, 
+	Array.prototype.filter.call(paras, 
 		function (arr) { var d = arr[1]; return $(d).attr('class').indexOf('off') == -1; })
 		.map(function (arr) {
 			var paragraphId = arr[0]; var paragraphD = arr[1];
@@ -146,6 +146,8 @@ function summarize () {
 			.attr('class','off')[0]);
 	$(d).attr('id','summary');	
 	$insertDB('#summary', Z.unit(d));
+	
+	return {paras: paras, onParas: on, offSents: offSents};
 }
 
 	function formatParagraph (o, i) { // jsonParagraph -> DOM
@@ -282,6 +284,59 @@ function bindDOM() {
     	summarize();    
     });
 
+
+	function getParagraph (i) {
+		var res = null;
+		$("p.paragraph").map(function (idx, d) { if (idx == i) res = this; });
+		return res;
+	}
+	function mapOffSents (offs) {
+		var res = {};
+		offs.forEach(function (o) {
+			if (!res[o.para]) res[o.para] = [];
+			res[o.para].push(o.sent);
+		});	
+		return res;
+	}
+	
+	
+    
+    $('#query').click(function () {    
+    	var summary = summarize(); //{paras: paras, onParas: on, offSents: offSents};
+    	
+    	var offSentMap = mapOffSents(summary.offSents);
+    	
+    	var paraSents = summary.paras.map(function (id) {
+    		if (summary.onParas.indexOf(id) == -1) return [];
+    		
+    		var paragraphD = getParagraph(id);
+    		var offSents = offSentMap[id];
+    		if (!offSents) offSents = [];
+    		
+    		
+    		var sents = [];
+    		$('.real span', paragraphD).map(function (i, d) {
+    			if (offSents[i]) return null;
+    			sents.push($(d).html());
+			});
+			someGlobal = sents;
+			return sents;
+    	});
+    	var flatSentences = Array.prototype.concat.apply([], paraSents);
+    	
+    	console.log('sending', flatSentences);
+    	
+    	$.post('api/turkit', {sentences: flatSentences})
+			.done(function (data) {
+				console.log('got back', data);
+				alert('posted');
+			
+			});
+				
+
+    	
+    });
+
 }
 
 
@@ -295,6 +350,7 @@ window.addEventListener('load',bindDOM);
   <div>
   	<h2>Commands:</h2>
   	<input id="toggleAll" type="button" value="toggle all"/>
+  	<input id="query" type="button" value="query"/>
   </div>
   <div id="doc"></div>
   </body>
