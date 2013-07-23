@@ -15,16 +15,41 @@ app.get('/hello.txt', function(req, res){
 */
 
 var delay = 10 * 1000;
-function fetchGet (url, sent) {
+
+
+var jobCounter = 0;
+var batches = [];
+function makeBatch (sentences, batchID) {
+	jobCounter++;
+	var res = [];
+	res.count = 0;
+	res.batchID = batchID;
+	batches[jobCounter] = res;	
+	return jobCounter;
+}
+function getBatch (jobID) {
+    return batches[jobID];
+}
+function updateBatch(jobID, i, result) {
+	batches[jobID][i] = result;
+	batches[jobID].count++;
+}
+
+
+function fetchGet (url, sent, sentenceI, jobID) {
 	request(url, function (err, response, body) {
-		if (response.statusCode == 404) {
+		if (!response) {
+			console.log('no response (offline?), try again in ' + (delay / 1000) + ' seconds...');
+			setTimeout(function () { fetchGet(url, sent, sentenceI, jobID); }, delay);
+		} else if (response.statusCode == 404) {
 			console.log('404, try again in ' + (delay / 1000) + ' seconds...');
-			setTimeout(function () { fetchGet(url, sent); }, delay);
+			setTimeout(function () { fetchGet(url, sent, sentenceI, jobID); }, delay);
 		} else {
 			try {
-				var out = JSON.parse(body)[0];
+				var out = JSON.parse(body)[0];				
 				console.log('Result');
 				console.log(out, sent);
+				updateBatch(jobID, sentenceI, out);
 			} catch (exn) {
 				console.log('error', err);
 				console.log('response', response);
@@ -35,30 +60,47 @@ function fetchGet (url, sent) {
 	});
 }
 
+app.get('/api/improvements', function (req, res) {
+	var jobID = req.query.jobID; 
+	
+	console.log('got request for batch', jobID);
+	var currentResult = getBatch(jobID);
+	
+	var out = {
+		count: currentResult.count, 
+		sentences: currentResult, 
+		jobID: jobID, 
+		batchID: currentResult.batchID,
+		repollDelayMS: delay};
+	console.log('sending result', out);
+	res.send(JSON.stringify(out));	
+}); 
+
 app.post('/api/turkit', function (req, res) {
-	var sents = req.body.sentences;
-	res.send(JSON.stringify({succ: true}));
+	var sents = req.body.sentences ? req.body.sentences : [];
+	var batchID = req.body.batchID;
+	var jobID = makeBatch(sents, batchID);
+	res.send(JSON.stringify({jobID: jobID}));
 	console.log('got sents', sents);
 	
 	function buildUrl (sent) {
 		return 'http://vivam.us/human/ask?' + qs.stringify({
-			instructions: 'Copy editing: are there spelling or grammar mistakes in the following sentences?', //task description
+			instructions: //task description
+				'Copy editing: are there spelling or grammar mistakes in the following sentences? Ignore style formatting hints such as "\section{Chapter name.}" and "\ref{??}"', 
 			question: 
 				JSON.stringify({Radio: {
 					questionText: sent,
 					chooseOne: ['yes','no']
 				}})
 			});
-	}
+	}	
 	
-	sents.map(function (sent) {
-
+	sents.map(function (sent, idx) {
 		console.log('asking for', sent);
 		var url = buildUrl(sent);
 		console.log('url', url);	
 		request.put(url, function (error, response, body) { /* whatevs */  });
-		fetchGet(url, sent);
-	
+		fetchGet(url, sent, idx, jobID);	
 	});
 
 });

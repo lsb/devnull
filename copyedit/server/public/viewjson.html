@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Pretty print spelling and grammar errors</title>
+    <title>Turk Error Finder</title>
     <script src="jquery-1.7.1.min.js"></script>
     <script>
         function $insertDB (elt, db) { db.pipe(D.swap($(elt)[0])); }
@@ -108,6 +108,24 @@ p.paragraph.off {
 	</style>
 	<script>
 
+
+function toggle (d) {
+	var style = $(d).attr('class');	
+	var toggleOn = style.indexOf('off') == -1 ? true : false;
+	toggleOn = !toggleOn;
+	if (toggleOn) {
+		if (style.indexOf('off') != -1) style = style.replace('off','on');
+		else if (style.indexOf('on') != -1) { /* nop */ }
+		else style = style + " on";
+	} else {
+		if (style.indexOf('on') != -1) style = style.replace('on','off');
+		else if (style.indexOf('off') != -1) { /* nop */ }
+		else style = style + " off";	
+	}	
+	$(d).attr('class', style);
+	return toggleOn;
+}
+
 function summarize () {
 
 	//paragraphs
@@ -151,9 +169,9 @@ function summarize () {
 }
 
 	function formatParagraph (o, i) { // jsonParagraph -> DOM
-		var res;
+		var resP;
 		  if (o.errors.length == 0) {
-		    res = D.$p(o.paragraph);
+		    resP = D.$p(o.paragraph);
 		  } else {
 		  	var isSpellingError = o.errors[0].e == 'spell';
 		  	var lbl = $(D.$span(isSpellingError ? "Spelling:" : "Grammar:"))
@@ -167,10 +185,11 @@ function summarize () {
 		    			var res = D.$span(sent + '.'); 
 		    			$(res).attr('class','on');
 		    			$(res).click(function (event) {
-		    				if ($(res).attr('class').indexOf('off') == -1) {
-								var toggleOn = $(this).attr('class').indexOf('off') == -1 ? true : false;
-								toggleOn = !toggleOn;
-								$(this).attr('class', (toggleOn ? 'on' : 'off'));
+		    				if ($(resP).attr('class').indexOf('off') == -1) {
+		    					var toggleOn = toggle(this);
+//								var toggleOn = $(this).attr('class').indexOf('off') == -1 ? true : false;
+//								toggleOn = !toggleOn;
+//								$(this).attr('class', (toggleOn ? 'on' : 'off'));
 								summarize();
 		    					event.stopPropagation();
 		    				} else {
@@ -180,7 +199,7 @@ function summarize () {
 		    			return res;
 		    		})))
 		    	.attr('class','real')[0];
-		    res = D.$p.apply({}, [textD, lbl].concat(o.errors.map(function (err) {
+		    resP = D.$p.apply({}, [textD, lbl].concat(o.errors.map(function (err) {
 		    	if (err.e == "spell") {
 		    		var elt = 
 		    			err.s.length > 0 ?
@@ -202,13 +221,14 @@ function summarize () {
 		    })));
 		  }
 		
-		return $(res)
+		return $(resP)
 			.attr('id', 'paragraph_' + i)
 			.attr('class','paragraph')
 			.click(function(){
-			  var toggleOn = $(this).attr('class').indexOf('off') == -1 ? true : false;
-			  toggleOn = !toggleOn;
-			  $(this).attr('class', 'paragraph' + (toggleOn ? '' : ' off'));
+			  var toggleOn = toggle(this);
+			  //var toggleOn = $(this).attr('class').indexOf('off') == -1 ? true : false;
+			  //toggleOn = !toggleOn;
+			  //$(this).attr('class', 'paragraph' + (toggleOn ? '' : ' off'));
 			  summarize();
 		})[0];
 	}
@@ -247,12 +267,12 @@ function bindDOM() {
 				var lastFileD = $(D.$p(elt)).attr('class','file')[0];
 				
 				$(lastFileD).click(function () {
-			  		var toggleOn = $(this).attr('class').indexOf('off') == -1 ? true : false;
-					toggleOn = !toggleOn;
-					$(this).attr('class','file' + (toggleOn ? '' : ' off'));
+				    var toggleOn = toggle(this);
+			  		//var toggleOn = $(this).attr('class').indexOf('off') == -1 ? true : false;
+					//toggleOn = !toggleOn;
+					//$(this).attr('class','file' + (toggleOn ? '' : ' off'));
 					var rSib = this.nextSibling;
 					while (rSib) {
-						console.log('rSib', rSib);
 						if ($(rSib).attr('class').indexOf('paragraph') != -1) {
 							$(rSib).attr('class', 'paragraph' + (toggleOn ? '' : ' off'));
 							rSib = rSib.nextSibling;
@@ -280,7 +300,7 @@ function bindDOM() {
     var toggleAllOn = true;
     $('#toggleAll').click(function () {
     	toggleAllOn = !toggleAllOn;
-    	$('.paragraph').attr('class','paragraph' + (toggleAllOn ? '' : ' off'));
+    	$('.paragraph').attr('class','paragraph' + (toggleAllOn ? ' on' : ' off'));
     	summarize();    
     });
 
@@ -300,42 +320,73 @@ function bindDOM() {
 	}
 	
 	
+	function fetchResults(jobID, flatSentences, batchID, paraSents) {
+		$.get('api/improvements?jobID=' + jobID)
+		 .done(function (data) {
+		 	try {
+		 	    console.log('fetched', data);
+		 		var out = JSON.parse(data);
+		 		if (out.count == flatSentences.length) {
+		 			console.log('done, got all sentences', flatSentences, out.sentences);
+		 		} else {
+		 			console.log('Try again in ', out.repollDelayMS, 'ms, only got ', out.count, ' / ', flatSentences.length);
+		 			setTimeout(function () {
+		 					fetchResults(jobID, flatSentences, batchID, paraSents);
+		 				}, out.repollDelayMS);
+		 		}
+		 	} catch (e) {
+		 		console.log('could not handle get response', 
+		 			{jobID: jobID,
+		 			 flatSentences: flatSentences,
+		 			 batchID: batchID},
+		 			data);
+		 	}
+		 });
+	}
+	
+	
     
+    var batchID = 0;
     $('#query').click(function () {    
+    	batchID++;
     	var summary = summarize(); //{paras: paras, onParas: on, offSents: offSents};
     	
     	var offSentMap = mapOffSents(summary.offSents);
     	
+    	// {text: [ string ], nodes: [ dom] }
     	var paraSents = summary.paras.map(function (id) {
     		if (summary.onParas.indexOf(id) == -1) return [];
     		
     		var paragraphD = getParagraph(id);
     		var offSents = offSentMap[id];
-    		if (!offSents) offSents = [];
-    		
+    		if (!offSents) offSents = [];    		
     		
     		var sents = [];
+    		var sentsD = [];
     		$('.real span', paragraphD).map(function (i, d) {
-    			if (offSents[i]) return null;
+    			if (offSents.indexOf(i) != -1) return null;
     			sents.push($(d).html());
+    			sentsD.push(d);
 			});
-			someGlobal = sents;
-			return sents;
+			return {text: sents, nodes: sentsD};
     	});
-    	var flatSentences = Array.prototype.concat.apply([], paraSents);
+    	var flatSentences = Array.prototype.concat.apply([], 
+    		paraSents.map(function (o) { return o.text; }));
     	
     	console.log('sending', flatSentences);
     	
-    	$.post('api/turkit', {sentences: flatSentences})
+    	$.post('api/turkit', {sentences: flatSentences, batchID: batchID})
 			.done(function (data) {
-				console.log('got back', data);
-				alert('posted');
-			
+				try {
+					console.log('got back', data);
+					fetchResults(JSON.parse(data).jobID, flatSentences, batchID, paraSents);			
+				} catch (exn) {
+					console.log('failed to parse data', data, exn);
+				}
 			});
 				
 
-    	
-    });
+    });    
 
 }
 
