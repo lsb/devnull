@@ -28,10 +28,6 @@ Statically scheduled evaluation departs from the dynamic evaluation strategy of 
 Instead, a schedule statically specifies most of the scheduling decisions.  It specifies a sequence of tree traversals and the order of statements to use within each traversal. During a traversal at runtime, the order of nodes to traverse is based on the traversal pattern, such as top-down, rather than by inspecting data dependencies. Likewise, the statements to execute for a node are looked up based on the node's type rather than by data dependencies.  Our approach is a more compositional variant of others. Our flexibility requirements led to focusing on the ability to compose different types of traversals, such as by sequencing and nesting.
 
 
-
-
-
-
 \newsavebox{\seqtraversals}
 \begin{lrbox}{\seqtraversals}% Store first listing
 \begin{minipage}{1\columnwidth}
@@ -384,68 +380,106 @@ The language of constraints are recurrence relations~\cite{??}. Attribute depend
 
 Our approach is to divide the problem into two steps. First, we transform an attribute grammar with loops into one without them by unrolling several steps of the loop. Second, after scheduling the loopless grammar, we recover loops from the schedule. Our approach guarantees that, if the synthesizer reports a loopless schedule, dependency-preserving loops will be recovered from it.
 
+
+\begin{figure}
+\centering
+\subfloat[\textbf{Unrolled Loop Dependencies.}]{\label{fig:unrolling:deps}
+\begin{minipage}{1\columnwidth}\centering
+\includegraphics[trim=0 0 0 0,clip,width=0.7\columnwidth]{chapter3/unrolledloop}
+\end{minipage}}\\
+\subfloat[\textbf{Staging as Two Loops.}]{\label{fig:unrolling:stages}
+\begin{minipage}{1\columnwidth}\centering
+\includegraphics[trim=0 0 0 0,clip,width=1.0\columnwidth]{chapter3/stagedloop}
+\end{minipage}}
+\caption{\textbf{Loop scheduling}.The loop code can be scheduled as two loops that occur in the same traversal.}
+\label{fig:unrolling}
+\end{figure}
+
+
+
 \subsection{Reduction to OAGs by Unrolling}
 We show how to schedule the following loop:
 
-\begin{lstlisting}
-interface TopI {
-  var count : int;
+\begin{lstlisting}[mathescape]
+interface NodeI {
+  var c : int;
   var i : int;
-  input fixeda : int;
-  input fixedb : int;
+  input a : int;
+  input b : int;
 }
-class TopC : TopI {
-  children {  childs : [ TopI ]; }
+class NodeC : NodeI {
+  children {  childs : [ NodeI ]; }
   actions {
     loop childs {
-      childs.count := fold 0 .. childs$-.count + 1;
+      childs.c := fold 0 .. childs$\$-$.c + 1;
       childs.i := 
         fold 
-        fixeda 
+        a 
         ..         
-        childs$-.i  + childs$i.fixedb + childs$$.count;
+        childs$\$-$.i  + childs$\$i$.b + childs$\$$.c;
     }
   }
 }
 \end{lstlisting}
 
-Our reduction unrolls the loop into the following:
-\begin{lstlisting}
-interface TopI {
+Our reduction unrolls the loop into 4 steps ($0$, $1$, $2$, and $n$):
+
+\begin{lstlisting}[mathescape]
+interface NodeI {
+  var c : int;
   var i : int;
-  input fixeda : int;
-  input fixedb : int;
-  input fixedc : int;
+  input a : int;
+  input b : int;
 }
-class TopC : TopI {
-  attributes {
-    var childs0_count, childs1_count, childs2_count, childsn_count : int;
-    var childs0_i, childs1_i, childs2_i, childsn_i : int;
-  }
+class NodeC : NodeI {
   children {  
-    childs0, childs1, childs2, childsn : TopI;
+    childs0, childs1, childs2, childsn : NodeI;
   }
   actions {   
-    childs0_count := f();
-    childs0.count := f(childs0_count);
-    childs1_count := f(childs0_count);
-    childs1.count := f(childs1_count);
-    childs2_count := f(childs1_count);
-    childs2.count := f(childs2_count);
-    childsn_count := f(childs2_count);
-    childsn.count := f(childsn_count);
+    childs0.c := 0 + 1;
+    childs1.c := childs0.c + 1;
+    childs2.c := childs1.c + 1;
+    childsn.c := childs2.c + 1;
 
-    childs0_i := f(fixeda, childs0_fixedb, childsn_count);
-    childs0.i := f(childs0_i);
-    childs1_i := f(childs0_i, childs1.fixedb);
-    childs1.i := f(childs1_i);
-    childs2_i := f(childs1_i, childs2.fixedb);
-    childs2.i := f(childs2_i);
-    childsn_i := f(childs2_i, childsn.fixedb);
-    childsn.i := f(childs2_n);
+    childs0.i := a + childs0.b + childsn.c;
+    childs1.i := childs0.i + childs1.b + childsn.c;
+    childs2.i := childs1.i + childs2.b + childsn.c;
+    childsn.i := childs2.i + childsn.b + childsn.c;
   }
 }        
 \end{lstlisting}
+
+
+
+The reduction performs several rewrites that unroll loops and then substitute variable names in the unrolled statements:
+
+\begin{figure}
+\begin{align*}
+\llbracket ~child : [ interface ] ~\rrbracket &\rightarrow child0, child1, child2, child \texttt{n} : interface 
+\\
+\llbracket child.fld := \texttt{fold} ~ e_{\texttt{init},fld} ~ .. ~ e_\texttt{step} \rrbracket &\rightarrow 
+\\
+& child0.fld = \llbracket~e_\texttt{step}[\forall ~f:  ~ e_{\texttt{init},f} ~/~ child\$\texttt{-}.f~]~\rrbracket_0; 
+\\
+& child1.fld = \llbracket~e_\texttt{step}~\rrbracket_1; 
+\\
+& child2.fld = \llbracket~e_\texttt{step}~\rrbracket_2; 
+\\
+& childn.fld = \llbracket~e_\texttt{step}~\rrbracket_\texttt{n} 
+\\
+\llbracket ~child\$\$.fld ~\rrbracket_\alpha &\rightarrow child \texttt{n}. fld
+\\
+\llbracket ~child\$i.fld \rrbracket_\alpha & \rightarrow child\alpha.fld
+\\
+\llbracket ~child\$\texttt{-}.fld \rrbracket_1 & \rightarrow child0.fld
+\\
+\llbracket ~child\$\texttt{-}.fld \rrbracket_2 & \rightarrow child1.fld
+\\
+\llbracket ~child\$\texttt{-}.fld \rrbracket_\texttt{n} & \rightarrow child2.fld
+\end{align*}
+\caption{\textbf{Rewrite Rules for Loop Reduction}. Cases of $\llbracket \cdot \rrbracket$ that simply recur are elided.}
+\label{fig:loopreduction}
+\end{figure}
 
 
 \subsection{Recovery by Commuting Abstractions}
