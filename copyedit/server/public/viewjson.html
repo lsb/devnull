@@ -336,18 +336,48 @@ function bindDOM() {
 		 				if (ratings.length == 0) {
 		 					$(flatDoms[i]).fadeTo(1000, Math.max(1.0 - ratio, 0.2));
 		 				} else {
-							var numOk = 0;
-							ratings.forEach(function (rating) {
-								if (rating == 'ok') numOk++;		 					
-							});
-							var ratio = ratings.length == 0 ? 0 : (numOk / ratings.length);
-							console.log(
-								'rating',
-								ratio, 
-								flatSentences[i], 
-								ratings.filter(function (i) { return i != 'ok'; }));
-							$(flatDoms[i]).fadeTo(1000, Math.max(1.0 - ratio, 0.2));
-							$(flatDoms[i]).css("color", "rgb(" + Math.round((1.0 - ratio) * 255) + ",0,0)");
+							var numOk = ratings.filter(function (o) { return o == 'ok'; }).length;
+							if (numOk != ratings.length) {
+								var notes = ratings.filter(function (i) { return i != 'ok'; }).join(' \n');
+								console.log(
+									'Rating',
+									ratio, 
+									flatSentences[i]);
+								console.error('Corrections',notes);
+
+								var ratio = ratings.length == 0 ? 0 : (numOk / ratings.length);
+								$(flatDoms[i]).css(
+									"background-color", 
+									"rgb(255," 
+										+ Math.round((1.0 - ratio) * 200 + 55) + "," 
+										+ Math.round((1.0 - ratio) * 200 + 55) + ")");
+
+								//tool tip
+						 		var moveLeft = 20;
+								var moveDown = 10;
+								
+								var tipText = 
+									"<b>" + (ratings.length - numOk) + " Flagged</b>"
+									+ "<br/><br>"
+									+ notes.replace('\n','<br/><br/>');								
+								$(flatDoms[i]).hover(function(e) {
+								  $('#tooltip')
+									.html(tipText)								  
+								  	.show()
+								  	.attr('class','tip' + i)
+								  	.css('position', 'absolute')
+									.css('top', e.pageY + moveDown)
+									.css('left', e.pageX + moveLeft)
+								  	.css('background-color','yellow')
+								  	.css('border', '1px solid black')								
+									;
+								}, function() {
+									setTimeout(function() { 
+										if ($('#tooltip').attr('class') == 'tip' + i)
+											$('#tooltip').fadeOut(1000); 
+									}, 3000);
+								});								
+							}
 						}
 		 			});
 		 		} else {
@@ -430,5 +460,6 @@ window.addEventListener('load',bindDOM);
   	<input id="query" type="button" value="query"/>
   </div>
   <div id="doc"></div>
+  <div id="tooltip"></div>
   </body>
 </html>
