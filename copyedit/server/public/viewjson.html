@@ -328,6 +328,28 @@ function bindDOM() {
 		 		var out = JSON.parse(data);
 		 		if (out.count == flatSentences.length) {
 		 			console.log('done, got all sentences', flatSentences, out.sentences);
+
+					var flatDoms = Array.prototype.concat.apply([], 
+    					paraSents.map(function () { return this.nodes; }));
+		 			
+		 			out.sentences.map(function (ratings, i) {
+		 				if (ratings.length == 0) {
+		 					$(flatDoms[i]).fadeTo(1000, Math.max(1.0 - ratio, 0.2));
+		 				} else {
+							var numOk = 0;
+							ratings.forEach(function (rating) {
+								if (rating == 'ok') numOk++;		 					
+							});
+							var ratio = ratings.length == 0 ? 0 : (numOk / ratings.length);
+							console.log(
+								'rating',
+								ratio, 
+								flatSentences[i], 
+								ratings.filter(function (i) { return i != 'ok'; }));
+							$(flatDoms[i]).fadeTo(1000, Math.max(1.0 - ratio, 0.2));
+							$(flatDoms[i]).css("color", "rgb(" + Math.round((1.0 - ratio) * 255) + ",0,0)");
+						}
+		 			});
 		 		} else {
 		 			console.log('Try again in ', out.repollDelayMS, 'ms, only got ', out.count, ' / ', flatSentences.length);
 		 			setTimeout(function () {
@@ -354,6 +376,8 @@ function bindDOM() {
     	var offSentMap = mapOffSents(summary.offSents);
     	
     	// {text: [ string ], nodes: [ dom] }
+    	global2 = summary;
+    	console.log('summary', summary);
     	var paraSents = summary.paras.map(function (id) {
     		if (summary.onParas.indexOf(id) == -1) return [];
     		
@@ -371,8 +395,10 @@ function bindDOM() {
 			return {text: sents, nodes: sentsD};
     	});
     	var flatSentences = Array.prototype.concat.apply([], 
-    		paraSents.map(function (o) { return o.text; }));
+    		paraSents.map(function () { return this.text; }));
     	
+    	global = paraSents;
+    	console.log(paraSents, paraSents.map(function () { return this.text; }));
     	console.log('sending', flatSentences);
     	
     	$.post('api/turkit', {sentences: flatSentences, batchID: batchID})
