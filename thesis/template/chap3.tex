@@ -391,7 +391,7 @@ Our approach is to divide the problem into two steps. First, we transform an att
 \begin{minipage}{1\columnwidth}\centering
 \includegraphics[trim=0 0 0 0,clip,width=1.0\columnwidth]{chapter3/stagedloop}
 \end{minipage}}
-\caption{\textbf{Loop scheduling}.The loop code can be scheduled as two loops that occur in the same traversal.}
+\caption{\textbf{Loop scheduling}.The loops may be scheduled for the same traversal if attributes \code{a} and \code{b} are available.}
 \label{fig:unrolling}
 \end{figure}
 
@@ -436,22 +436,19 @@ class NodeC : NodeI {
     childs0, childs1, childs2, childsn : NodeI;
   }
   actions {   
-    childs0.c := 0 + 1;
-    childs1.c := childs0.c + 1;
-    childs2.c := childs1.c + 1;
-    childsn.c := childs2.c + 1;
+    childs0.c := 0 + 1 + 0;
+    childs1.c := childs0.c + 1 + childs0.c;
+    childs2.c := childs1.c + 1 + childs1.c;
+    childsn.c := childs2.c + 1 + childs2.c;
 
-    childs0.i := a + childs0.b + childsn.c;
-    childs1.i := childs0.i + childs1.b + childsn.c;
-    childs2.i := childs1.i + childs2.b + childsn.c;
-    childsn.i := childs2.i + childsn.b + childsn.c;
+    childs0.i := a + childs0.b + childsn.c + a;
+    childs1.i := childs0.i + childs1.b + childsn.c + childs0.i;
+    childs2.i := childs1.i + childs2.b + childsn.c + childs1.i;
+    childsn.i := childs2.i + childsn.b + childsn.c + childs2.i;
   }
 }        
 \end{lstlisting}
 
-
-
-The reduction performs several rewrites that unroll loops and then substitute variable names in the unrolled statements:
 
 \begin{figure}
 \begin{align*}
@@ -459,13 +456,13 @@ The reduction performs several rewrites that unroll loops and then substitute va
 \\
 \llbracket child.fld := \texttt{fold} ~ e_{\texttt{init},fld} ~ .. ~ e_\texttt{step} \rrbracket &\rightarrow 
 \\
-& child0.fld = \llbracket~e_\texttt{step}[\forall ~f:  ~ e_{\texttt{init},f} ~/~ child\$\texttt{-}.f~]~\rrbracket_0; 
+& child0.fld = \llbracket~e_\texttt{step}[\forall ~f:  ~ e_{\texttt{init},f} ~/~ child\$\texttt{-}.f~]~\rrbracket_0 + e_{\texttt{init},fld}; 
 \\
-& child1.fld = \llbracket~e_\texttt{step}~\rrbracket_1; 
+& child1.fld = \llbracket~e_\texttt{step}~\rrbracket_1 + child0.fld;
 \\
-& child2.fld = \llbracket~e_\texttt{step}~\rrbracket_2; 
+& child2.fld = \llbracket~e_\texttt{step}~\rrbracket_2 + child1.fld; 
 \\
-& childn.fld = \llbracket~e_\texttt{step}~\rrbracket_\texttt{n} 
+& childn.fld = \llbracket~e_\texttt{step}~\rrbracket_\texttt{n} + child2.fld;
 \\
 \llbracket ~child\$\$.fld ~\rrbracket_\alpha &\rightarrow child \texttt{n}. fld
 \\
@@ -481,9 +478,31 @@ The reduction performs several rewrites that unroll loops and then substitute va
 \label{fig:loopreduction}
 \end{figure}
 
+The reduction performs several rewrites that unroll loops and then substitute variable names in the unrolled statements (Figure~\ref{fig:loopreduction}). The first key property that the unrolling preserves is that the dependencies are preserved. The unrolling does this in several ways:
+\begin{itemize}
+\item \textbf{Schema unrolling.} It unrolls every declaration ``\code{child : [ NodeI ]}'' into the following form:
+ \code{child0, child1, child2, childn : NodeI}
+ 
+\item \textbf{Substitution.} The first step of a loop unfolds by replacing references of the form ``\code{child$-.fld}'' to use the initial value specified in the first part of a ``\code{fold}'' expression. Likewise, step 1 will substitute the reference with ``\code{child0.fld}'', and ``\code{child$i.fld}'' for ``\code{child1.fld}''. Finally, it replaces every reference to last value ``\code{child$$.fld}'' with ``\code{child.fld}''.
+
+\item \textbf{Forward Loop Direction.} The rewriting enforces a forward loop direction by making \code{child1.fld} depend on \code{child0.fld}, \code{child2.fld} depend on \code{child1.fld}, etc. The dependencies simplify later analysis by eliminating concerns in safely reordering steps of a loop. To support an alternative loop order, such as backwards, these dependencies would be elided and the recovery algorithm would be perform more reasoning.
+\end{itemize}
+
+The result of the rewriting is a canonical attribute grammar without loops. Our full implementation differs in two significant ways. First, it performs static checks such as that step variable ``\code{child$i.fld}'' is not referred to by the \code{fold} initialization expression. Second, it supports loops that may temporarily escape as part of a \code{recursive} traversal. Each loop step over an element may require traversal into the element's subtree, so we expand child attributes with a local and transfer version in order to reason about safe placement of the recursive call.
 
 \subsection{Recovery by Commuting Abstractions}
+If the rewritten grammar can be scheduled, so can the original grammar with loops. We extract loops from the scheduled grammar and guarantee that any dependency in the original grammar is safely obeyed by the extracted loops. A difficult part of the guarantee is proving that the procedure for recovering loops from the schedule will not get ``stuck.'' This section describes the loop recovery process and its correctness.
 
+The algorithm first rearranges loop statements into distinct blocks. The scheduler may interleave statements from loops over distinct sets of children, but code generation needs them to be separated.  Likewise, the algorithm rearranges all non-loop assignments to fit between loop blocks. The procedure iteratively performs the following steps, where each step is guaranteed to preserve any dependencies:
+\begin{itemize}
+\item \textbf{Extract non-loop assignments from a loop}. The beginning of a loop corresponds to an assignment to ``\code{child0.fld}'' and the end by an assignment to ``\code{childn.fld}''. Assignments to non-loop variables that occur within the loop range are moved to be before the beginning of the loop. They are moved out in case multiple statements are scheduled for the same loop and some of them depend on the non-loop variables. All non-loop assignments in a loop range are moved out with their relative ordering preserved.
+
+Moving a non-loop assignment to before the loop is safe. If the assignment depended on a loop variable, that variable could only have been the final one (\code{child$$.fld}), and the scheduler would not have placed the assignment inside of the loop range. Likewise, if a loop statement depends on the non-loop assignment, moving the assignment earlier preserves the ordering. Finally, moved assignment statements may have mutual dependencies, so maintaining their relative ordering during the movement preserves any read-after-write dependencies.
+
+The process is guaranteed to terminate. First, moving statements out of one loop completes in time linear in the size of the range of the loop. Second, the finite number of loops means that the process must only repeat a finite number of times.
+\item \textbf{Separate Loops over Different Collections} Loops over different sets 
+\item \textbf{Chained loops}
+\end{itemize}
 
 
 
