@@ -488,7 +488,8 @@ The reduction performs several rewrites that unroll loops and then substitute va
 \item \textbf{Forward Loop Direction.} The rewriting enforces a forward loop direction by making \code{child1.fld} depend on \code{child0.fld}, \code{child2.fld} depend on \code{child1.fld}, etc. The dependencies simplify later analysis by eliminating concerns in safely reordering steps of a loop. To support an alternative loop order, such as backwards, these dependencies would be elided and the recovery algorithm would be perform more reasoning.
 \end{itemize}
 
-The result of the rewriting is a canonical attribute grammar without loops. Our full implementation differs in two significant ways. First, it performs static checks such as that step variable ``\code{child$i.fld}'' is not referred to by the \code{fold} initialization expression. Second, it supports loops that may temporarily escape as part of a \code{recursive} traversal. Each loop step over an element may require traversal into the element's subtree, so we expand child attributes with a local and transfer version in order to reason about safe placement of the recursive call.
+The result of the rewriting is a canonical attribute grammar without loops. Our full implementation differs in two significant ways. First, it performs static checks such as that the \code{fold} initialization expression does not refer to step variables ``\code{child$i.fld}'' nor \code{child$-.fld}. Likewise, statements looping over one collection are checked for references to intermediate elements of another. Second, the rewriting supports loops that may temporarily escape as part of a \code{recursive} traversal. Each loop step over an element may require traversal into the element's subtree, so we expand child attributes with a local and transfer version in order to reason about safe placement of the recursive call. 
+
 
 \subsection{Recovery by Commuting Abstractions}
 If the rewritten grammar can be scheduled, so can the original grammar with loops. We extract loops from the scheduled grammar and guarantee that any dependency in the original grammar is safely obeyed by the extracted loops. A difficult part of the guarantee is proving that the procedure for recovering loops from the schedule will not get ``stuck.'' This section describes the loop recovery process and its correctness.
@@ -499,8 +500,13 @@ The algorithm first rearranges loop statements into distinct blocks. The schedul
 
 Moving a non-loop assignment to before the loop is safe. If the assignment depended on a loop variable, that variable could only have been the final one (\code{child$$.fld}), and the scheduler would not have placed the assignment inside of the loop range. Likewise, if a loop statement depends on the non-loop assignment, moving the assignment earlier preserves the ordering. Finally, moved assignment statements may have mutual dependencies, so maintaining their relative ordering during the movement preserves any read-after-write dependencies.
 
-The process is guaranteed to terminate. First, moving statements out of one loop completes in time linear in the size of the range of the loop. Second, the finite number of loops means that the process must only repeat a finite number of times.
-\item \textbf{Separate Loops over Different Collections} Loops over different sets 
+The process is guaranteed to terminate. First, moving statements out of one loop completes in time linear in the size of the range of the loop. Second, the finite number of loops means that the process only repeat a finite number of times because movement only occurs in one direction.
+
+\item \textbf{Separate Loops over Different Collections} Loops over different collections are iteratively separated. The beginning of a loop span is examined for statements belonging to another type of loop, and those instances are moved before the span. The moved statements maintain their relative ordering.
+
+
+
+
 \item \textbf{Chained loops}
 \end{itemize}
 
