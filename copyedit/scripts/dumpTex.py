@@ -6,13 +6,35 @@
 ## Tries to handle LaTeX macros, including \include{}.
 ## Expands some commands such as \emph{hello}, but skips others such as $x + y$ 
 
+### INSTALLATION
+####
+#sudo easy_install pip
+#optional: sudo pip install -U numpy
+#sudo pip install -U pyyaml nltk
+#sudo python -m nltk.downloader -d /usr/share/nltk_data all
+
+
 import sys
 import re
 import os
 import subprocess
 import pexpect
 import json 
+import codecs
 
+import nltk.data
+tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+
+#from nltk.tokenize.punkt import PunktSentenceTokenizer, PunktParameters
+#punkt_param = PunktParameters()
+#punkt_param.abbrev_types = set(['dr', 'vs', 'mr', 'mrs', 'prof', 'inc', 'ie','eg','fig','chap','sec'])
+#sentence_splitter = PunktSentenceTokenizer(punkt_param)
+
+sentence_splitter = nltk.tokenize.PunktSentenceTokenizer()
+abbreviations = ['i.e','e.g']
+for abbrev in abbreviations:
+  sentence_splitter._params.abbrev_types.add(abbrev)
+    
 
 from time import sleep ###hack
 
@@ -55,13 +77,16 @@ file = sys.argv[1]
 
 
 LinkParser = None
-def restartParser ():
+def restartParser ():  
   global LinkParser
-  if LinkParser:
-    LinkParser.close(force=True)
-  os.system('killall -9 link-parser &> /dev/null')
-  LinkParser = pexpect.spawn("link-parser", timeout=0.3)
-  LinkParser.expect('linkparser>')
+  try:
+	  if LinkParser:
+		LinkParser.close(force=True)
+	  os.system('killall -9 link-parser &> /dev/null')
+	  LinkParser = pexpect.spawn("link-parser", timeout=0.3)
+	  LinkParser.expect('linkparser>')
+  except:
+    restartParser()
 restartParser()
 
 tokIncomplete = re.compile("No complete linkages found")
@@ -109,10 +134,18 @@ def spellcheckSentence(sent):
 
   out = spellcheckCall(qry, True)
   splits = r'\n'
-  outs = re.split(splits, out)[:-2]
+  outs = out.splitlines()[:-2]
   okTok = re.compile(r'\*|\+')
+  #print '===='
+  #print qry
+  #for i, w in enumerate(terms):
+  #	print i, w
+  #print '===='  
   for i, w in enumerate(outs):
-    if okTok.match(w):
+    #print '---'
+    #print i, w
+    #print '---'
+    if okTok.match(w):      
       yield (True, sent[i], [])
     elif orig[i].find('-') != -1 and  w.find(': ') != -1 and orig[i] in  w.split(': ')[1].split(', '):
       yield (True, sent[i], [])
@@ -122,9 +155,9 @@ def spellcheckSentence(sent):
       yield (False, sent[i], [])
 
 tokExpandCommands = re.compile(r'\\(ref|subref|sched|caption|emph|textbf|title|section|subsection|subsubsection|subsubsubsection)')
-tokCommand = re.compile(r'(\\begin{tabular}.*?\\end{tabular})|(\\begin{lstlisting}.*?\\end{lstlisting})|(\\begin{grammar}.*?\\end{grammar})|(\\((\\\\)| |([a-zA-Z0-9:]*(\*|({.*?})|\[.*?\])*)))', re.DOTALL)
-tokText = re.compile(r'[a-zA-Z\-\'-\+#]+|((\$)?[0-9]+(,|[\.xX+]|(\\%))?)')
-tokNoise = re.compile(r'(\$.*\$)|[${},:\n\r \t.!<>;`|*"#=@&~\[\]\+\?\(\)/]|(%.*(\n|$))')
+tokCommand = re.compile(r'(\\begin{tabular}.*?\\end{tabular})|(\\begin{lstlisting}.*?\\end{lstlisting})|(\\begin{grammar}.*?\\end{grammar})|(\\((\\\\)| |(([\xc4-\xfc]|\w|[:])*(\*|({.*?})|\[.*?\])*)))', re.DOTALL)
+tokText = re.compile(ur'(\w|[\xc4-\xfc]|[\-\u2013\u2014\'-\+#])+|((\$)?[0-9]+(,|[\.xX+]|(\\%))?)')
+tokNoise = re.compile(ur'(\ufeff|\u200b|\$.*\$)|[${},\u2026:\n\r \t.!<>;`"\u2018\u2019\u201c\u201d\u0060\u00b4|*#=@&~\[\]\+\?\(\)/]|(%.*(\n|$))')
 
 def words (paragraph, firstLine):
   line = 0 #line in paragraph 
@@ -166,12 +199,12 @@ def words (paragraph, firstLine):
     #$i: 
     raise  Exception('unknown', paragraph[totalOffset:(totalOffset+5)], paragraph[(totalOffset-20):(totalOffset+20)])
 
-tokParagraph = re.compile(r'\n(\n+)')
+tokParagraph = re.compile(r'(\n|\r)((\n|\r)+)')
 def paragraphs(file):
     fullFile = ""
     for line in file:
       fullFile = fullFile + line
-    
+
     includeLen= len('\\include')
     def replaceNonInput (match):
       if '\\include' == fullFile[match.start():(match.start() + includeLen)]:
@@ -197,12 +230,12 @@ def paragraphs(file):
     #  pass
     
     lineNumber = 1
-    offset = 0
-    for split in tokParagraph.finditer(stripped):
-      para = stripped[offset:split.start()]      
+    offset = 0    
+    for split in stripped.splitlines(True):
+      para = split
       yield (lineNumber, para)
-      lineNumber = lineNumber + (split.end() - split.start()) + len(re.findall('\n',para))
-      offset = split.end()
+      lineNumber = lineNumber + 1
+      offset = offset + len(para)
 
 
 
@@ -210,7 +243,7 @@ def inputs(paragraph):
     return re.findall('nclude\\{(.*)}',paragraph)
 
 def paragraphsRec(fileName):
-  fileObj = open(fileName, 'r')
+  fileObj = codecs.open(fileName, 'r', "utf-8")
   dir = None
   for (l,p) in paragraphs(fileObj):
     yield (fileName, l, p)
@@ -260,21 +293,22 @@ def paragraphToLines(words):
   if len(line) > 0:
     yield line
 
-sentenceTok = re.compile(r'\n|\.|\?')
+sentenceTok = re.compile(r'\n|\.|\?("?)')
 def lineToSentences(line):
+  if len(line) == 0:
+    return
+
   sentence = []
-  offset = 0
-  for (f,p,line,c,cTotal,w,pText) in line:
-    if sentenceTok.search(pText[offset:cTotal]):
-      if len(sentence) > 0:
-        yield sentence
-      sentence = [ (f,p,line,c,cTotal,w,pText) ]
-      offset = cTotal + len(w)
-    else:
-      sentence.append( (f,p,line,c,cTotal,w,pText) )
-      offset = cTotal + len(w)
-  if len(sentence) > 0:
-    yield sentence
+  (f0,p0,line0,c0,cTotal0,w0,pText0) = line[0]
+  (fn,pn,linen,cn,cTotaln,wn,pTextn) = line[len(line)-1]
+  para = pText0[cTotal0:(cTotaln + len(wn) + 1)]
+  for (start,end) in sentence_splitter.span_tokenize(para):
+  	#print para[start:end]  	
+  	for (f,p,linei,c,cTotal,w,pText) in line:
+  		if cTotal >= start and cTotal <= end:
+  			sentence.append( (f,p,linei,c,cTotal,w,pText) )
+  	yield sentence
+  return
 
 def originalSentence (sent,includePunctuation=True):
   (f,p,l,c,cTotal,w,pText) = sent[0]
@@ -291,6 +325,7 @@ def checkParagraph (paragraph):
       sent = paragraph
       if len(sent) <= minWords:
         return
+
       okParagraph = True
       for (stat, (f,p,l,c,cTotal,w,pText), sugg) in spellcheckSentence(sent):
         if stat == False:
@@ -299,7 +334,7 @@ def checkParagraph (paragraph):
           #print
           #print f.split("/")[-1],(p+l),c,':',w, '->', sugg
           #print '     "', originalSentence(sent),'"'
-          yield {"e": "spell", "i": [p,l,c,cTotal,w], "s": sugg}
+          yield {"e": "spell", "i": [p,l,c,cTotal,w], "s": sugg}    
       if okParagraph:
         (_,_,_,_,c,_,p) = sent[0]
         (_,_,_,_,c2,w,_) = sent[-1]
@@ -317,8 +352,12 @@ def checkParagraphs():
   for paragraph in allParagraphs():
     if len(paragraph) == 0:
       continue
-    (f,para,line,c,cTotal, w,pText) = paragraph[0]
-    yield {'file': f, 'paragraph': pText, 'errors': [err for err in checkParagraph(paragraph)]}
+
+    (f,para,line,c,cTotal, w,pText) = paragraph[0]    
+    yield {'file': f, 
+    	'paragraph': pText, 
+    	'spans': [startEndSpan for startEndSpan in sentence_splitter.span_tokenize(pText)], 
+    	'errors': [err for err in checkParagraph(paragraph)]}
 
 def dumpJson():
   yield '['

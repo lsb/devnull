@@ -77,7 +77,7 @@ p.paragraph.off {
 }
 
 .spell, .gram { color: #000 }
-.spell:hover, .gram:hover { color: #000 }
+.spell:hover { color: #000 }
 
 .spell, .gramSentence { margin: 1em; border-bottom-width: 2px; border-bottom-style: dotted;  }
 .spell { border-bottom-color: red; }
@@ -97,10 +97,12 @@ p.paragraph.off {
 	opacity: 0.7;
 	margin: 1em;
 }
+/*
 .gram:hover { 
 	height: auto; 
 	opacity: 1.0;
 }
+*/
 
 #summary .on, #summary .off {
 	display: block;
@@ -169,36 +171,41 @@ function summarize () {
 }
 
 	function formatParagraph (o, i) { // jsonParagraph -> DOM
+		var sents = o.spans.map(function (span) {
+			var start = span[0];
+			var end = span[1];
+			console.log('sent', o.paragraph.substring(start,end));
+			return  o.paragraph.substring(start,end);
+		});			
+
+		var textD = 
+			$(D.$span.apply({},
+				sents.map(function (sent, i, arr) { 
+					if (i == arr.length - 1 && (sent.trim() == '')) {
+						return D.$a();
+					}
+					var res = D.$span(sent); 
+					$(res).attr('class','on');
+					$(res).click(function (event) {
+						if ($(resP).attr('class').indexOf('off') == -1) {
+							var toggleOn = toggle(this);
+							summarize();
+							event.stopPropagation();
+						} else {
+							//bubble to paragraph click
+						}
+					});
+					return res;
+				})))
+			.attr('class','real')[0];		
+		
 		var resP;
 		  if (o.errors.length == 0) {
-		    resP = D.$p(o.paragraph);
+		    resP = D.$p.apply({}, [textD]);
 		  } else {
 		  	var isSpellingError = o.errors[0].e == 'spell';
 		  	var lbl = $(D.$span(isSpellingError ? "Spelling:" : "Grammar:"))
-		  				.attr('class',isSpellingError ? "lblSpell" : "lblGram")[0];
-		    var textD = 
-		    	$(D.$span.apply({},
-		    		o.paragraph.split('.').map(function (sent, i, arr) { 
-		    			if (i == arr.length - 1 && (sent.trim() == '')) {
-							return D.$a();
-		    			}
-		    			var res = D.$span(sent + '.'); 
-		    			$(res).attr('class','on');
-		    			$(res).click(function (event) {
-		    				if ($(resP).attr('class').indexOf('off') == -1) {
-		    					var toggleOn = toggle(this);
-//								var toggleOn = $(this).attr('class').indexOf('off') == -1 ? true : false;
-//								toggleOn = !toggleOn;
-//								$(this).attr('class', (toggleOn ? 'on' : 'off'));
-								summarize();
-		    					event.stopPropagation();
-		    				} else {
-		    					//bubble to paragraph click
-		    				}
-		    			});
-		    			return res;
-		    		})))
-		    	.attr('class','real')[0];
+		  				.attr('class',isSpellingError ? "lblSpell" : "lblGram")[0];		  			  	
 		    resP = D.$p.apply({}, [textD, lbl].concat(o.errors.map(function (err) {
 		    	if (err.e == "spell") {
 		    		var elt = 
@@ -239,7 +246,7 @@ function summarize () {
 	
 function bindDOM() {	
 	var BASE_URL = document.URL.replace("#","").replace("viewjson.html","") + "/";
-	var FILE =  'out.json';
+	var FILE =  'out2.json';
 	
 	var jsonP = Z.unit(BASE_URL + FILE).pipeAsync(D.xhrJSON).print('== jsonP');
 	
@@ -443,7 +450,27 @@ function bindDOM() {
 				
 
     });    
-
+    
+    $('#humani').click(function () {
+		$.ajax({
+			url: 'http://vivam.us/human/i',
+			type: 'PUT',
+			success: function(result) {
+				console.log('human/i result',result);
+				global = result;
+			}
+		});    	    
+    });
+    $('#humano').click(function () {
+		$.ajax({
+			url: 'http://vivam.us/human/o',
+			type: 'PUT',
+			success: function(result) {
+				console.log('human/o result',result);
+				global = result;
+			}
+		});    	    
+    });
 }
 
 
@@ -458,6 +485,8 @@ window.addEventListener('load',bindDOM);
   	<h2>Commands:</h2>
   	<input id="toggleAll" type="button" value="toggle all"/>
   	<input id="query" type="button" value="query"/>
+  	<input id="humani" type="button" value="human/i"/>
+  	<input id="humano" type="button" value="human/o"/>
   </div>
   <div id="doc"></div>
   <div id="tooltip"></div>

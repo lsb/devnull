@@ -24,6 +24,9 @@ function makeBatch (sentences, batchID) {
 	var res = [];
 	res.count = 0;
 	res.batchID = batchID;
+	res.startTime = new Date().getTime();
+	res.lastTime = new Date().getTime();
+	res.ticks = [];
 	batches[jobCounter] = res;	
 	return jobCounter;
 }
@@ -31,8 +34,11 @@ function getBatch (jobID) {
     return batches[jobID];
 }
 function updateBatch(jobID, i, result) {
+	var time = new Date().getTime();
 	batches[jobID][i] = result;
 	batches[jobID].count++;
+	batches[jobID].ticks.push({i: i, time: time});
+	batches[jobID].lastTime = time;
 }
 
 
@@ -44,6 +50,10 @@ function fetchGet (url, sent, sentenceI, jobID) {
 		} else if (response.statusCode == 404) {
 			console.log('404, try again in ' + (delay / 1000) + ' seconds...');
 			setTimeout(function () { fetchGet(url, sent, sentenceI, jobID); }, delay);
+		} else if (response.statusCode == 412) {
+			console.log('412, ERROR: need to do a PUT before a GET');
+			//die
+			//TODO: tell client?
 		} else if (response.statusCode == 502) {
 			console.log('502 (down), try again in ' + (delay / 1000) + ' seconds...'); 
 			setTimeout(function () { fetchGet(url, sent, sentenceI, jobID); }, delay);
@@ -70,11 +80,15 @@ app.get('/api/improvements', function (req, res) {
 	var currentResult = getBatch(jobID);
 	
 	var out = {
-		count: currentResult.count, 
-		sentences: currentResult, 
-		jobID: jobID, 
-		batchID: currentResult.batchID,
-		repollDelayMS: delay};
+		startTime: currentResult.startTime, //put
+		lastTime: currentResult.lastTime, //most recent mturk response
+		responseTime: new Date().getTime(), //now
+		ticks: currentResult.ticks, //for each sentence that came in, {i: int, time: ms}
+		count: currentResult.count,  //how many have come in
+		sentences: currentResult,  //{i: [ String ]}
+		jobID: jobID, //internal id
+		batchID: currentResult.batchID, //user id
+		repollDelayMS: delay}; //server delay; no point in polling faster than this
 	console.log('sending result', out);
 	res.send(JSON.stringify(out));	
 }); 
@@ -109,20 +123,12 @@ function askAsText (sent) {
 	return qs.stringify({
 				distinctUsers: 3,
 				instructions: //task description
-					'Proofread: at first glance, which sentences have spelling or grammar mistakes?\nIf there is a mistake, briefly describe it. Otherwise, leave it described as "ok". You can ignore formatting hints such as "\\section{Chapter name}" and "\\ref{??}".', 
+					'Proofread: at first glance, which sentences have spelling mistakes, grammar mistakes, or seem awkward?\nIf the sentence is awkward, write "awkward". Next, if there are mistakes, please briefly describe them. If the sentence is fine, leave it described as "ok". You can ignore formatting hints such as "\\section{Chapter name}" and "\\ref{??}". \nFeel free to leave additional comments in the box, and for general hints about HIT design, email LMeyerov+mt@gmail.com. Thank you for helping!', 
 				question: 
 					JSON.stringify({Text: {
 						questionText: '"' + sent + '"',
 						defaultText: 'ok'
-					}}),
-				knownAnswerQuestionsIgnore: JSON.stringify({
-					answeredQuestions: [
-						{question: 
-							{Radio: {questionText: "The schedule is combined with the attribute grammar to form an intermediate representation, and different code generators target different backends such as JavaScript, OpenCL, and C++.",
-									 defaultText: 'ok'}},
-						 answer: 'ok'}],
-					percentCorrect: 100
-				})
+					}})
 			});
 }
 
