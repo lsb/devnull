@@ -494,7 +494,7 @@ The result of the rewriting is a canonical attribute grammar without loops. Our 
 \subsection{Recovery by Commuting Abstractions}
 If the rewritten grammar can be scheduled, so can the original grammar with loops. We extract loops from the scheduled grammar and guarantee that any dependency in the original grammar is safely obeyed by the extracted loops. A difficult part of the guarantee is proving that the procedure for recovering loops from the schedule will not get ``stuck.'' This section describes the loop recovery process and its correctness.
 
-The algorithm first rearranges loop statements into distinct blocks. The scheduler may interleave statements from loops over distinct sets of children, but code generation needs them to be separated.  Likewise, the algorithm rearranges all non-loop assignments to fit between loop blocks. The procedure iteratively performs the following steps, where each step is guaranteed to preserve any dependencies:
+The algorithm first rearranges loop statements into distinct blocks. The scheduler may interleave statements from loops over distinct sets of children, but code generation needs them to be separated.  Likewise, the algorithm must rearrange all non-loop assignments to fit between loop blocks. The procedure recursively performs the following partitioning steps, where each step is guaranteed to preserve any dependencies:
 \begin{itemize}
 \item \textbf{Extract non-loop assignments from a loop}. The beginning of a loop corresponds to an assignment to ``\code{child0.fld}'' and the end by an assignment to ``\code{childn.fld}''. Assignments to non-loop variables that occur within the loop range are moved to be before the beginning of the loop. They are moved out in case multiple statements are scheduled for the same loop and some of them depend on the non-loop variables. All non-loop assignments in a loop range are moved out with their relative ordering preserved.
 
@@ -502,15 +502,43 @@ Moving a non-loop assignment to before the loop is safe. If the assignment depen
 
 The process is guaranteed to terminate. First, moving statements out of one loop completes in time linear in the size of the range of the loop. Second, the finite number of loops means that the process only repeat a finite number of times because movement only occurs in one direction.
 
-\item \textbf{Separate Loops over Different Collections} Loops over different collections are iteratively separated. The beginning of a loop span is examined for statements belonging to another type of loop, and those instances are moved before the span. The moved statements maintain their relative ordering.
+\item \textbf{Separate Loops over Different Collections} The algorithm iteratively separates loops over different collections. First, it detects mutually dependent statements that must be scheduled as part of the same loop. Then, it examines the loop span for statements belonging to another type of loop and moves them either to before or after the base range of mutually dependent statements.  The moved statements maintain their ordering relative to other statements moved to the same side of the range.
 
+The complexity of the operation stems from mutually dependent loop variables. For example, the following code must be scheduled into the same loop:
+\begin{lstlisting}[mathescape]
+loop childs {
+  childs.a := fold 0 .. childs$\$-$.b + 1;
+  childs.b := fold 0 .. childs$\$-$.a + 1 + otherChilds$\$\$$.c;
+}
+\end{lstlisting}
+The partial order for the resulting schedule is ``\code{(a0\|b0) (a1\|b1) (a2\|b2) (an\|bn)}''. If ``\code{cn}'' is scheduled as ``\code{a0 c0 d0 c1 d1 c2 d2 cn b0 dn}'', the ``\code{c}'' computations do not depend on ``\code{a}'' nor ``\code{b}'' ones, but not vice-versa. The ``\code{c}'' loop must be moved ahead. Doing so is safe relative to ``\code{a,b,..}'' because ``\code{c}'' statements cannot depend on them. Furthermore, if ``\code{c}'' is dependent on other statements in the range, those would also be moved with it, such as seen with ``\code{d}''.  For the remaining statements, ``\code{a,b,...}'' do not depend on them and the algorithm moves them after.
 
+The algorithm terminates because it recursively operates on successively smaller partitions: statements moved earlier, the current loop range, and statements moved after. 
 
-
-\item \textbf{Chained loops}
+\item \textbf{Separate Loops over the Same Collection} Loops over the same collection may still need to be separated. Consider the following loop:
+\begin{lstlisting}[mathescape]
+loop childs {
+  childs.a := fold 0 .. childs$\$-$.b + 1;
+  childs.b := fold 0 .. childs$\$-$.a + 1 + childs$\$\$$.c;
+  childs.c := fold 0 .. childs$\$-$.c + 1;
+}
+\end{lstlisting}
+A valid resultant schedule would be the same as the above case. In fact, the same reasoning as applied above applies to this case. For most of the above reasoning, only the loop steps matter. 
 \end{itemize}
+Due to dependencies across statements being moved before or after a loop, each partitioning step performs all of the above separations. The relative order of statements moved out of a loop is thereby preserved. 
 
+Once the partitioning completes, the code generator receives a a list of blocks. Each block is for loop statements or non-loop statements. The code generator handles blocks of non-loop statements as usual. A block of loop statements will translate into a single loop. For example, the above code example code generates as follows:
 
+\begin{lstlisting}[mathescape]
+for (int i = 0; i < childs.length; i++) {
+	childs[i].c = (i == 0 ? 0 : childs[i $-$ 1].c) + 1;
+}
+for (int i = 0; i < childs.length; i++) {
+	childs[i].a = (i == 0 ? 0 : childs[i $-$ 1].b) + 1;
+	childs[i].b = (i == 0 ? 0 : childs[i $-$ 1].a) + 1;
+}
+\end{lstlisting}
+Note that translation of references of the form ``\code{childs$-.fld}'' require tracking the loop step in order to pick whether to use the initial value or the previous node's value.
 
 
 \section{Verification}
