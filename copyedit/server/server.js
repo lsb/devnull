@@ -27,6 +27,7 @@ function makeBatch (sentences, batchID) {
 	res.startTime = new Date().getTime();
 	res.lastTime = new Date().getTime();
 	res.ticks = [];
+	res.sentences = sentences;
 	batches[jobCounter] = res;	
 	return jobCounter;
 }
@@ -94,6 +95,7 @@ app.get('/api/improvements', function (req, res) {
 }); 
 
 
+//DEPRECATED
 function askAsRadio (sent) {
 	return qs.stringify({
 				distinctUsers: 2,
@@ -123,7 +125,7 @@ function askAsText (sent) {
 	return qs.stringify({
 				distinctUsers: 3,
 				instructions: //task description
-					'Proofread: at first glance, which sentences have spelling mistakes, grammar mistakes, or seem awkward?\nIf the sentence is awkward, write "awkward". Next, if there are mistakes, please briefly describe them. If the sentence is fine, leave it described as "ok". You can ignore formatting hints such as "\\section{Chapter name}" and "\\ref{??}". \nFeel free to leave additional comments in the box, and for general hints about HIT design, email LMeyerov+mt@gmail.com. Thank you for helping!', 
+					'Proofread: at first glance, which sentences have spelling mistakes, grammar mistakes, or seem awkward?\nPlease describe any problems with the sentence. If the sentence is fine, leave it described as "ok". You can ignore formatting hints such as "\\section{Chapter name}" and "\\ref{??}" and broken quotation marks. \nFeel free to leave additional comments in the box, and for general ideas about how to improve the HIT request, please email LMeyerov+mt@gmail.com. Thank you for helping!', 
 				question: 
 					JSON.stringify({Text: {
 						questionText: '"' + sent + '"',

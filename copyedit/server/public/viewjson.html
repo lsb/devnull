@@ -81,10 +81,10 @@ p.paragraph.off {
 
 .spell, .gramSentence { margin: 1em; border-bottom-width: 2px; border-bottom-style: dotted;  }
 .spell { border-bottom-color: red; }
-.gram { border-bottom-color: green; }
+.gram { border-bottom-color: blue; }
 .lblSpell, .lblGram { font-weight: bold; }
 .lblSpell { color: maroon; }
-.lblGram { color: green; }
+.lblGram { color: blue; }
 
 .gram {
 	border-bottom: 1px dotted #7F7; 
@@ -93,7 +93,7 @@ p.paragraph.off {
 	max-width: 50em;
 	height: 1em; 
 	overflow: hidden; 
-	color: green;
+	color: blue;
 	opacity: 0.7;
 	margin: 1em;
 }
@@ -214,9 +214,9 @@ function summarize () {
 		    			 	: D.$span(err.i[4])
 		    		return $(elt).attr('class','spell')[0];		    		        
 		    	} else if (err.e == "gram") {
-		    		var sentence = err.s.split(/\n/).shift();
+		    		var sentence = err.s.split(/\n/).shift().trim();
 		    		var messageD = D.$pre(err.s.substr(sentence.length));//output.map(function (line) { return D.$pre(line); }));
-		    		sentenceD = D.$span(sentence);
+		    		sentenceD = D.$span(sentence.substring(0,20) + '...');
 		    		
 		    		$(sentenceD).attr('class','gramSentence');
 		    		$(messageD).attr('class','gramMessage');
@@ -246,7 +246,7 @@ function summarize () {
 	
 function bindDOM() {	
 	var BASE_URL = document.URL.replace("#","").replace("viewjson.html","") + "/";
-	var FILE =  'out2.json';
+	var FILE =  'out.json';
 	
 	var jsonP = Z.unit(BASE_URL + FILE).pipeAsync(D.xhrJSON).print('== jsonP');
 	
@@ -333,13 +333,20 @@ function bindDOM() {
 		 	try {
 		 	    console.log('fetched', data);
 		 		var out = JSON.parse(data);
-		 		if (out.count == flatSentences.length) {
-		 			console.log('done, got all sentences', flatSentences, out.sentences);
+		 		if (true || out.count == flatSentences.length) {
+		 			if (out.count == flatSentences.length)
+		 			  console.log('done, got all sentences', flatSentences, out.sentences);
 
 					var flatDoms = Array.prototype.concat.apply([], 
     					paraSents.map(function () { return this.nodes; }));
 		 			
 		 			out.sentences.map(function (ratings, i) {
+
+		 				if (!ratings) {
+		 					//console.log('nothing for',i);
+		 					return;
+		 				}
+		 				
 		 				if (ratings.length == 0) {
 		 					$(flatDoms[i]).fadeTo(1000, Math.max(1.0 - ratio, 0.2));
 		 				} else {
@@ -353,18 +360,25 @@ function bindDOM() {
 								console.error('Corrections',notes);
 
 								var ratio = ratings.length == 0 ? 0 : (numOk / ratings.length);
-								$(flatDoms[i]).css(
-									"background-color", 
-									"rgb(255," 
-										+ Math.round((1.0 - ratio) * 200 + 55) + "," 
-										+ Math.round((1.0 - ratio) * 200 + 55) + ")");
+								$(flatDoms[i])
+									.css("background-color", 
+										"rgb(255," 
+											+ Math.round((ratio) * 200 + 55) + "," 
+											+ Math.round((ratio) * 200 + 55) + ")")
+									.addClass('badSentence');
 
 								//tool tip
 						 		var moveLeft = 20;
 								var moveDown = 10;
 								
+								var flagged= 
+									ratings.map(function (o, i) { return [o, i + 1]; })
+											.filter(function (arr) { return arr[0] != 'ok'; })
+											.map(function (arr) { return arr[1]; })
+											.join(', ');
+								
 								var tipText = 
-									"<b>" + (ratings.length - numOk) + " Flagged</b>"
+									"<b>" + (ratings.length - numOk) + " Flagged (Reviewers " + flagged + ")</b>"
 									+ "<br/><br>"
 									+ notes.replace('\n','<br/><br/>');								
 								$(flatDoms[i]).hover(function(e) {
@@ -384,10 +398,14 @@ function bindDOM() {
 											$('#tooltip').fadeOut(1000); 
 									}, 3000);
 								});								
+							} else {
+								$(flatDoms[i]).css('color','green');
+								console.log('ok:',$(flatDoms[i]).text());
 							}
 						}
 		 			});
-		 		} else {
+		 		}
+		 		if (out.count != flatSentences.length) {
 		 			console.log('Try again in ', out.repollDelayMS, 'ms, only got ', out.count, ' / ', flatSentences.length);
 		 			setTimeout(function () {
 		 					fetchResults(jobID, flatSentences, batchID, paraSents);
@@ -398,7 +416,8 @@ function bindDOM() {
 		 			{jobID: jobID,
 		 			 flatSentences: flatSentences,
 		 			 batchID: batchID},
-		 			data);
+		 			data,
+		 			e);
 		 	}
 		 });
 	}
@@ -454,7 +473,7 @@ function bindDOM() {
     $('#humani').click(function () {
 		$.ajax({
 			url: 'http://vivam.us/human/i',
-			type: 'PUT',
+			type: 'POST',
 			success: function(result) {
 				console.log('human/i result',result);
 				global = result;
@@ -464,13 +483,19 @@ function bindDOM() {
     $('#humano').click(function () {
 		$.ajax({
 			url: 'http://vivam.us/human/o',
-			type: 'PUT',
+			type: 'POST',
 			success: function(result) {
 				console.log('human/o result',result);
 				global = result;
 			}
 		});    	    
     });
+    $('#summarize').click(function () {
+    	$('.badSentence').map(function () {
+    		console.log('bad', $(this).text());
+    	});
+    });
+    
 }
 
 
@@ -484,9 +509,10 @@ window.addEventListener('load',bindDOM);
   <div>
   	<h2>Commands:</h2>
   	<input id="toggleAll" type="button" value="toggle all"/>
-  	<input id="query" type="button" value="query"/>
-  	<input id="humani" type="button" value="human/i"/>
-  	<input id="humano" type="button" value="human/o"/>
+  	<input id="query" type="button" value="proofread!"/>
+  	<input id="humano" type="button" value="human/o (flush to turk)"/>
+  	<input id="humani" type="button" value="human/i (check turk)"/>
+  	<input id="summarize" type="button" value="summarize"/>
   </div>
   <div id="doc"></div>
   <div id="tooltip"></div>

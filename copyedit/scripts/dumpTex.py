@@ -14,6 +14,11 @@
 #sudo python -m nltk.downloader -d /usr/share/nltk_data all
 
 
+
+SPELLCHECK = False
+GRAMMARCHECK = False
+
+
 import sys
 import re
 import os
@@ -327,14 +332,15 @@ def checkParagraph (paragraph):
         return
 
       okParagraph = True
-      for (stat, (f,p,l,c,cTotal,w,pText), sugg) in spellcheckSentence(sent):
-        if stat == False:
-          #spelling error
-          okParagraph = False
-          #print
-          #print f.split("/")[-1],(p+l),c,':',w, '->', sugg
-          #print '     "', originalSentence(sent),'"'
-          yield {"e": "spell", "i": [p,l,c,cTotal,w], "s": sugg}    
+      if SPELLCHECK:
+		  for (stat, (f,p,l,c,cTotal,w,pText), sugg) in spellcheckSentence(sent):
+			if stat == False:
+			  #spelling error
+			  okParagraph = False
+			  #print
+			  #print f.split("/")[-1],(p+l),c,':',w, '->', sugg
+			  #print '     "', originalSentence(sent),'"'
+			  yield {"e": "spell", "i": [p,l,c,cTotal,w], "s": sugg}    
       if okParagraph:
         (_,_,_,_,c,_,p) = sent[0]
         (_,_,_,_,c2,w,_) = sent[-1]
@@ -343,7 +349,9 @@ def checkParagraph (paragraph):
         #print para
         for line in paragraphToLines(paragraph):
           for sent in lineToSentences(line):
-            (ok, out) = checkGrammar(originalSentence(sent))
+            if len(sent) == 0:
+              continue
+            (ok, out) = (True, 0) if (not GRAMMARCHECK) else checkGrammar(originalSentence(sent))
             if not ok:
               cleanedSent = map(lambda (f,p,line,c,cTotal,w,pText): [p,line,c,cTotal,w], sent)
               yield {"e": "gram", "i": cleanedSent, "s": out}
