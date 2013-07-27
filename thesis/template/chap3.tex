@@ -279,6 +279,7 @@ parPost(visit1, start); parPre(visit2, start);
 
 
 \subsection{Parallel Schedules: Same Traversal}
+\label{subsec:nested}
 A schedule exposes structured parallelism both within a traversal and across them. 
 
 For an example of parallelism within a traversal, the first postorder traversal for \hlang features latent parallelism. The widths and heights for one subtree can be computed independently of the widths and heights of another distinct subtree. Figure~\ref{fig:depsparallel:postorder} shows an example where different (logical) threads may compute on the leaf nodes and implicit barriers force a join at every intermediate node. Likewise, the second traversal (Figure~\ref{fig:depsparallel:preorder}) may be changed to a parallel preorder traversal where ever intermediate node acts as a logical fork. Figure~\ref{fig:hboxparallel:traversals} depicts na\"{i}ve parallel implementations using Cilk's~\cite{??} \code{spawn} and \code{join} primitives. We formulate the schedule by changing the specification from \code{postorder} and \code{preorder} to \code{parPost} and \code{parPre} (Figure~\ref{fig:hboxparallel:schedule}).
@@ -494,7 +495,12 @@ The result of the rewriting is a canonical attribute grammar without loops. Our 
 \subsection{Recovery by Commuting Abstractions}
 If the rewritten grammar can be scheduled, so can the original grammar with loops. We extract loops from the scheduled grammar and guarantee that any dependency in the original grammar is safely obeyed by the extracted loops. A difficult part of the guarantee is proving that the procedure for recovering loops from the schedule will not get ``stuck.'' This section describes the loop recovery process and its correctness.
 
-The algorithm first rearranges loop statements into distinct blocks. The scheduler may interleave statements from loops over distinct sets of children, but code generation needs them to be separated.  Likewise, the algorithm must rearrange all non-loop assignments to fit between loop blocks. The procedure recursively performs the following partitioning steps, where each step is guaranteed to preserve any dependencies:
+
+The algorithm first rearranges loop statements into distinct blocks. The scheduler may interleave statements from loops over distinct sets of children, but code generation needs them to be separated.  Likewise, the algorithm must rearrange all non-loop assignments to fit between loop blocks. The procedure iteratively partitions a sequence of attributes into several subsequences until it reaches a normal form and can proceed nor further.
+
+For each iteration, the algorithm takes a sequences of attributes starting with ``\code{child0.fld}'', which represents the beginning of a loop. It partitions the attributes following it into those that must occur before the loop, after the loop, or during it. The loop's partition is then ready for code generation, and the algorithm repeats on the other two partitions. As the algorithm finalizes a loop with at least one attribute in each step, we guarantee that the algorithm terminates.
+
+The partitions for one step of the algorithm are determined by applying the following three rules:
 \begin{itemize}
 \item \textbf{Extract non-loop assignments from a loop}. The beginning of a loop corresponds to an assignment to ``\code{child0.fld}'' and the end by an assignment to ``\code{childn.fld}''. Assignments to non-loop variables that occur within the loop range are moved to be before the beginning of the loop. They are moved out in case multiple statements are scheduled for the same loop and some of them depend on the non-loop variables. All non-loop assignments in a loop range are moved out with their relative ordering preserved.
 
@@ -502,7 +508,7 @@ Moving a non-loop assignment to before the loop is safe. If the assignment depen
 
 The process is guaranteed to terminate. First, moving statements out of one loop completes in time linear in the size of the range of the loop. Second, the finite number of loops means that the process only repeat a finite number of times because movement only occurs in one direction.
 
-\item \textbf{Separate Loops over Different Collections} The algorithm iteratively separates loops over different collections. First, it detects mutually dependent statements that must be scheduled as part of the same loop. Then, it examines the loop span for statements belonging to another type of loop and moves them either to before or after the base range of mutually dependent statements.  The moved statements maintain their ordering relative to other statements moved to the same side of the range.
+\item \textbf{Separate loops over different collections} The algorithm iteratively separates loops over different collections. First, it detects mutually dependent statements that must be scheduled as part of the same loop. Then, it examines the loop span for statements belonging to another type of loop and moves them either to before or after the base range of mutually dependent statements.  The moved statements maintain their ordering relative to other statements moved to the same side of the range.
 
 The complexity of the operation stems from mutually dependent loop variables. For example, the following code must be scheduled into the same loop:
 \begin{lstlisting}[mathescape]
@@ -515,7 +521,7 @@ The partial order for the resulting schedule is ``\code{(a0\|b0) (a1\|b1) (a2\|b
 
 The algorithm terminates because it recursively operates on successively smaller partitions: statements moved earlier, the current loop range, and statements moved after. 
 
-\item \textbf{Separate Loops over the Same Collection} Loops over the same collection may still need to be separated. Consider the following loop:
+\item \textbf{Separate staged loops over the same collection} Loops over the same collection may still need to be separated. Consider the following loop:
 \begin{lstlisting}[mathescape]
 loop childs {
   childs.a := fold 0 .. childs$\$-$.b + 1;
@@ -538,7 +544,7 @@ for (int i = 0; i < childs.length; i++) {
 	childs[i].b = (i == 0 ? 0 : childs[i $-$ 1].a) + 1;
 }
 \end{lstlisting}
-Note that translation of references of the form ``\code{childs$-.fld}'' require tracking the loop step in order to pick whether to use the initial value or the previous node's value.
+Note that translation of references of the form ``\code{childs$}$-$\code{.fld}'' require tracking the loop step in order to pick whether to use the initial value or the previous node's value.
 
 
 \section{Verification}
@@ -628,9 +634,36 @@ Similar reasoning applies to quickly checking the two other properties. Linear c
 
 
 \section{Evaluation: Layout as Structured Parallel Visits}
+
+We show that our static language of parallel schedules is expressive enough to support common layout tasks.  In particular, we show that it can support document layout (box models and nested text), table layout (user interfaces and data tables), and rendering. Our document layout and table examples describe supporting a subset of CSS. Our rendering example highlights optimizing dynamic memory allocation for GPU. Rendering should be integrated into each layout model; we discuss how to do so at the end. The attribute grammars in Appendix~\ref{??} include sketches~\ref{chap:4} of the schedules described here.
+
 \subsection{Box model}
+Document languages provide nested box models where intermediate nodes are boxes and leaf nodes are text and images. For example, a box may represent a page, column, or paragraph. The \hlang{} example provides the basic insight, except a language such as CSS extends it with features. Of most relevance to parallelization, we describe supporting the following common features with non-trivial data dependencies~\cite{mama}:
+\begin{itemize}
+\item Intrinsic preferences. Document content leads to intrinsic preferences, such as as a box being big enough to contain its content. These must be combined with external constraints, such as overriding preferences set by the designer on the element or its container. 
+\item Relative layout. Based on the size preferences of a node and its content, the content must be positioned relative to each other and the node.
+\item Absolute layout. Based on the relative positioning between a node and its parent, transitive reasoning must be applied to position the node relative to the tree's root node.
+\end{itemize}
+Our static box model schedule loosely corresponds to the above list by devoting 1-2 parallel passes for each item. 
+
+We stage the computations with the following sequence of parallel traversals:
+\begin{enumerate}
+\item \textbf{Bottom-up: intrinsic widths and concrete overriding constraints.} For example, the intrinsic width of a horizontal box is the sum of intrinsic widths of its children. If the user specifies a concrete width value such as 2 pixels, that value is used instead.
+\item \textbf{Top-down: percent widths.}  Constraints such as a width being a percent of its parent are computed next. Notably, the CSS standard defines percent widths that cannot be computed at this point as being undefined. The definition by the CSS standard makes whatever interpretation we use safe.
+\item \textbf{Bottom-up: heights and relative positioning.} Once the size of a node's children is known, their placement relative to the node can be computed. For example, a horizontal box would place them side by side, and a vertical box would stack them. Likewise, the relative positioning of a node's children, their heights, and any overriding user constraints are sufficient for computing the node's height.
+\item \textbf{Top-down: absolute positioning.} When the absolute position of a node becomes available, the absolute positions of its children may be computed. The process proceeds recursively.
+\end{enumerate}
+
+
 \subsection{Nested text}
+Our core approach to supporting nested text is described in Section~\ref{subsec:nested}. As a reminder, the problem is to perform word-wrapping on subtrees such as paragraphs with stylized text. The idea is to identify subtrees that require sequential evaluation but can be computed in parallel with other subtrees. Given the basic insight of performing such a nesting, we use our tool to design and verify the schedule.
+
+A non-obvious aspect of using nested traversals for text layout  is that we only use the nesting for one pass. The computations relating to text layout span several tree traversals. The intrinsic and computed width passes execute using the parallel traversals described above. We only use the nesting for height and relative position computation. Thus, our strategy of using nested traversals achieves coarse-grained parallelism for the traversal with the difficult word-wrapping dependency, and features the usual fine-grained parallelism for all others.
+
+
 \subsection{Grids}
+We scheduled the automatic layout algorithm used in CSS and HTML as parallel tree traversals.
+Section~\ref{subsec:tables} describes the functional specification. The primary dependencies challenging parallelization relate to supporting topological traversals over a DAG rather than a tree because cells have two parents: the row and the column. In a top-down traversal, both the row and column should be visited before the cell. Our solution for parallelization is a level-synchronous breadth-first evaluation order. Finally, our example propagates information between rows and columns using several intermediate parallel traversals. A nested traversal or the ability to reason about attributes of grandchildren rather than just children may help eliminate those traversals.
 
 
 \subsection{SIMD Rendering through Staged Memory Allocation}
@@ -664,6 +697,10 @@ Table~\ref{table:macroreduction} compares the lines of code in visualizations be
 As shown in Figure~\ref{fig:stagedallocClient}, the eliminated code is code that was introduced by staging the library calls. Porting unstaged functional graphics calls to the library, is in practice, an alpha renaming of function names.  Using the '@' macro eliminates 19--44\% of the code that would have otherwise been introduced and completely eliminates two classes of bugs (scheduling and pointer arithmetic), so the productivity benefit is non-trivial. 
 
 \subsubsection{Performance}
+
+\subsection{Discussion}
+An interesting distinction arises between our use of attribute grammars and our approach of parallel traversals. The restricted attribute grammars prevents specifying computations that could be manually expressed with the tree traversals. Thus, we found that our box model can be manually encoded with 3-5 parallel traversals, but expressing it with our restricted attribute grammar formalism may require additional parallel traversals. An important future direction would therefore be to increase the flexibility and reasoning over the attribute grammar while maintaining the set of parallel traversal types.
+
 
 
 \section{Related Work}

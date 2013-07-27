@@ -619,6 +619,7 @@ class Point : PointI {
 Visualizations like the treemap require recompilation of most of the attributes for such animations, which can become a bottleneck and thus benefits from acceleration by our tool.
 
 \subsection{Grid-based: Tables}
+\label{subsec:tables}
 We now examine one of our most difficult case studies: HTML~[[CITE]] and CSS table layout~[[CITE]]. Tables appear in  most rich document layout languages such as CSS and \LaTeX, and are an instanced of \emph{grid-based layout}, which is popular for representing layouts such as user interfaces and data tables. In conversations with commercial browser developers, we found that the proposed standards for the layout language features were reverse-engineered from earlier implementations. Furthermore, at the time of writing, two such competing standards were proposed, and with unclear notions of completeness or cases of distinction.
 
 We found that specifying tables involved \emph{non-linear} reasoning about \emph{dynamic DAGs}, which we achieved by using abstract data types and  using encoding hints to perform DAG scheduling by reusing our attribute grammar tree scheduler. More dynamic formalisms such as a higher-order attribute grammars~\cite{??} provide flexible alternatives, but it is not clear how to use them to address the performance criteria of the subsequent chapters.
