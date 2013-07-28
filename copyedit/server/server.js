@@ -5,6 +5,9 @@ app.enable('trust proxy'); //for nginix etc..
 var qs = require('querystring');
 
 
+var DEBUG = true;
+
+
 app.use(express.static(__dirname + '/public'));
 app.use(express.bodyParser());
 
@@ -44,6 +47,31 @@ function updateBatch(jobID, i, result) {
 
 
 function fetchGet (url, sent, sentenceI, jobID) {
+
+	if (DEBUG) {
+		if (Math.random() > 1.2) {
+			console.log('GET fake delay', sent);
+			setTimeout(
+				function () { fetchGet(url, sent, sentenceI, jobID); }, 
+				Math.random() * 3 * 1000);
+		} else {
+			var nonce = Math.random();
+			var out = 
+				Math.random() > 0.5 ?
+					['ok', 'ok', '<or> ' + nonce + ' asdf asdf']
+				: Math.random() > 0.5 ?
+					['<is> ' + nonce + ' ha hah a long description goes here ok', 
+					 '<the> ' + nonce + ' another long description goes here asdf asdf asdf',
+					 '<if> ' + nonce + ' this sentence is going to be long and take space too due to its redundancy']
+				: ['ok','ok','ok'];
+			console.log('GET fake result', out);
+			updateBatch(jobID, sentenceI, out);			
+		}	
+		return;
+	}
+
+	//////////////////////////////////////////
+
 	request(url, function (err, response, body) {
 		if (!response) {
 			console.log('no response (offline?), try again in ' + (delay / 1000) + ' seconds...');
@@ -184,8 +212,13 @@ function askAsText (sent) {
 						regex: "(^ok$)|(^(<([^>]+)>[^\\n]+)(\\n+<([^>]+)>[^\\n]+)*\\n*$)"
 					}})
 			});
+			/* knownAnswerQuestions:
+				JSON.stringify({
+					match:{
+						Inexact: '^[0-9]+\n*$'
+			
+			*/
 }
-
 
 app.post('/api/turkit', function (req, res) {
 	var sents = req.body.sentences ? req.body.sentences : [];
@@ -202,7 +235,12 @@ app.post('/api/turkit', function (req, res) {
 		console.log('asking for', sent);
 		var url = buildUrl(sent);
 		console.log('url', url);	
-		request.put(url, function (error, response, body) { /* whatevs */  });
+		if (DEBUG) {
+			request.put(url, function (error, response, body) { /* whatevs */  });
+		} else {
+			console.log("Fake PUT");
+			console.log(url);
+		}
 		fetchGet(url, sent, idx, jobID);	
 	});
 
