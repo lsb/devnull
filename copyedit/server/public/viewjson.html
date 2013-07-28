@@ -17,6 +17,26 @@ THROTTLE = (1.0/9) * 1000; //min delay between XHRs
 </script>
 	<script src="promptjs/d.js"></script>
 	<style>
+
+html, body {
+	margin: 0;
+	padding: 0;
+}
+#header {
+	overflow: hidden;
+}
+#header h2, #header h1 {
+	background-color: #ff9900;
+	color: white;
+	margin: 0em;
+	padding: 0.5em;
+}
+#header h1 {
+	background-color: #FF3300;
+}
+#header span {
+	margin: 0.2em;
+}
 	
 p.file {
 	margin-top: 2em;
@@ -31,9 +51,10 @@ p.file {
 }
 	
 p.paragraph { 
-	padding: 1em; 
-	border: 1px solid #CCC; 
-	margin: 1em; 
+	padding: 0.5em; 
+	margin: 0.5em; 
+	margin-right: 0.1em;
+	padding-right: 0.1em;
 }
 p.paragraph .real {
 	display: block;
@@ -109,6 +130,28 @@ p.paragraph.off {
 #summary .on, #summary .off {
 	display: block;
 }
+
+
+#fixes p.off {
+	display: none;
+}
+#fixes p.on {
+	margin-bottom: 1em;
+	border-left: 0;
+	padding: 1em;	
+	background-color: #FEE;
+}
+
+
+#linkage {
+	width: 1em; 
+	height: 100%; 
+	float: left; 
+	background-color: white;
+	opacity: 0.5;
+}
+
+
 	</style>
 
 
@@ -122,9 +165,18 @@ p.paragraph .comment {
 #book, #corrections {
 	width: 50%;
 	float: left;
+	height: 100%;	
+}	
+#book {
+	overflow: auto;
+}
+#book::-webkit-scrollbar {
+      width: 0px;
+}
+#fixes {
 	height: 100%;
 	overflow: auto;
-}	
+}
 #corrections {
 	scrollbar: invisible;
 }
@@ -187,7 +239,7 @@ function summarize () {
 		.map(function (arr) {
 			var paragraphId = arr[0]; var paragraphD = arr[1];
 			$('.real span', paragraphD).map(function (i, d) {
-				if ($(this).attr('class').indexOf('off') != -1) {
+				if ($(this).attr('class') && $(this).attr('class').indexOf('off') != -1) {
 					offSents.push({para: paragraphId, sent: i});
 				}
 			});
@@ -195,10 +247,10 @@ function summarize () {
 	var onSents = $("p.paragraph.on .real .on").toArray().length;
 		
 	var d = D.$span(
-		$(D.$h2('Paragraphs:'))[0],
+		$(D.$h2('Paragraphs'))[0],
 		$(D.$span('On: ' + on.join(', '))).attr('class','on')[0], 
 		$(D.$span('Off: ' + off.join(', '))).attr('class','off')[0],
-		$(D.$h2('Sentences:'))[0],
+		$(D.$h2('Sentences'))[0],
 		$(D.$span('Off: ' + 
 			offSents.map(function (o) { return '(' + o.para + ':' + o.sent + ')'; })			
 					.join(', ')))
@@ -468,17 +520,19 @@ function bindDOM() {
 								
 								$(flatDoms[i])
 									.css("background-color", 
-										"rgb(255," 
+										/*"rgb(255," 
 											+ Math.round((ratio) * 200 + 55) + "," 
-											+ Math.round((ratio) * 200 + 55) + ")")
+											+ Math.round((ratio) * 200 + 55) + ")")*/
+										ratio < 0.3 ? '#FD9' : '#FF9')									
 									.addClass('badSentence');
+							
 
 								//tool tip
 						 		var moveLeft = 20;
 								var moveDown = 10;
 								
-								var tipText = makeTip(ratings);
-																
+								var tipText = makeTip(ratings);														
+								/*
 								$(flatDoms[i])
 									.hover(function(e) {
 									  $('#tooltip')
@@ -497,11 +551,12 @@ function bindDOM() {
 												$('#tooltip').fadeOut(1000); 
 										}, 3000);
 									});
+								*/
 								$(flatDoms[i]).children().remove();
 								$(flatDoms[i]).append($(tipText).clone().addClass('comment'));
 																
 							} else {
-								$(flatDoms[i]).css('color','green');
+								$(flatDoms[i]).css('color','#333');
 //								console.log('all ok',$(flatDoms[i]).text());
 							}
 						}
@@ -622,11 +677,16 @@ function bindDOM() {
 }
 
 
+
 $(function () {
 	/*! jQuery visible 1.0.0 teamdf.com/jquery-plugins | teamdf.com/jquery-plugins/license */
 	(function(d){d.fn.visible=function(e,i){var a=d(this).eq(0),f=a.get(0),c=d(window),g=c.scrollTop();c=g+c.height();var b=a.offset().top,h=b+a.height();a=e===true?h:b;b=e===true?b:h;return!!(i===true?f.offsetWidth*f.offsetHeight:true)&&b<=c&&a>=g}})(jQuery);
 });
 $(function () {
+
+	var ctx = null;
+	var cnv = null;
+	var cnvJ = null;
 	
 	var originalTopIdx = 0;
 	var beforeScroll = $('#book').scrollTop();
@@ -634,7 +694,15 @@ $(function () {
 		console.log('scroll');
 		var paras = $('p.paragraph',this)
 
-		//closest to top		
+		if (!cnv || !cnvJ) {
+			cnvJ = $('#linkage');
+			cnv = cnvJ[0];
+			cnvJ.attr('height',$('#book').height() + 'px');
+		}
+		if (!ctx) ctx = cnv.getContext('2d');
+		ctx.clearRect(0, 0, cnvJ.width(), cnvJ.height());
+	
+		//closest to top, any overlap		
 		var topMostIdx = -1;
 		paras.each(function (i, e) {
 			if ($(this).visible(true /* any part visible */)) {
@@ -656,7 +724,72 @@ $(function () {
 				+ $('#book').scrollTop() - beforeScroll);
 			beforeScroll = $('#book').scrollTop();
 		}
-		
+
+
+		var w = cnvJ.width();
+		paras.map(function (i, e) {
+			if ($(this).visible(true)) {
+				var matches = $("#corrections p");
+				if (matches.length == 0) return;
+				var match = $(matches[i]);
+				
+				console.log(match.attr('class'));
+				if (match.attr('class') == 'off') return;
+				
+				if (false) {
+					//left
+					ctx.save();
+					ctx.fillStyle = "rgba(255,51,51, 0.5)";
+					ctx.fillRect(
+						0, 
+						$(this).offset().top - $('#book').offset().top, 
+						w/2, 
+						$(this).outerHeight());
+					if (true || i == 2) {
+						ctx.fillStyle = "rgba(255,51,51, 0.3)";
+						ctx.fillRect(
+							w/2, 
+							match.offset().top - $('#fixes').offset().top, 
+							//$(this).offset().top - $('#book').offset().top, 
+							w/2, 
+							match.outerHeight());
+							//$(this).outerHeight());
+					}
+					ctx.restore();
+				}
+				
+				ctx.save();
+      			ctx.beginPath();
+				//top left
+				ctx.moveTo(0, $(this).offset().top - $('#book').offset().top);
+				//top right
+				ctx.quadraticCurveTo(
+				  w/4, 
+				  $(this).offset().top - $('#book').offset().top,
+				  w,
+				  match.offset().top - $('#fixes').offset().top);
+				//bottom right
+				ctx.lineTo(
+				  w, 
+				  match.offset().top - $('#fixes').offset().top
+				    + match.outerHeight());
+				//bottom left
+				ctx.quadraticCurveTo(
+				  w/4, 
+				  $(this).offset().top - $('#book').offset().top + $(this).outerHeight(),
+				  0,
+				  $(this).offset().top - $('#book').offset().top + $(this).outerHeight());
+				
+				ctx.closePath();
+				ctx.fillStyle = 'rgba(255,51,51,0.3)';
+				ctx.fill();
+				ctx.restore();
+				
+				
+      			
+				
+			}
+		});		
 		//$("#corrections").scrollTop($(paras[topMostIdx]).scrollTop());
 	});
 });
@@ -664,7 +797,6 @@ $(function () {
 
 
 function rebuildScroll () {
-
 
 	$('#fixes').html('');
     var paragraphs = $('p.paragraph');
@@ -679,6 +811,8 @@ function rebuildScroll () {
 		var corrections = 
 			D.$p.apply({},
 				$('.comment', para).clone());
+		var numCorrections = $('.comment', para).length;
+		$(corrections).addClass(numCorrections > 0 ? 'on' : 'off');
     	return corrections;
     });
     nodes.forEach(function (elt) {
@@ -725,13 +859,22 @@ function stopLaunchTimer () {
 }    
 
 
+$(function () {
+	var on = true;	
+	$('#header').click(function () {
+		on = !on;
+		$(this).css('height', on ? 'auto' : '3.5em');
+	});
+});
+
 window.addEventListener('load',bindDOM);
 	
 	</script>
   </head>
   <body>
-  <div>
+  <div id="header">
 	  <div>
+	  	<h1>FastCheck</h1>
 		<h2>Progress</h2>
 		<span id="timeOutstanding">Time since launch</span>
 		<br/>
@@ -739,7 +882,7 @@ window.addEventListener('load',bindDOM);
 	  </div>
 	  <div id="summary"></div>
 	  <div>
-		<h2>Commands:</h2>
+		<h2>Commands</h2>
 		<input id="toggleAll" type="button" value="toggle all"/>
 		<input id="query" type="button" value="proofread!"/>
 		<input id="humano" type="button" value="human/o (flush to turk)"/>
@@ -751,9 +894,11 @@ window.addEventListener('load',bindDOM);
   	<div id="book">
   		<div id="doc"></div>
   	</div>
-  	<div id="corrections">
-  		<div id="fixes"></div>
-  	</div>
+  	<div id="corrections"><!--
+  		--><canvas id="linkage" width="40px" style="width:40px" height="1024">
+  		</canvas><!--
+  		--><div id="fixes"></div><!--
+  	--></div>
   </div>
   <div id="tooltip"></div>
   </body>
