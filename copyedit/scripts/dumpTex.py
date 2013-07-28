@@ -161,8 +161,8 @@ def spellcheckSentence(sent):
 
 tokExpandCommands = re.compile(r'\\(ref|subref|sched|caption|emph|textbf|title|section|subsection|subsubsection|subsubsubsection)')
 tokCommand = re.compile(r'(\\begin{tabular}.*?\\end{tabular})|(\\begin{lstlisting}.*?\\end{lstlisting})|(\\begin{grammar}.*?\\end{grammar})|(\\((\\\\)| |(([\xc4-\xfc]|\w|[:])*(\*|({.*?})|\[.*?\])*)))', re.DOTALL)
-tokText = re.compile(ur'(\w|[\xc4-\xfc]|[\-\u2013\u2014\'-\+#])+|((\$)?[0-9]+(,|[\.xX+]|(\\%))?)')
-tokNoise = re.compile(ur'(\ufeff|\u200b|\$.*\$)|[${},\u2026:\n\r \t.!<>;`"\u2018\u2019\u201c\u201d\u0060\u00b4|*#=@&~\[\]\+\?\(\)/]|(%.*(\n|$))')
+tokText = re.compile(ur'(\w|[\xc4-\xfc]|[\-\u2013\u2014\'-\+#])+|((\$)?[0-9]+(,|[\.xX+]|(\xb0|\\%))?)')
+tokNoise = re.compile(ur'(\xb0|\ufeff|\u200b|\$.*\$)|[${},\u2026:\n\r \t.!<>;`"\u2018\u2019\u201c\u201d\u0060\u00b4|*#=@&~\[\]\+\?\(\)/]|(%.*(\n|$))')
 
 def words (paragraph, firstLine):
   line = 0 #line in paragraph 

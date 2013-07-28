@@ -122,14 +122,66 @@ function askAsRadio (sent) {
 }
 
 function askAsText (sent) {
+
+	var instructions = 
+	  'Proofread: describe mistakes in these sentences\n'
+	+ [
+	  'Mistakes can be anything, such as spelling, grammar, awkward phrasing, and run-on sentences.',
+	  'Describe each mistake on a new line (multiple mistakes may appear in a sentence).',
+	  'Describe a mistake by first labeling a word in it with "<the_word>" and then what is wrong, such as "<hellllo> spelling mistake".',
+	  'If there are no mistakes, leave the box as "ok".',
+	  'You can ignore text formatting notes such as \\Chapter{The Beginning}, Figure~., [ii], and ----',
+	  '',
+	  'Here are two examples:',
+	  '',
+	  '=== Example 1 Sentence ===',
+	  'The quick \\highlight{brown} fox jumps over the lazy dog.',
+	  '----Answer -----',
+	  'ok',
+	  '==========================',
+	  '=== Example 2 Sentence ===',
+	  'The quickly broown fox jumps over the lazy dog.',
+	  '--- Answer -----',
+	  '<quickly> looks wrong',
+	  '<broown> spelling',
+	  '==========================',
+	  '',
+	  'If you have suggestions on how to improve the design of this HIT, please email LMeyerov+mt@gmail.com .',
+	  'Thank you for helping!'
+	].join('\n');
+/*	
+	var instructions = 
+	  'Proofread: at first glance, which sentences have spelling mistakes, grammar mistakes, or seem awkward?\n'
+	+ [
+	  'Put every mistake in the sentence on a new line.',
+	  'If there are no mistakes, leave the box as "ok".',
+	  'Here are two examples:',
+	  '=====',
+	  '"The quickly broown fox juumps over the lazy fog."',
+	  '-----',
+	  'broown -> brown',
+	  'quickly looks wrong',
+	  'juumps -> jumps',
+	  '*fog* cannot be jumped over, did you mean dog?',
+	  '=====',
+	  '"The quick brown fox jumps over the lazy dog."',
+	  '-----',
+	  'ok',
+	  '=====',	  
+	  'If you have suggestions on how to improve the design of the HIT, please email LMeyerov+mt@gmail.com .',
+	  'Thank you for helping!'
+	].join('\n');
+*/
 	return qs.stringify({
-				distinctUsers: 3,
-				instructions: //task description
-					'Proofread: at first glance, which sentences have spelling mistakes, grammar mistakes, or seem awkward?\nPlease describe any problems with the sentence. If the sentence is fine, leave it described as "ok". You can ignore formatting hints such as "\\section{Chapter name}" and "\\ref{??}" and broken quotation marks. \nFeel free to leave additional comments in the box, and for general ideas about how to improve the HIT request, please email LMeyerov+mt@gmail.com. Thank you for helping!', 
+//				cost: 2,
+				distinctUsers: 5,
+				instructions: instructions,
 				question: 
-					JSON.stringify({Text: {
+					JSON.stringify({
+					  ConstrainedText: {
 						questionText: '"' + sent + '"',
-						defaultText: 'ok'
+						defaultText: 'ok',
+						regex: "(^ok$)|(^(<([^>]+)>[^\\n]+)(\\n+<([^>]+)>[^\\n]+)*\\n*$)"
 					}})
 			});
 }
