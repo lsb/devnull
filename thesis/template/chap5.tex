@@ -1,24 +1,41 @@
 \chapter{Parallel Schedule Synthesis}
 \label{chap:4}
 
-\section{Motivation: Language Design and Algorithm Implementation}
-\subsection{The Good: Automating Dependency Management}
-\subsection{The Bad: Guiding Parallelization}
-\subsection{The Ugly: Preventing Serialization}
-\subsection{Algorithm Design}
 
-\section{Holes}
+Programmers struggle to map applications into parallel algorithms. Going beyond the automatic schedule verification of the last chapter, we now examine how to automatically generate a schedule.  Consider two of the decisions that a programmer faces in manually designing a schedule:
+\begin{itemize}
+\item \textbf{Scheduling a single traversal.} Many computations contain sequential dependencies between nodes. One correct traversal over the full tree might then be sequential. However, if the sequential dependencies can be isolated to a subtree, an overall parallel traversal would be possible if it invokes a sequential traversal for just the isolated subtree. Whether such isolation is always possible is not obvious.
+\item \textbf{Scheduling multiple traversals.} Programs such as browsers perform many traversals. Traversals might run one after another, concurrently, or be fused into one. These choices optimize for different aspects of the computation. Running two traversals in parallel improves scaling, but fusing them into one parallel traversal avoids overheads: the choice may depend on both the hardware and tree size. Which traversal sequence to use is not obvious.
+\end{itemize}
+These decisions explode the space of schedules. Today, programmers manually navigate the space by selecting a parallel schedule, judging its correctness,  and comparing its efficiency to alternative schedules. The tasks are expensive: programmers  globally reason about dependencies, develop prototypes for profiling, and whenever the functional specification changes, restart the process. 
+
+This chapter explores the design and implementation of an attribute grammar that supports automatic schedule synthesis.
+We examine several questions: 
+\begin{itemize}
+\item What programming constructs are enabled by schedule synthesis?
+\item What is an algorithm to \emph{quickly} find a \emph{correct} schedule?
+\item If multiple schedules are possible, how do we find a \emph{fast} one?
+\end{itemize}
+The following sections explore each question in turn. 
+
+
+
+\section{Computer-Aided Programming with Schedule Holes}
 \label{sec:holes}
+Being able to automatically generate parallel schedules enables possibilities for parallel programming.	
+
 \subsection{Generalizing Holes to Unification}
 
-\section{Optimized Algorithm: Finding One Schedule}
+\section{Fast Schedule Synthesis}
+\subsection{Search}
+\subsection{Optimization}
+\subsection{Analysis}
 
-\section{Optimized Algorithm: Autotuning Over Many Schedules}
+\section{Schedule Autotuning}
 \label{sec:schedtuning}
 \subsection{Alternation Heuristic: Off-by-one Optimality}
 \subsection{Enumeration via Incrementalization}
 
-\section{Complexity Analysis and the Power of Sketching}
 \section{Evaluation}
 \subsection{Case Studies: Sketching in Action}
 Show use in CSS and data viz: 
