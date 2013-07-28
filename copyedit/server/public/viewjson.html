@@ -37,17 +37,14 @@ p.paragraph {
 }
 p.paragraph .real {
 	display: block;
-	margin-bottom: 1em;
-	padding-bottom: 1em;
-	border-bottom: 1px dotted #CCC;
 }
 p.paragraph.off {
 	opacity: 0.3;
 	background-color: silver;
 }
-
 .spell > span { 
-	display: inline-block;
+	display: none;
+
 	font-size: 1.0em;	
 
 	background-color: blue;
@@ -58,6 +55,8 @@ p.paragraph.off {
 	opacity: 0.08;
 }
 .spell > span:hover {
+	display: none;
+	
 	background-color: white;
 	color: blue;
 	width: auto;
@@ -86,6 +85,9 @@ p.paragraph.off {
 .lblSpell { color: maroon; }
 .lblGram { color: blue; }
 
+.lblSpell, .lblGram, .spell, .gram { display: none; }
+
+
 .gram {
 	border-bottom: 1px dotted #7F7; 
 }
@@ -108,6 +110,42 @@ p.paragraph.off {
 	display: block;
 }
 	</style>
+
+
+<style type="text/css" media="screen">
+p.paragraph .correction {
+	display: none;
+}
+p.paragraph .comment {
+	display: none;
+}
+#book, #corrections {
+	width: 50%;
+	float: left;
+	height: 100%;
+	overflow: auto;
+}	
+#corrections {
+	scrollbar: invisible;
+}
+</style>
+<style type="text/css" media="print">
+.correction {
+	display: block;
+}
+p.paragraph .comment {
+	display: block;
+	padding-left: 1em;
+	padding-right: 1em;
+	color: red;
+}
+#corrections {
+	display: none;
+}
+</style>	
+
+	
+	
 	<script>
 
 
@@ -154,7 +192,8 @@ function summarize () {
 				}
 			});
 		});
-	
+	var onSents = $("p.paragraph.on .real .on").toArray().length;
+		
 	var d = D.$span(
 		$(D.$h2('Paragraphs:'))[0],
 		$(D.$span('On: ' + on.join(', '))).attr('class','on')[0], 
@@ -163,7 +202,8 @@ function summarize () {
 		$(D.$span('Off: ' + 
 			offSents.map(function (o) { return '(' + o.para + ':' + o.sent + ')'; })			
 					.join(', ')))
-			.attr('class','off')[0]);
+			.attr('class','off')[0],
+		D.$span('On (count): ' + onSents));
 	$(d).attr('id','summary');	
 	$insertDB('#summary', Z.unit(d));
 	
@@ -174,7 +214,7 @@ function summarize () {
 		var sents = o.spans.map(function (span) {
 			var start = span[0];
 			var end = span[1];
-			console.log('sent', o.paragraph.substring(start,end));
+//			console.log('sent', o.paragraph.substring(start,end));
 			return  o.paragraph.substring(start,end);
 		});			
 
@@ -208,10 +248,10 @@ function summarize () {
 		  				.attr('class',isSpellingError ? "lblSpell" : "lblGram")[0];		  			  	
 		    resP = D.$p.apply({}, [textD, lbl].concat(o.errors.map(function (err) {
 		    	if (err.e == "spell") {
-		    		var elt = 
+		    		var elt = 		    		
 		    			err.s.length > 0 ?
-		    			 	D.$span(err.i[4], D.$span( D.$span.apply({}, err.s) ))
-		    			 	: D.$span(err.i[4])
+		    			 	D.$span(' ' + err.i[4], D.$span( D.$span.apply({}, err.s) ))
+		    			 	: D.$span(' ' + err.i[4])
 		    		return $(elt).attr('class','spell')[0];		    		        
 		    	} else if (err.e == "gram") {
 		    		var sentence = err.s.split(/\n/).shift().trim();
@@ -230,7 +270,7 @@ function summarize () {
 		
 		return $(resP)
 			.attr('id', 'paragraph_' + i)
-			.attr('class','paragraph')
+			.attr('class','paragraph on')
 			.click(function(){
 			  var toggleOn = toggle(this);
 			  //var toggleOn = $(this).attr('class').indexOf('off') == -1 ? true : false;
@@ -246,7 +286,7 @@ function summarize () {
 	
 function bindDOM() {	
 	var BASE_URL = document.URL.replace("#","").replace("viewjson.html","") + "/";
-	var FILE =  'out.json';
+	var FILE =  'serviceHalf.json';
 	
 	var jsonP = Z.unit(BASE_URL + FILE).pipeAsync(D.xhrJSON).print('== jsonP');
 	
@@ -326,13 +366,78 @@ function bindDOM() {
 		return res;
 	}
 	
+	function deTag (i) { 
+		return i.replace(/</g,'&lt;').replace(/>/g,'&gt;'); 
+	}
+
+	function makeTip (ratings) {
+		var numOk = ratings.filter(function (o) { return o == 'ok'; }).length;
+
+		var flagged = 
+			ratings.map(function (o, i) { return [o, i + 1]; })
+					.filter(function (arr) { return arr[0] != 'ok'; })
+					.map(function (arr) { return arr[1]; })
+					.join(', R');
+					
+
+		var words = {};
+
+		Array.prototype.concat.apply([],
+		ratings	
+				.filter(function (i) { return i != 'ok' && i != 'ok:'; })							
+				.map(function (i) { return i.split(/\n/); }))
+		.forEach(function (line) {
+			var keyM = line.match(/<[^>]*>/);
+			if (!keyM) {
+				//console.log('no keyM', line);
+				return;
+			}
+			var key = keyM[0];
+			if (!words.hasOwnProperty(key))
+				words[key] = [];
+			words[key].push(line.substring(key.length));
+		});
+		
+		var bestWords = {};
+		var remaining = {};
+		for (var i in words) {
+			var sorted = words[i].sort(
+				function (a, b) { return b.length - a.length; });
+			bestWords[i] = sorted[0];
+			sorted.forEach(function (o, j) {
+				if (j > 0) {
+					if (!remaining[i]) remaining[i] = [];
+					remaining[i].push(o);
+				}
+			});
+		}
+
+		var best = '';
+		for (var i in bestWords) 
+			best += deTag(i) + ' ' + bestWords[i] +'<br/>';
+		var extra = '';
+		for (var i in remaining)  {
+			if (extra == '') extra = '<hr/>';
+			for (var j = 0; j < remaining[i].length; j++)
+				extra += deTag(i) + ' ' + remaining[i][j] + '<br/>'
+		}
+				
+		return D.$div(
+				D.$b( (ratings.length - numOk) + " Flagged (R" + flagged + ")"),
+				D.$hr(),
+				D.$span($('<span></span>').html(best + extra)[0]));
+	}
+	
 	
 	function fetchResults(jobID, flatSentences, batchID, paraSents) {
 		$.get('api/improvements?jobID=' + jobID)
 		 .done(function (data) {
-		 	try {
+//		 	try {
 		 	    console.log('fetched', data);
 		 		var out = JSON.parse(data);
+		 		
+		 		$('#resultCount').text(out.count + ' / ' + flatSentences.length + ' done');
+		 		
 		 		if (true || out.count == flatSentences.length) {
 		 			if (out.count == flatSentences.length)
 		 			  console.log('done, got all sentences', flatSentences, out.sentences);
@@ -342,24 +447,25 @@ function bindDOM() {
 		 			
 		 			out.sentences.map(function (ratings, i) {
 
+						//$(flatDoms[i]).replaceWith($(flatDoms[i]).clone()); //clear handlers
+
 		 				if (!ratings) {
 		 					//console.log('nothing for',i);
 		 					return;
 		 				}
-		 				
+						
 		 				if (ratings.length == 0) {
-		 					$(flatDoms[i]).fadeTo(1000, Math.max(1.0 - ratio, 0.2));
+		 					$(flatDoms[i]).fadeTo(1000, 1.0);
 		 				} else {
 							var numOk = ratings.filter(function (o) { return o == 'ok'; }).length;
 							if (numOk != ratings.length) {
-								var notes = ratings.filter(function (i) { return i != 'ok'; }).join(' \n');
-								console.log(
-									'Rating',
-									ratio, 
-									flatSentences[i]);
-								console.error('Corrections',notes);
-
-								var ratio = ratings.length == 0 ? 0 : (numOk / ratings.length);
+								var ratio = ratings.length == 0 ? 0 : (numOk / ratings.length);		 				
+								var notes = 
+									ratings
+										.filter(function (i) { return i != 'ok' && i != 'ok:'; })
+										.map(function (i) { return i.replace(/</g,'&lt;').replace(/>/g,'&gt;') })
+										.join(' <hr/>');
+								
 								$(flatDoms[i])
 									.css("background-color", 
 										"rgb(255," 
@@ -371,36 +477,32 @@ function bindDOM() {
 						 		var moveLeft = 20;
 								var moveDown = 10;
 								
-								var flagged= 
-									ratings.map(function (o, i) { return [o, i + 1]; })
-											.filter(function (arr) { return arr[0] != 'ok'; })
-											.map(function (arr) { return arr[1]; })
-											.join(', ');
-								
-								var tipText = 
-									"<b>" + (ratings.length - numOk) + " Flagged (Reviewers " + flagged + ")</b>"
-									+ "<br/><br>"
-									+ notes.replace('\n','<br/><br/>');								
-								$(flatDoms[i]).hover(function(e) {
-								  $('#tooltip')
-									.html(tipText)								  
-								  	.show()
-								  	.attr('class','tip' + i)
-								  	.css('position', 'absolute')
-									.css('top', e.pageY + moveDown)
-									.css('left', e.pageX + moveLeft)
-								  	.css('background-color','yellow')
-								  	.css('border', '1px solid black')								
-									;
-								}, function() {
-									setTimeout(function() { 
-										if ($('#tooltip').attr('class') == 'tip' + i)
-											$('#tooltip').fadeOut(1000); 
-									}, 3000);
-								});								
+								var tipText = makeTip(ratings);
+																
+								$(flatDoms[i])
+									.hover(function(e) {
+									  $('#tooltip')
+										.html(tipText)
+										.show()
+										.attr('class','tip' + i)
+										.css('position', 'absolute')
+										.css('top', e.pageY + moveDown)
+										.css('left', e.pageX + moveLeft)
+										.css('background-color','yellow')
+										.css('border', '1px solid black')								
+										;
+									}, function() {
+										setTimeout(function() { 
+											if ($('#tooltip').attr('class') == 'tip' + i)
+												$('#tooltip').fadeOut(1000); 
+										}, 3000);
+									});
+								$(flatDoms[i]).children().remove();
+								$(flatDoms[i]).append($(tipText).clone().addClass('comment'));
+																
 							} else {
 								$(flatDoms[i]).css('color','green');
-								console.log('ok:',$(flatDoms[i]).text());
+//								console.log('all ok',$(flatDoms[i]).text());
 							}
 						}
 		 			});
@@ -410,16 +512,13 @@ function bindDOM() {
 		 			setTimeout(function () {
 		 					fetchResults(jobID, flatSentences, batchID, paraSents);
 		 				}, out.repollDelayMS);
+		 		} else {
+		 			stopLaunchTimer();
 		 		}
-		 	} catch (e) {
-		 		console.log('could not handle get response', 
-		 			{jobID: jobID,
-		 			 flatSentences: flatSentences,
-		 			 batchID: batchID},
-		 			data,
-		 			e);
-		 	}
-		 });
+
+		 	rebuildScroll();
+
+		 });		 
 	}
 	
 	
@@ -451,10 +550,26 @@ function bindDOM() {
 			return {text: sents, nodes: sentsD};
     	});
     	var flatSentences = Array.prototype.concat.apply([], 
-    		paraSents.map(function () { return this.text; }));
+    		paraSents.map(function () { 
+    			var paraText = this.text;
+    			return this.text.map(function (str, i) {
+    				return str;
+/*    				
+    				var out = '';
+    				if (i > 0) 
+    				  out += paraText[i - 1] + '\n';
+    				out += "<<<\n";
+    				out += str + "\n";
+    				out += ">>>";
+    				if (i + 1 < paraText.length) 
+    				  out += '\n' + paraText[i + 1];
+    				return out;
+*/    				
+    			});
+    		}));
     	
     	global = paraSents;
-    	console.log(paraSents, paraSents.map(function () { return this.text; }));
+    	console.log(paraSents, paraSents.map(function (i) { return this.text; }));
     	console.log('sending', flatSentences);
     	
     	$.post('api/turkit', {sentences: flatSentences, batchID: batchID})
@@ -490,14 +605,124 @@ function bindDOM() {
 			}
 		});    	    
     });
+    
+
+    
     $('#summarize').click(function () {
     	$('.badSentence').map(function () {
     		console.log('bad', $(this).text());
     	});
-    });
+    }); 
     
+    $('#query').click(function () {
+		launchTimer();
+	});
+
+	docP.pipe(summarize).pipe(rebuildScroll);
 }
 
+
+$(function () {
+	/*! jQuery visible 1.0.0 teamdf.com/jquery-plugins | teamdf.com/jquery-plugins/license */
+	(function(d){d.fn.visible=function(e,i){var a=d(this).eq(0),f=a.get(0),c=d(window),g=c.scrollTop();c=g+c.height();var b=a.offset().top,h=b+a.height();a=e===true?h:b;b=e===true?b:h;return!!(i===true?f.offsetWidth*f.offsetHeight:true)&&b<=c&&a>=g}})(jQuery);
+});
+$(function () {
+	
+	var originalTopIdx = 0;
+	var beforeScroll = $('#book').scrollTop();
+	$('#book').scroll(function () { 	
+		console.log('scroll');
+		var paras = $('p.paragraph',this)
+
+		//closest to top		
+		var topMostIdx = -1;
+		paras.each(function (i, e) {
+			if ($(this).visible(true /* any part visible */)) {
+				topMostIdx = i;
+				return false;
+			}
+		});
+		
+		if (topMostIdx != originalTopIdx) {
+			//scroll to it
+			//$("#corrections").animate({
+			//	scrollTop: $($("#corrections p")[topMostIdx]).offset().top});				
+			$("#corrections p")[topMostIdx].scrollIntoView(true);
+			originalTopIdx = topMostIdx;
+			beforeScroll = $('#book').scrollTop();
+		} else {
+			$('#corrections').scrollTop(
+				$('#corrections').scrollTop()
+				+ $('#book').scrollTop() - beforeScroll);
+			beforeScroll = $('#book').scrollTop();
+		}
+		
+		//$("#corrections").scrollTop($(paras[topMostIdx]).scrollTop());
+	});
+});
+
+
+
+function rebuildScroll () {
+
+
+	$('#fixes').html('');
+    var paragraphs = $('p.paragraph');
+	var nodes = $.map(paragraphs, function (para) {
+		var spellingMistakes = 
+			D.$ol.apply({}, 
+				$('.spell', para)
+					.contents()
+					.filter(function () { return this.nodeType == 3; })
+					.map(function () { return D.$li($(this).text()); })
+					.get());
+		var corrections = 
+			D.$p.apply({},
+				$('.comment', para).clone());
+    	return corrections;
+    });
+    nodes.forEach(function (elt) {
+    	$('#fixes').append(elt);
+    });
+        
+    /*
+    $(window).bind('scroll', function() {    	
+        paragraphs.each(function() {
+            var post = $(this);
+            
+            var position = post.position().top - $(window).scrollTop();
+            //positive: 
+            
+            if (position <= 0) {
+                post.addClass('selected');
+            } else {
+                post.removeClass('selected');
+            }
+        });        
+    });
+    */
+
+}
+
+var startTime = false;
+var theTimer = false;
+function launchTimer () {
+  startTime = new Date().getTime() - 150 * 1000;	
+  theTimer = setInterval(function () {			
+	  var t = (new Date().getTime()) - startTime;
+	  if (t < 1000) t = t + 'ms';
+	  else if (t < 60 * 1000) t = Math.round(t / 1000.0) + 's';
+	  else if (t < 60 * 60 * 1000) {
+	  	var min = Math.round(Math.floor(t / (60 * 1000.0)));
+	  	var sec = Math.round((t - min * (60 * 1000))/1000.0);
+	  	t = min + ':' + (sec < 10 ? '0' + sec : sec) + 'min';
+	  } else t = (Math.round((t / (60 * 60 * 100.0))) / 10.0) + 'hr';  	  
+	  $('#timeOutstanding').text('Time since launch: ' + t);
+	}, 1 * 1000);
+}
+function stopLaunchTimer () {
+	clearInterval(theTimer);
+}    
 
 
 window.addEventListener('load',bindDOM);
@@ -505,16 +730,31 @@ window.addEventListener('load',bindDOM);
 	</script>
   </head>
   <body>
-  <div id="summary"></div>
   <div>
-  	<h2>Commands:</h2>
-  	<input id="toggleAll" type="button" value="toggle all"/>
-  	<input id="query" type="button" value="proofread!"/>
-  	<input id="humano" type="button" value="human/o (flush to turk)"/>
-  	<input id="humani" type="button" value="human/i (check turk)"/>
-  	<input id="summarize" type="button" value="summarize"/>
+	  <div>
+		<h2>Progress</h2>
+		<span id="timeOutstanding">Time since launch</span>
+		<br/>
+		<span id="resultCount">No sentences done</span>      
+	  </div>
+	  <div id="summary"></div>
+	  <div>
+		<h2>Commands:</h2>
+		<input id="toggleAll" type="button" value="toggle all"/>
+		<input id="query" type="button" value="proofread!"/>
+		<input id="humano" type="button" value="human/o (flush to turk)"/>
+		<input id="humani" type="button" value="human/i (check turk)"/>
+		<input id="summarize" type="button" value="summarize"/>
+	  </div>
   </div>
-  <div id="doc"></div>
+  <div>
+  	<div id="book">
+  		<div id="doc"></div>
+  	</div>
+  	<div id="corrections">
+  		<div id="fixes"></div>
+  	</div>
+  </div>
   <div id="tooltip"></div>
   </body>
 </html>
