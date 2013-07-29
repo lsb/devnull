@@ -32,7 +32,8 @@ html, body {
 	padding: 0.5em;
 }
 #header h1 {
-	background-color: #FF3300;
+	background-color: #9999FF;
+	color: #FFF;
 }
 #header span {
 	margin: 0.2em;
@@ -136,7 +137,7 @@ p.paragraph.off {
 	display: none;
 }
 #fixes p.on {
-	margin-bottom: 1em;
+	margin-bottom: 1.5em;
 	border-left: 0;
 	padding: 1em;	
 	background-color: #FEE;
@@ -149,6 +150,8 @@ p.paragraph.off {
 	float: left; 
 	background-color: white;
 	opacity: 0.5;
+	margin: 0;
+	padding: 0;
 }
 
 
@@ -172,6 +175,10 @@ p.paragraph .comment {
 }
 #book::-webkit-scrollbar {
       width: 0px;
+}
+#book p.paragraph.on.error {
+	border-right: 1em #EEE solid;
+	margin-right: 0;
 }
 #fixes {
 	height: 100%;
@@ -681,83 +688,41 @@ function bindDOM() {
 $(function () {
 	/*! jQuery visible 1.0.0 teamdf.com/jquery-plugins | teamdf.com/jquery-plugins/license */
 	(function(d){d.fn.visible=function(e,i){var a=d(this).eq(0),f=a.get(0),c=d(window),g=c.scrollTop();c=g+c.height();var b=a.offset().top,h=b+a.height();a=e===true?h:b;b=e===true?b:h;return!!(i===true?f.offsetWidth*f.offsetHeight:true)&&b<=c&&a>=g}})(jQuery);
+
+	/*
+	* jQuery scrollintoview() plugin and :scrollable selector filter
+	*
+	* Version 1.8 (14 Jul 2011)
+	* Requires jQuery 1.4 or newer
+	*
+	* Copyright (c) 2011 Robert Koritnik
+	* Licensed under the terms of the MIT license
+	* http://www.opensource.org/licenses/mit-license.php
+	*/
+	(function(f){var c={vertical:{x:false,y:true},horizontal:{x:true,y:false},both:{x:true,y:true},x:{x:true,y:false},y:{x:false,y:true}};var b={duration:"fast",direction:"both"};var e=/^(?:html)$/i;var g=function(k,j){j=j||(document.defaultView&&document.defaultView.getComputedStyle?document.defaultView.getComputedStyle(k,null):k.currentStyle);var i=document.defaultView&&document.defaultView.getComputedStyle?true:false;var h={top:(parseFloat(i?j.borderTopWidth:f.css(k,"borderTopWidth"))||0),left:(parseFloat(i?j.borderLeftWidth:f.css(k,"borderLeftWidth"))||0),bottom:(parseFloat(i?j.borderBottomWidth:f.css(k,"borderBottomWidth"))||0),right:(parseFloat(i?j.borderRightWidth:f.css(k,"borderRightWidth"))||0)};return{top:h.top,left:h.left,bottom:h.bottom,right:h.right,vertical:h.top+h.bottom,horizontal:h.left+h.right}};var d=function(h){var j=f(window);var i=e.test(h[0].nodeName);return{border:i?{top:0,left:0,bottom:0,right:0}:g(h[0]),scroll:{top:(i?j:h).scrollTop(),left:(i?j:h).scrollLeft()},scrollbar:{right:i?0:h.innerWidth()-h[0].clientWidth,bottom:i?0:h.innerHeight()-h[0].clientHeight},rect:(function(){var k=h[0].getBoundingClientRect();return{top:i?0:k.top,left:i?0:k.left,bottom:i?h[0].clientHeight:k.bottom,right:i?h[0].clientWidth:k.right}})()}};f.fn.extend({scrollintoview:function(j){j=f.extend({},b,j);j.direction=c[typeof(j.direction)==="string"&&j.direction.toLowerCase()]||c.both;var n="";if(j.direction.x===true){n="horizontal"}if(j.direction.y===true){n=n?"both":"vertical"}var l=this.eq(0);var i=l.closest(":scrollable("+n+")");if(i.length>0){i=i.eq(0);var m={e:d(l),s:d(i)};var h={top:m.e.rect.top-(m.s.rect.top+m.s.border.top),bottom:m.s.rect.bottom-m.s.border.bottom-m.s.scrollbar.bottom-m.e.rect.bottom,left:m.e.rect.left-(m.s.rect.left+m.s.border.left),right:m.s.rect.right-m.s.border.right-m.s.scrollbar.right-m.e.rect.right};var k={};if(j.direction.y===true){if(h.top<0){k.scrollTop=m.s.scroll.top+h.top}else{if(h.top>0&&h.bottom<0){k.scrollTop=m.s.scroll.top+Math.min(h.top,-h.bottom)}}}if(j.direction.x===true){if(h.left<0){k.scrollLeft=m.s.scroll.left+h.left}else{if(h.left>0&&h.right<0){k.scrollLeft=m.s.scroll.left+Math.min(h.left,-h.right)}}}if(!f.isEmptyObject(k)){if(e.test(i[0].nodeName)){i=f("html,body")}i.animate(k,j.duration).eq(0).queue(function(o){f.isFunction(j.complete)&&j.complete.call(i[0]);o()})}else{f.isFunction(j.complete)&&j.complete.call(i[0])}}return this}});var a={auto:true,scroll:true,visible:false,hidden:false};f.extend(f.expr[":"],{scrollable:function(k,i,n,h){var m=c[typeof(n[3])==="string"&&n[3].toLowerCase()]||c.both;var l=(document.defaultView&&document.defaultView.getComputedStyle?document.defaultView.getComputedStyle(k,null):k.currentStyle);var o={x:a[l.overflowX.toLowerCase()]||false,y:a[l.overflowY.toLowerCase()]||false,isRoot:e.test(k.nodeName)};if(!o.x&&!o.y&&!o.isRoot){return false}var j={height:{scroll:k.scrollHeight,client:k.clientHeight},width:{scroll:k.scrollWidth,client:k.clientWidth},scrollableX:function(){return(o.x||o.isRoot)&&this.width.scroll>this.width.client},scrollableY:function(){return(o.y||o.isRoot)&&this.height.scroll>this.height.client}};return m.y&&j.scrollableY()||m.x&&j.scrollableX()}})})(jQuery);
 });
 $(function () {
 
-	var ctx = null;
-	var cnv = null;
-	var cnvJ = null;
-	
-	var originalTopIdx = 0;
-	var beforeScroll = $('#book').scrollTop();
-	$('#book').scroll(function () { 	
-		console.log('scroll');
-		var paras = $('p.paragraph',this)
+	var cnvJ = $('#linkage');
+	var cnv = cnvJ[0];
+	var ctx = cnv.getContext('2d');
+	cnvJ.attr('height',$('#book').height() + 'px');
 
-		if (!cnv || !cnvJ) {
-			cnvJ = $('#linkage');
-			cnv = cnvJ[0];
-			cnvJ.attr('height',$('#book').height() + 'px');
-		}
-		if (!ctx) ctx = cnv.getContext('2d');
-		ctx.clearRect(0, 0, cnvJ.width(), cnvJ.height());
-	
-		//closest to top, any overlap		
-		var topMostIdx = -1;
-		paras.each(function (i, e) {
-			if ($(this).visible(true /* any part visible */)) {
-				topMostIdx = i;
-				return false;
-			}
-		});
-		
-		if (topMostIdx != originalTopIdx) {
-			//scroll to it
-			//$("#corrections").animate({
-			//	scrollTop: $($("#corrections p")[topMostIdx]).offset().top});				
-			$("#corrections p")[topMostIdx].scrollIntoView(true);
-			originalTopIdx = topMostIdx;
-			beforeScroll = $('#book').scrollTop();
-		} else {
-			$('#corrections').scrollTop(
-				$('#corrections').scrollTop()
-				+ $('#book').scrollTop() - beforeScroll);
-			beforeScroll = $('#book').scrollTop();
-		}
-
-
+	function drawCurves (paras) {
 		var w = cnvJ.width();
+		ctx.clearRect(0, 0, w, cnvJ.height());
 		paras.map(function (i, e) {
 			if ($(this).visible(true)) {
 				var matches = $("#corrections p");
-				if (matches.length == 0) return;
+				if (matches.length == 0 || $(matches[i]).attr('class') == 'off') {
+					$(this).removeClass('error');
+					return;
+				}				
+				$(this).addClass('error');
 				var match = $(matches[i]);
 				
 				console.log(match.attr('class'));
-				if (match.attr('class') == 'off') return;
-				
-				if (false) {
-					//left
-					ctx.save();
-					ctx.fillStyle = "rgba(255,51,51, 0.5)";
-					ctx.fillRect(
-						0, 
-						$(this).offset().top - $('#book').offset().top, 
-						w/2, 
-						$(this).outerHeight());
-					if (true || i == 2) {
-						ctx.fillStyle = "rgba(255,51,51, 0.3)";
-						ctx.fillRect(
-							w/2, 
-							match.offset().top - $('#fixes').offset().top, 
-							//$(this).offset().top - $('#book').offset().top, 
-							w/2, 
-							match.outerHeight());
-							//$(this).outerHeight());
-					}
-					ctx.restore();
-				}
-				
+								
 				ctx.save();
       			ctx.beginPath();
 				//top left
@@ -784,14 +749,121 @@ $(function () {
 				ctx.fillStyle = 'rgba(255,51,51,0.3)';
 				ctx.fill();
 				ctx.restore();
-				
-				
-      			
-				
 			}
 		});		
-		//$("#corrections").scrollTop($(paras[topMostIdx]).scrollTop());
+	}
+	
+	
+	
+	
+	var lastScrolled = 'neither';
+	var originalTopIdx = 0;
+	var beforeScroll = $('#book').scrollTop();
+	var skipScroll = false;
+	
+	var activeBox = 'neither';
+	$('#book').mouseover(function () { activeBox = '#book'; });
+	$('#fixes').mouseover(function () { activeBox = '#fixes'; });
+	
+	
+	$('#book').scroll(function () { 	
+		if (activeBox != '#book') {
+			drawCurves($('p.paragraph',$('#book')));	
+			return;
+		}
+		
+		var paras = $('p.paragraph',this);	
+		//closest to top, any overlap		
+		var topMostIdx = -1;
+		paras.each(function (i, e) {
+			if ($(this).visible( /* fully  visible */)) {
+				topMostIdx = i;
+				return false;
+			}
+		});
+		if (lastScrolled == '#book') {
+			if ($('#book').scrollTop() - beforeScroll > 0) {
+				for (var j = topMostIdx; j < paras.length; j++) {
+					if ($(paras[j]).visible( /* fully  visible */)) {
+						topMostIdx = j;
+					} else {
+						break;
+					}
+				}
+			}
+		}
+				
+		if (lastScrolled != '#book' || topMostIdx != originalTopIdx) {
+			//scroll to it
+			//$("#corrections").animate({
+			//	scrollTop: $($("#corrections p")[topMostIdx]).offset().top});				
+			//$("#corrections p")[topMostIdx].scrollIntoView(true);
+			$($('#corrections p')[topMostIdx]).scrollintoview({duration: 150});
+			originalTopIdx = topMostIdx;
+		} else {		
+			$('#fixes').scrollTop(
+				$('#fixes').scrollTop()
+				+ $('#book').scrollTop() - beforeScroll);				
+		}
+		beforeScroll = $('#book').scrollTop();
+		lastScrolled = '#book';
+		drawCurves(paras);	
 	});
+	
+	$('#fixes').scroll(function () { 	
+		if (activeBox != '#fixes') {
+			drawCurves($('p.paragraph',$('#book')));	
+			return;
+		}
+
+		console.log('fix scroll');
+		var paras = $('p',this);	
+		//closest to top, any overlap		
+		var topMostIdx = -1;
+		console.log('check', paras);
+		paras.each(function (i, e) {
+			if ($(this).hasClass('off')) return true;
+			if ($(this).visible(true /* any part visible */)) {
+				topMostIdx = i;
+				return false;
+			}
+		});
+		if (lastScrolled == '#fixes') {
+				console.log('bigger!', $('#corrections').scrollTop(), $('#fixes').scrollTop());
+			if ($('#fixes').scrollTop() - beforeScroll > 0) {
+				for (var j = topMostIdx; j < paras.length; j++) {
+					if ($(paras[j]).hasClass('off')) {
+						continue;
+					} else if ($(paras[j]).visible(true /* any  visible */)) {
+						topMostIdx = j;
+					} else {
+						break;
+					}
+				}
+			}
+		}		
+		
+				
+		console.log(topMostIdx);
+		if (lastScrolled != '#fixes' || topMostIdx != originalTopIdx) {
+			//scroll to it
+			//$("#corrections").animate({
+			//	scrollTop: $($("#corrections p")[topMostIdx]).offset().top});				
+			console.log($("#book p.paragraph").length, topMostIdx);
+			//$("#book p.paragraph")[topMostIdx].scrollIntoView(true);
+			$($("#book p.paragraph")[topMostIdx]).scrollintoview({duration: 150});
+			originalTopIdx = topMostIdx;
+		} else {		
+			$('#corrections').scrollTop(
+				$('#corrections').scrollTop()
+				+ $('#fixes').scrollTop() - beforeScroll);				
+		}
+		beforeScroll = $('#fixes').scrollTop();
+		lastScrolled = '#fixes';
+		drawCurves($('p.paragraph',$('#book')));	
+	});
+	
+	
 });
 
 
