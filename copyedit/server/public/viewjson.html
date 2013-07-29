@@ -22,9 +22,6 @@ span {
 	font-family: Georgia;
 }
 
-span + span {
-    margin-left: 5px;
-}
 
 html, body {
 	margin: 0;
@@ -98,12 +95,20 @@ p.paragraph.off {
 	color: black; 
 	line-height: 1.5em;
 }
+.real span {
+	margin: 1px;
+}
 .real span:hover { 
 	border: 1px dotted red; 
+	margin: 0px;
 }
+.real span:before { content: '  '; }
+.real span + span { margin-left: 2px; }
+.real span + span:hover { margin-left: 1px; }
 .real span.off {
 	background-color: silver;
 }
+
 
 .spell, .gram { color: #000 }
 .spell:hover { color: #000 }
