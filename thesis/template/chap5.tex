@@ -22,7 +22,23 @@ The following sections explore each question in turn.
 
 \section{Computer-Aided Programming with Schedule Holes}
 \label{sec:holes}
-Being able to automatically generate parallel schedules enables possibilities for parallel programming.	
+Being able to automatically generate parallel schedules enables rich forms of parallel programming. An automation tool will automatically find a parallel schedule, so a natural conclusion would be to assume the programming interface would hide all parallelization concerns. We found this to be largely true when writing small amounts of declarative data visualization code. However, in parallelizing the larger and more complicated CSS layout language, we encountered cases where the visualization designer needed to guide (or be guided by) the automation procedure. Likewise, we encountered the need for one programmer to communicate parallel structure to another. Automatic parallelization is insufficient in that hides all parallelization details, yet manual scheduling was too low-level and brittle.
+
+Our solution is to provide a \emph{sketching} construct for specifying constraints on the schedule that the automatic parallelization algorithm must respect. We routinely wrote schedules sketches in order to override schedule selection, test and debug parallelization ideas, and enforceably communicate parallelization decisions when sharing code with others. Discussed later in this chapter~\ref{??}, we also used the sketching mechanism to speed up automatic parallelization over specifications with many attributes or schedule patterns that challenge static analysis.
+
+We revisit the specification of \hlang{} to demonstrate the sketching construct and its use for the above scenarios. First, many parallel schedules are possible for \hlang{}, and if we  have a preference, ...
+
+\begin{align}
+%\begin{lstlisting}[mathescape,morekeywords={parPre,parPost}]
+\text{\textbf{parPost}} ~ \hole_1 ~ ; ~ \text{\textbf{parPre}} ~ \hole_2 \\
+(\text{\textbf{parPost}} ~ \hole_3 ~ ; ~ \text{\textbf{parPost}} ~ \hole_4) ~ ; ~ \hole_5 \\
+\hole_6
+\end{align}
+
+
+
+
+
 
 \subsection{Generalizing Holes to Unification}
 
