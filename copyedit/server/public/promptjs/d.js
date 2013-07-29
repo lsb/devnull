@@ -11,7 +11,7 @@ var D = (function () {
 		};
 	};
 
-	var tags = ["div","h2","h1","h3","hr","span","ul","ol","li","p","iframe","img","a","b","pre"];
+	var tags = ["div","h2","h1","h3","hr","span","ul","ol","li","p","iframe","img","a","b","i","pre"];
 	
 	tags.forEach(function (v) {
 		ret["$" + v] = function () {
