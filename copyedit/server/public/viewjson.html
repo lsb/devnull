@@ -18,7 +18,13 @@ THROTTLE = (1.0/9) * 1000; //min delay between XHRs
 	<script src="promptjs/d.js"></script>
 	<style>
 
-span {
+.word { margin: 0.1em; }
+
+/* 
+.word:hover { background-color: #CCCCff }
+*/
+
+.sentence {
 	font-family: Georgia;
 }
 
@@ -40,7 +46,7 @@ html, body {
 	color: #9999FF;
 	background-color: #FFF;
 }
-#header span {
+#header .sentence {
 	margin: 0.2em;
 }
 	
@@ -95,17 +101,17 @@ p.paragraph.off {
 	color: black; 
 	line-height: 1.5em;
 }
-.real span {
+.real .sentence {
 	margin: 1px;
 }
-.real span:hover { 
+.real .sentence:hover { 
 	border: 1px dotted red; 
 	margin: 0px;
 }
-.real span:before { content: '  '; }
-.real span + span { margin-left: 2px; }
-.real span + span:hover { margin-left: 1px; }
-.real span.off {
+.real .sentence:before { content: '  '; }
+.real .sentence + .sentence { margin-left: 2px; }
+.real .sentence + .sentence:hover { margin-left: 1px; }
+.real .sentence.off {
 	background-color: silver;
 }
 
@@ -150,10 +156,14 @@ p.paragraph.off {
 	display: none;
 }
 #fixes p.on {
-	margin-bottom: 1.5em;
 	border-left: 0;
-	padding: 1em;	
+	padding-left: 1em;	
+	padding-right: 1em;	
 	background-color: #FEE;
+	padding: 1em;
+}
+#fixes p.on .comment + .comment {
+	margin-top: 1em;
 }
 
 
@@ -166,6 +176,9 @@ p.paragraph.off {
 	margin: 0;
 	padding: 0;
 }
+
+
+
 
 
 	</style>
@@ -258,7 +271,7 @@ function summarize () {
 		function (arr) { var d = arr[1]; return $(d).attr('class').indexOf('off') == -1; })
 		.map(function (arr) {
 			var paragraphId = arr[0]; var paragraphD = arr[1];
-			$('.real span', paragraphD).map(function (i, d) {
+			$('.real .sentence', paragraphD).map(function (i, d) {
 				if ($(this).attr('class') && $(this).attr('class').indexOf('off') != -1) {
 					offSents.push({para: paragraphId, sent: i});
 				}
@@ -296,10 +309,16 @@ function summarize () {
 					if (i == arr.length - 1 && (sent.trim() == '')) {
 						return D.$a();
 					}
-					var res = D.$span(sent); 
-					$(res).attr('class','on');
+					var words = 
+						sent
+						  .split(/(\s|\n|\r)+/)
+						  .map(function (word) { 
+						    return $(D.$span(word)).addClass('word')[0]; })
+					
+					var res = D.$span.apply({}, words); 
+					$(res).addClass('on').addClass('sentence');
 					$(res).click(function (event) {
-						if ($(resP).attr('class').indexOf('off') == -1) {
+						if ($(resP).hasClass('on')) {
 							var toggleOn = toggle(this);
 							summarize();
 							event.stopPropagation();
@@ -309,7 +328,7 @@ function summarize () {
 					});
 					return res;
 				})))
-			.attr('class','real')[0];		
+			.addClass('real')[0];		
 		
 		var resP;
 		  if (o.errors.length == 0) {
@@ -358,7 +377,8 @@ function summarize () {
 	
 function bindDOM() {	
 	var BASE_URL = document.URL.replace("#","").replace("viewjson.html","") + "/";
-	var FILE =  'serviceHalf.json';
+	//var FILE =  'serviceHalf.json';
+	var FILE =  'out2.json';
 	
 	var jsonP = Z.unit(BASE_URL + FILE).pipeAsync(D.xhrJSON).print('== jsonP');
 	
@@ -484,20 +504,30 @@ function bindDOM() {
 			});
 		}
 
-		var best = '';
+
+		
+		var bests = [];
 		for (var i in bestWords) 
-			best += deTag(i) + ' ' + bestWords[i] +'<br/>';
-		var extra = '';
-		for (var i in remaining)  {
-			if (extra == '') extra = '<hr/>';
+			bests.push([i.replace('<','').replace('>',''), bestWords[i]]);		
+		var extras = [];
+		for (var i in remaining)
 			for (var j = 0; j < remaining[i].length; j++)
-				extra += deTag(i) + ' ' + remaining[i][j] + '<br/>'
+				extras.push([i.replace('<','').replace('>',''), remaining[i][j]]);
+
+		function errToDiv (arr) { 
+			var elt = D.$div(D.$b('<', $(D.$span(arr[0])).addClass('key')[0], '> '), arr[1]);			
+			$(elt).addClass('correction')
+			return elt;
 		}
-				
+		var bestsD = bests.map(errToDiv);
+		var des = extras.length == 0 ? 
+			D.$span.apply({}, bestsD)
+			: D.$span.apply({}, bestsD.concat(D.$hr()).concat(extras.map(errToDiv)));
+									
 		return D.$div(
-				D.$b( (ratings.length - numOk) + " Flagged (R" + flagged + ")"),
+				D.$b(''+  (ratings.length - numOk) + " Flagged (R" + flagged + ")"),
 				D.$hr(),
-				D.$span($('<span></span>').html(best + extra)[0]));
+				des);
 	}
 	
 	
@@ -508,9 +538,15 @@ function bindDOM() {
 		 	    console.log('fetched', data);
 		 		var out = JSON.parse(data);
 		 		
-		 		$('#resultCount').text(out.count + ' / ' + flatSentences.length + ' done');
 		 		
-		 		if (true || out.count == flatSentences.length) {
+		 		if (out.error) {
+		 			console.error('Bad get', out.error);		 			
+		 		}
+
+		 		$('#resultCount').text(out.count + ' / ' + flatSentences.length + ' done');
+		 		$('#title').html('FastCheck <small>' + out.count + ' / ' + flatSentences.length + ' sentences checked</small>');
+		 		
+		 		if (!out.error && (true || out.count == flatSentences.length)) {
 		 			if (out.count == flatSentences.length)
 		 			  console.log('done, got all sentences', flatSentences, out.sentences);
 
@@ -527,18 +563,17 @@ function bindDOM() {
 		 				}
 						
 		 				if (ratings.length == 0) {
-		 					$(flatDoms[i]).fadeTo(1000, 1.0);
+		 					$(flatDoms[i])
+		 					  .fadeTo(1000, 1.0)
+		 					  .css('color','#333')
+		 					  .css('background-color','#FFF');
 		 				} else {
 							var numOk = ratings.filter(function (o) { return o == 'ok'; }).length;
 							if (numOk != ratings.length) {
 								var ratio = ratings.length == 0 ? 0 : (numOk / ratings.length);		 				
-								var notes = 
-									ratings
-										.filter(function (i) { return i != 'ok' && i != 'ok:'; })
-										.map(function (i) { return i.replace(/</g,'&lt;').replace(/>/g,'&gt;') })
-										.join(' <hr/>');
 								
 								$(flatDoms[i])
+									.css('color','#000')
 									.css("background-color", 
 										/*"rgb(255," 
 											+ Math.round((ratio) * 200 + 55) + "," 
@@ -572,11 +607,14 @@ function bindDOM() {
 										}, 3000);
 									});
 								*/
+								var words = $(flatDoms[i]).children().filter('.word').clone();
 								$(flatDoms[i]).children().remove();
-								$(flatDoms[i]).append($(tipText).clone().addClass('comment'));
+								$(flatDoms[i])
+									.append(words)
+									.append($(tipText).addClass('comment'));
 																
 							} else {
-								$(flatDoms[i]).css('color','#333');
+								$(flatDoms[i]).css('color','#333').css('background-color','#FFF');
 //								console.log('all ok',$(flatDoms[i]).text());
 							}
 						}
@@ -617,9 +655,9 @@ function bindDOM() {
     		
     		var sents = [];
     		var sentsD = [];
-    		$('.real span', paragraphD).map(function (i, d) {
+    		$('.real .sentence', paragraphD).map(function (i, d) {
     			if (offSents.indexOf(i) != -1) return null;
-    			sents.push($(d).html());
+    			sents.push($('.word', d).text());
     			sentsD.push(d);
 			});
 			return {text: sents, nodes: sentsD};
@@ -647,8 +685,18 @@ function bindDOM() {
     	console.log(paraSents, paraSents.map(function (i) { return this.text; }));
     	console.log('sending', flatSentences);
     	
+    	$('.real .sentence')
+    		.css('color','#999')
+    		.css('background-color', '#EEE');
+    	
     	$.post('api/turkit', {sentences: flatSentences, batchID: batchID})
 			.done(function (data) {
+				if (data && data.error) {
+					alert("Error: " + data.error);
+					console.error("PUT error", data.error);
+					return;
+				}
+			
 				try {
 					console.log('got back', data);
 					fetchResults(JSON.parse(data).jobID, flatSentences, batchID, paraSents);			
@@ -734,8 +782,6 @@ $(function () {
 				$(this).addClass('error');
 				var match = $(matches[i]);
 				
-				console.log(match.attr('class'));
-								
 				ctx.save();
       			ctx.beginPath();
 				//top left
@@ -829,11 +875,9 @@ $(function () {
 			return;
 		}
 
-		console.log('fix scroll');
 		var paras = $('p',this);	
 		//closest to top, any overlap		
 		var topMostIdx = -1;
-		console.log('check', paras);
 		paras.each(function (i, e) {
 			if ($(this).hasClass('off')) return true;
 			if ($(this).visible(true /* any part visible */)) {
@@ -842,7 +886,6 @@ $(function () {
 			}
 		});
 		if (lastScrolled == '#fixes') {
-				console.log('bigger!', $('#corrections').scrollTop(), $('#fixes').scrollTop());
 			if ($('#fixes').scrollTop() - beforeScroll > 0) {
 				for (var j = topMostIdx; j < paras.length; j++) {
 					if ($(paras[j]).hasClass('off')) {
@@ -857,12 +900,10 @@ $(function () {
 		}		
 		
 				
-		console.log(topMostIdx);
 		if (lastScrolled != '#fixes' || topMostIdx != originalTopIdx) {
 			//scroll to it
 			//$("#corrections").animate({
 			//	scrollTop: $($("#corrections p")[topMostIdx]).offset().top});				
-			console.log($("#book p.paragraph").length, topMostIdx);
 			//$("#book p.paragraph")[topMostIdx].scrollIntoView(true);
 			$($("#book p.paragraph")[topMostIdx]).scrollintoview({duration: 150});
 			originalTopIdx = topMostIdx;
@@ -896,6 +937,33 @@ function rebuildScroll () {
 		var corrections = 
 			D.$p.apply({},
 				$('.comment', para).clone());
+		
+		$('.correction', corrections).map(function () {
+			function removePunc (s) { return s == ',' ? s : s.replace(',','').replace('.'); }
+			var key = removePunc($('.key', this).text()).split(/\s/)[0].toLowerCase();
+			var sources = [];	
+			var sourceWords = [];
+			$('.word', para).map(function () {
+				if ($(this).parent().hasClass('badSentence')) {
+					if (removePunc($(this).text().toLowerCase()) == key) {
+						//sources.push($(this).parent());
+						sourceWords.push($(this));
+					}
+				}
+			});
+			sourceWords.map(function (w) { $(w).css('border-bottom','5px solid pink') });					
+			
+			$(this).parent().parent().hover(
+				function () {
+					//sources.map(function (elt) { $(elt).css('border','1px solid red') });
+					sourceWords.map(function (w) { $(w).css('background-color','#CCF') });					
+				},
+				function () {
+					//sources.map(function (elt) { $(elt).css('border','none') });
+					sourceWords.map(function (w) { $(w).css('background-color','') });									
+				});
+		});
+		
 		var numCorrections = $('.comment', para).length;
 		$(corrections).addClass(numCorrections > 0 ? 'on' : 'off');
     	return corrections;
@@ -904,22 +972,6 @@ function rebuildScroll () {
     	$('#fixes').append(elt);
     });
         
-    /*
-    $(window).bind('scroll', function() {    	
-        paragraphs.each(function() {
-            var post = $(this);
-            
-            var position = post.position().top - $(window).scrollTop();
-            //positive: 
-            
-            if (position <= 0) {
-                post.addClass('selected');
-            } else {
-                post.removeClass('selected');
-            }
-        });        
-    });
-    */
 
 }
 
@@ -959,7 +1011,7 @@ window.addEventListener('load',bindDOM);
   <body>
   <div id="header">
 	  <div>
-	  	<h1>FastCheck</h1>
+	  	<h1 id="title">FastCheck</h1>
 		<h2>Progress</h2>
 		<span id="timeOutstanding">Time since launch</span>
 		<br/>
