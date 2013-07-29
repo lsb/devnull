@@ -1,12 +1,36 @@
+var DEBUG = false;
+var MAX_DOLLARS_BATCH = 2.50; 
+var DOLLARS_PER_LETTER = 0.00007;
+var NUM_READERS = 5;
+
+//=================
+/*
+	/api/turkit POST 
+		{sentences: [ string ], 
+		 batchID: int}   //nonce
+		-> {jobID: int}
+	/api/improvements?jobID=int GET
+		->
+		{
+			startTime: int,  //ms
+			lastTime: int, //most recent mturk response, ms
+			responseTime: int, //ms
+			ticks: [ {i: int, time: ms} ] //for each sentence that came in, {i: int, time: ms}
+			count: int, //how many have come in
+			sentences: //{i: [ String ]}, the result
+			jobID: int, //internal id
+			batchID: int, //user id
+			repollDelayMS: int}; //server delay in ms between batches, use for polling
+		}
+		 
+*/
+//=================
+
 var express = require('express');
 var request = require("request");
 var app = express();
 app.enable('trust proxy'); //for nginix etc..
 var qs = require('querystring');
-
-
-var DEBUG = true;
-
 
 app.use(express.static(__dirname + '/public'));
 app.use(express.bodyParser());
@@ -30,7 +54,7 @@ function makeBatch (sentences, batchID) {
 	res.startTime = new Date().getTime();
 	res.lastTime = new Date().getTime();
 	res.ticks = [];
-	res.sentences = sentences;
+//	res.sentences = sentences;
 	batches[jobCounter] = res;	
 	return jobCounter;
 }
@@ -49,7 +73,7 @@ function updateBatch(jobID, i, result) {
 function fetchGet (url, sent, sentenceI, jobID) {
 
 	if (DEBUG) {
-		if (Math.random() > 1.2) {
+		if (Math.random() > 0.5) {
 			console.log('GET fake delay', sent);
 			setTimeout(
 				function () { fetchGet(url, sent, sentenceI, jobID); }, 
@@ -107,6 +131,12 @@ app.get('/api/improvements', function (req, res) {
 	
 	console.log('got request for batch', jobID);
 	var currentResult = getBatch(jobID);
+	
+	if (!currentResult) {
+		res.send(JSON.stringify({error: 'could not find GET request, did you forget to PUT?'}));
+		console.log('GET without PUT');
+		return;
+	}
 	
 	var out = {
 		startTime: currentResult.startTime, //put
@@ -168,10 +198,20 @@ function askAsText (sent) {
 	  'ok',
 	  '==========================',
 	  '=== Example 2 Sentence ===',
+////////////////
 	  'The quickly broown fox jumps over the lazy dog.',
 	  '--- Answer -----',
-	  '<quickly> looks wrong',
+	  "<quickly> looks wrong",
 	  '<broown> spelling',
+////////////////
+/*
+	  'The quickly broown fox jumps over the lazy dog, I ate a fish.',
+	  '--- Answer -----',
+	  "<quickly> doesn't agree with fox",
+	  '<broown> spelling',
+	  '<I> run-on sentence',
+*/	  
+////////////////
 	  '==========================',
 	  '',
 	  'If you have suggestions on how to improve the design of this HIT, please email LMeyerov+mt@gmail.com .',
@@ -200,28 +240,65 @@ function askAsText (sent) {
 	  'Thank you for helping!'
 	].join('\n');
 */
+	var format = "(^ok$)|(^(<([^>]+)>[^\\n]+)(\\n+<([^>]+)>[^\\n]+)*\\n*$)";
+
 	return qs.stringify({
 //				cost: 2,
-				distinctUsers: 5,
+				distinctUsers: NUM_READERS,
 				instructions: instructions,
 				question: 
 					JSON.stringify({
 					  ConstrainedText: {
 						questionText: '"' + sent + '"',
 						defaultText: 'ok',
-						regex: "(^ok$)|(^(<([^>]+)>[^\\n]+)(\\n+<([^>]+)>[^\\n]+)*\\n*$)"
+						regex: format
 					}})
+/*					
+				,			
+				knownAnswerQuestions:
+					JSON.stringify({
+						answeredQuestions: [
+							{question: {
+								ConstrainedText:{
+									questionText: 'Lomonosov sent me to Sweden to inspect the route.',
+									defaultText: 'ok',
+									regex: format}},
+							 match: {Exact: 'ok'}},
+							{question: {
+								ConstrainedText:{
+									questionText: 'Derutra asked me to find as steamer whose dimensions allowed through the locks.',
+									defaultText: 'ok',
+									regex: format}},
+							 match: {Inexact: '^[^o].*$'}}
+						],
+						percentCorrect: 100})
+*/						
 			});
-			/* knownAnswerQuestions:
-				JSON.stringify({
-					match:{
-						Inexact: '^[0-9]+\n*$'
-			
-			*/
 }
 
 app.post('/api/turkit', function (req, res) {
 	var sents = req.body.sentences ? req.body.sentences : [];
+
+	for (var i = 0; i < Math.min(sents.length, 5); i++) {
+		console.log("PUT");
+		console.log('sample',i, sents[i]);
+	}
+	
+	
+	var estCost = sents.join(',').length * DOLLARS_PER_LETTER * NUM_READERS;
+	if (estCost >  MAX_DOLLARS_BATCH) {	
+		console.error('Too big a job!');
+		console.error('Estimated cost', estCost);
+		console.error('Max cost', MAX_DOLLARS_BATCH);
+		console.error('Characters', sents.join(',').length);
+		console.error('Readers', NUM_READERS);
+		res.send({error: 'Estimated cost of $' + estCost +  ' bigger than cap of $' + MAX_DOLLARS_BATCH});
+		return;
+	} else {
+		console.log("Estatimated cost: $" + estCost + " for " + sents.join(',').length + " characters");
+	}
+	
+	
 	var batchID = req.body.batchID;
 	var jobID = makeBatch(sents, batchID);
 	res.send(JSON.stringify({jobID: jobID}));
@@ -236,10 +313,10 @@ app.post('/api/turkit', function (req, res) {
 		var url = buildUrl(sent);
 		console.log('url', url);	
 		if (DEBUG) {
-			request.put(url, function (error, response, body) { /* whatevs */  });
-		} else {
 			console.log("Fake PUT");
 			console.log(url);
+		} else {
+			request.put(url, function (error, response, body) { /* whatevs */  });
 		}
 		fetchGet(url, sent, idx, jobID);	
 	});
