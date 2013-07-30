@@ -63,10 +63,15 @@ p.file {
 }
 	
 p.paragraph { 
-	padding: 0.5em; 
-	margin: 0.5em; 
+	padding: 3px; 
+	margin: 3px; 
 	margin-right: 0.1em;
 	padding-right: 0.1em;
+}
+p.paragraph.highlight {
+	padding: 2px;
+	border: 1px solid pink;
+	
 }
 p.paragraph .real {
 	display: block;
@@ -75,6 +80,7 @@ p.paragraph.off {
 	opacity: 0.3;
 	background-color: silver;
 }
+
 .spell > span { 
 	display: none;
 
@@ -105,7 +111,7 @@ p.paragraph.off {
 	margin: 1px;
 }
 .real .sentence:hover { 
-	border: 1px dotted red; 
+	border: 1px dotted blue; 
 	margin: 0px;
 }
 .real .sentence:before { content: '  '; }
@@ -160,10 +166,29 @@ p.paragraph.off {
 	padding-left: 1em;	
 	padding-right: 1em;	
 	background-color: #FEE;
-	padding: 1em;
+	padding: 1em;	
 }
+#fixes p.on.highlight {
+	background-color: rgba(255,51,51,0.3);
+}
+#fixes p.on .comment {
+	 margin: 1px;
+	 padding: 0.5em;
+}
+#fixes p.on .comment.highlight {
+	margin: 0;
+	border: 1px dotted gray;
+}
+
 #fixes p.on .comment + .comment {
-	margin-top: 1em;
+	margin-top: 5px;
+}
+
+#fixes p.on .comment.highlight + .comment {
+	margin-top: 4px;
+}
+#fixes p.on .comment + .comment.highlight {
+	margin-top: 4px;
 }
 
 
@@ -611,7 +636,7 @@ function bindDOM() {
 								$(flatDoms[i]).children().remove();
 								$(flatDoms[i])
 									.append(words)
-									.append($(tipText).addClass('comment'));
+									.append($(tipText).addClass('comment').attr('comment',i));
 																
 							} else {
 								$(flatDoms[i]).css('color','#333').css('background-color','#FFF');
@@ -772,43 +797,45 @@ $(function () {
 	function drawCurves (paras) {
 		var w = cnvJ.width();
 		ctx.clearRect(0, 0, w, cnvJ.height());
+		var matches = $("#corrections p");
 		paras.map(function (i, e) {
-			if ($(this).visible(true)) {
-				var matches = $("#corrections p");
-				if (matches.length == 0 || $(matches[i]).attr('class') == 'off') {
-					$(this).removeClass('error');
-					return;
-				}				
-				$(this).addClass('error');
-				var match = $(matches[i]);
-				
-				ctx.save();
-      			ctx.beginPath();
-				//top left
-				ctx.moveTo(0, $(this).offset().top - $('#book').offset().top);
-				//top right
-				ctx.quadraticCurveTo(
-				  w/4, 
-				  $(this).offset().top - $('#book').offset().top,
-				  w,
-				  match.offset().top - $('#fixes').offset().top);
-				//bottom right
-				ctx.lineTo(
-				  w, 
-				  match.offset().top - $('#fixes').offset().top
-				    + match.outerHeight());
-				//bottom left
-				ctx.quadraticCurveTo(
-				  w/4, 
-				  $(this).offset().top - $('#book').offset().top + $(this).outerHeight(),
-				  0,
-				  $(this).offset().top - $('#book').offset().top + $(this).outerHeight());
-				
-				ctx.closePath();
-				ctx.fillStyle = 'rgba(255,51,51,0.3)';
-				ctx.fill();
-				ctx.restore();
+			//skip
+			if (matches.length == 0 
+				|| $(matches[i]).hasClass('off')
+				|| !$(this).visible(true)) {				
+					$(this).removeClass('error');			
+					return;	
 			}
+						
+			$(this).addClass('error');
+			var match = $(matches[i]);
+			
+			ctx.save();
+			ctx.beginPath();
+			//top left
+			ctx.moveTo(0, $(this).offset().top - $('#book').offset().top);
+			//top right
+			ctx.quadraticCurveTo(
+			  w/4, 
+			  $(this).offset().top - $('#book').offset().top,
+			  w,
+			  match.offset().top - $('#fixes').offset().top);
+			//bottom right
+			ctx.lineTo(
+			  w, 
+			  match.offset().top - $('#fixes').offset().top
+				+ match.outerHeight());
+			//bottom left
+			ctx.quadraticCurveTo(
+			  w/4, 
+			  $(this).offset().top - $('#book').offset().top + $(this).outerHeight(),
+			  0,
+			  $(this).offset().top - $('#book').offset().top + $(this).outerHeight());
+			
+			ctx.closePath();
+			ctx.fillStyle = 'rgba(255,51,51,0.3)';
+			ctx.fill();
+			ctx.restore();
 		});		
 	}
 	
@@ -937,6 +964,24 @@ function rebuildScroll () {
 		var corrections = 
 			D.$p.apply({},
 				$('.comment', para).clone());
+		
+		$(corrections).hover(
+			function () { $(para).addClass('highlight'); },
+			function () { $(para).removeClass('highlight'); });
+		$(para).hover(
+			function () { $(corrections).addClass('highlight'); },
+			function () { $(corrections).removeClass('highlight'); });
+		$('div.comment', para).map(function () {
+			var to = $('div.comment[comment="' + $(this).attr('comment') + '"]', $(corrections));
+			console.log($(this).attr('comment'),'to',to);			
+			$(this).parent().hover(
+				function () {
+					to.addClass('highlight');
+				},
+				function () {
+					to.removeClass('highlight');
+				});
+		});
 		
 		$('.correction', corrections).map(function () {
 			function removePunc (s) { return s == ',' ? s : s.replace(',','').replace('.'); }

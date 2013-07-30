@@ -1,4 +1,4 @@
-var DEBUG = false;
+var DEBUG = true;
 var MAX_DOLLARS_BATCH = 2.50; 
 var DOLLARS_PER_LETTER = 0.00007;
 var NUM_READERS = 5;
@@ -199,18 +199,18 @@ function askAsText (sent) {
 	  '==========================',
 	  '=== Example 2 Sentence ===',
 ////////////////
+/*
 	  'The quickly broown fox jumps over the lazy dog.',
 	  '--- Answer -----',
 	  "<quickly> looks wrong",
 	  '<broown> spelling',
+*/
 ////////////////
-/*
 	  'The quickly broown fox jumps over the lazy dog, I ate a fish.',
 	  '--- Answer -----',
 	  "<quickly> doesn't agree with fox",
 	  '<broown> spelling',
 	  '<I> run-on sentence',
-*/	  
 ////////////////
 	  '==========================',
 	  '',
