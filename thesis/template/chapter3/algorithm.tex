@@ -61,7 +61,8 @@ set reachable$_\texttt{parPre}$($W{\rightarrow}X$,$P$,$A$,$B$,$C$):
   reach :=
     $~~~~ \{ a_{*,W{\rightarrow}X} ~ | ~ a_{*,W{\rightarrow}X}  \in A \} \cup~ (C \cap \{ a_{W,W{\rightarrow}X} ~ | \displaystyle \bigwedge _{V{\rightarrow}W \in P} W.a_{V{\rightarrow}W} \in B \}) \cup ~(C \cap \{ a_{X,W{\rightarrow}X}  ~ |  \neg \exists X{\rightarrow}Y \in P\})$
   while true:    
-    progress := $\{ a_{*,W{\rightarrow}X} ~|~  a_{*,W{\rightarrow}X} = f(b_0, \ldots, b_n) \in \texttt{F}$ `\Suppressnumber` $\displaystyle \wedge ~ a_{*,W{\rightarrow}X} \in B ~ \wedge ~~ \bigwedge b_i \in ~$reach$\}$ `\Reactivatenumber`
+    progress := $\{ a_{*,W{\rightarrow}X} ~|~  a_{*,W{\rightarrow}X} = f(b_0, \ldots, b_n) \in \texttt{F}$ `\Suppressnumber`
+                   $\displaystyle \wedge ~ a_{*,W{\rightarrow}X} \in B ~ \wedge ~~ \bigwedge b_i \in ~$reach$\}$ `\Reactivatenumber`
     reach := reach $\cup$ progress
     if progress = $\emptyset$:
       break

@@ -147,7 +147,7 @@ preorder
 It specifies a sequence ('';'') of two traversals of node visit order \code{postorder} and \code{preorder}. For each type of node visited within a traversal, the schedule specifies the sequential sequence of attributes to evaluate. We note that, due to the desugaring of our class system in Section~\ref{sec:desugaring}, the dispatches in the above examples are based on grammar productions in the desugared representation. In terms of the fronted language, the dispatches are based on node class.
 
 
-Generally, a single attribute grammar may be schedule in many ways. For example, the width and height computations share no dependencies, so the first postorder traversal might be partitioned into two postorder traversals:
+Generally, a single attribute grammar may be scheduled in many ways. For example, the width and height computations share no dependencies, so the first postorder traversal might be partitioned into two postorder traversals:
 \begin{lstlisting}[mathescape,morekeywords={preorder,postorder}]
 postorder
   HBOX$_0$ $\rightarrow$ HBOX$_1$ HBOX$_2$ { HBOX$_0$.w }

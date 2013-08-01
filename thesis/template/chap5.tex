@@ -20,27 +20,67 @@ The following sections explore each question in turn.
 
 
 
-\section{Computer-Aided Programming with Schedule Holes}
+\section{Computer-Aided Programming with Schedule Sketching}
 \label{sec:holes}
-Being able to automatically generate parallel schedules enables rich forms of parallel programming. An automation tool will automatically find a parallel schedule, so a natural conclusion would be to assume the programming interface would hide all parallelization concerns. We found this to be largely true when writing small amounts of declarative data visualization code. However, in parallelizing the larger and more complicated CSS layout language, we encountered cases where the visualization designer needed to guide (or be guided by) the automation procedure. Likewise, we encountered the need for one programmer to communicate parallel structure to another. Automatic parallelization is insufficient in that hides all parallelization details, yet manual scheduling was too low-level and brittle.
+Automatic parallel schedule synthesis enables rich forms of parallel programming. The utility of these constructs is not obvious. An automation tool will automatically find a parallel schedule, so a natural conclusion would be to assume the programming interface simply hide all parallelization concerns and rely upon automatic parallelization internally. We found this to be largely true for writing small amounts of declarative data visualization code. However, in parallelizing the larger and more complicated CSS layout language, we encountered cases where the visualization designer needed to guide (or be guided by) the automation procedure. Likewise, we encountered the need for one programmer to communicate parallel structure to another. Automatic parallelization is insufficient in that it hides all parallelization details and controls, yet manual scheduling was too low-level and brittle.
 
-Our solution is to provide a \emph{sketching} construct for specifying constraints on the schedule that the automatic parallelization algorithm must respect. We routinely wrote schedules sketches in order to override schedule selection, test and debug parallelization ideas, and enforceably communicate parallelization decisions when sharing code with others. Discussed later in this chapter~\ref{??}, we also used the sketching mechanism to speed up automatic parallelization over specifications with many attributes or schedule patterns that challenge static analysis.
+Our solution is to provide a \emph{sketching} construct for specifying constraints on the schedule that the automatic parallelization algorithm must respect. The programmer chooses which parts of a schedule to write and relies upon the synthesizer to fill in the rest. We routinely sketched schedules in order to \emph{override schedule selection}, \emph{test} and \emph{debug} parallelization ideas, and \emph{enforceably communicate parallelization decisions} when sharing code with others. Discussed later in this chapter~\ref{??}, we also used the sketching mechanism to speed up automatic parallelization over specifications with many attributes or schedule patterns that challenge static analysis.
 
-We revisit the specification of \hlang{} to demonstrate the sketching construct and its use for the above scenarios. First, many parallel schedules are possible for \hlang{}, and if we  have a preference, ...
+We revisit the specification of \hlang{} to demonstrate the sketching construct and its use for the above scenarios. First, depending on the expected memory size of target hardware, the programmer may choose a longer schedule with a smaller set of attributes computed in each one. Compare the three following schedule sketches:
 
-\begin{align}
+\begin{align*}
 %\begin{lstlisting}[mathescape,morekeywords={parPre,parPost}]
-\text{\textbf{parPost}} ~ \hole_1 ~ ; ~ \text{\textbf{parPre}} ~ \hole_2 \\
-(\text{\textbf{parPost}} ~ \hole_3 ~ ; ~ \text{\textbf{parPost}} ~ \hole_4) ~ ; ~ \hole_5 \\
-\hole_6
-\end{align}
+\hole_1 \\
+\text{\textbf{parPost}} ~ \hole_2 ~ ; ~ \text{\textbf{parPre}} ~ \hole_3 \\
+(\text{\textbf{parPost}} ~ \hole_4 ~ ; ~  \text{\textbf{parPost}}~ \hole_5) ~ ; ~\hole_6 
+\end{align*}
+
+The first specification leaves a \emph{hole} for the entire schedule. The synthesizer fills in every hole with a valid schedule term so that the resulting schedule is correct.  The entire first schedule is left as a hole, which is equivalent to requesting fully automatic parallelization. The second specification hardcodes the traversals but leaves holes for the attributes to schedule for each traversal. The final schedule sketch splits the \code{parPost} traversal in two in order to decrease the memory consumption in the first traversal. Like the second sketch, it does not specify the attributes, and like the first sketch, it does not specify the sequence of traversals to place at the end of the schedule. 
+
+The ability to run a sketch through the synthesizer enables several forms of parallel program debugging. First, the synthesizer rejects programs that it cannot parallelize, so sketches can test programmer intuitions. For example, it could test the validity of the above idea of splitting apart the first \code{parPost} traversal. We could more explicitly test the underlying insight that the \code{w} and \code{h} attributes are separable:
+
+\begin{align*}
+& (\text{\textbf{parPost}} ~ \{ w  \} ~ ; ~  \text{\textbf{parPost}}~ \{ h \}) ~ ;  ~\hole_6
+\end{align*}
+
+The synthesizer can fill in $\hole_6$ to find a complete schedule. It provides an error if it cannot: the longest schedule prefix of traversals it could schedule. For the above example, the error distinguishes two possible mistakes. First, it fails with a prefix containing  \code{parPost \{ w \} ; parPost \{ h \}}, the first traversal can be split but the rest of the schedule has an unsatisfiable dependency. Otherwise, the prefix is empty and the traversals could not be split. We found the ability to test scheduling ideas to be particularly useful, for example, in determining partitions for nested text.
+
+We provide another mechanism for debugging. The programmer may ask the synthesizer to \emph{enumerate} all valid solutions for a schedule sketch. The previous examples restricted themselves to only asking for one completion. However, for \hlang{}, the space of valid schedules is small enough that programmer could manually page through all possibles ones.
 
 
-
-
+As our attribute grammars grew, we wrote sketches to help share code between programmers. Consider a program with a sketch such as the above. Upon receiving a grammar with it, a programmer knows the desired parallelization scheme. Furthermore, the synthesizer checks that edits to the functional specification do not violate the schedule. For example, the synthesizer would detect the addition of a feature that requires the addition of an extra traversal or serialization of a parallel one. We typically ignored changes that do not impact parallelization and applied more careful reasoning whenever a sketch was violated.  In this way, the ability to communicate and enforce schedule specifications helps separate concerns between defining layout feature logic and optimizing layout scheduling.
 
 
 \subsection{Generalizing Holes to Unification}
+We provide a more expressive variant of holes for cases that require more high-level control than they provide. For example, we may want to specify that both the width and height are computed in the first traversal over a tree. The programmer should not have to specify the relative order of attributes for every type of node that computes them. Instead, we generalize the sketching construct to syntactic unification over scheduling terms. 
+
+Programmers may specify constraints over schedule terms. For example, the following specification declares that the width and height attributes are computed in the first traversal of a sequence but do not specify their relative order:
+\begin{align*}
+member(&\text{w}, \hole_2), member(\text{w}, \hole_3),\\
+member(&\text{h}, \hole_2), member(\text{h}, \hole_3),\\
+Sched = ~[&~[ \hole_1, ~ [ [\text{HBox}, \hole_2], [\text{VBox}, \hole_3]]], ~\\
+& ~ \textbf{seq},\\
+& ~  [\text{\textbf{parPost}}, ~\hole_4]~]
+\end{align*}
+Term $\hole_1$ will unify with a traversal type and $\hole_2$ and $\hole_3$ will unify with a sequence of attributes that includes \code{w} and \code{h}. Finally, $\hole_4$ will unify with another sequence of terms where each specifies a node type and the sequence of attributes to schedule for it. Note the change in syntax.
+
+Our scheduling language is an embedded domain specific language (EDSL~\cite{??}) in Prolog. The language of constraints is arbitrary Prolog. Thus, in the above example, \code{Sched} is a named Prolog variable that must be unified with the schedule constraints and the attribute grammar's functional dependencies. Likewise, unnamed variables $\hole_1$, $\hole_2$, and $\hole_3$ must unify with a correct schedule. Our system provides a library of traversal types such as \code{parPost} and combinators such as \code{seq}, and the attribute grammar introduces attribute terms such as \code{w} and \code{h}. The programmer then uses built-in Prolog predicates to constrain the result such as \code{member} for list membership. Likewise, they may use Prolog's ``,'' operator for conjunction and ``;'' for disjunction. 
+
+We generally used the predicates in two ways. First, we may specify that a traversal type unifies with a parallel form:
+\begin{align*}
+& (\hole_1 = \text{\textbf{parPost}} ; \hole_1 =  \text{\textbf{parPre}}), \\
+& Sched = [~[\hole_1, ~ \hole_2], ~ \text{\textbf{seq}}, ~ [\text{\textbf{parPost}}, ~\hole_3]]
+\end{align*}
+The sketch specifies a sequence of two traversals where the first traversal type ($\hole_1$) unifies with either  \code{parPost} or \code{parPre} traversal. The schedule does not specify what attributes are computed within the first traversal ($\hole_2$). 
+
+Our second significant use of predicates was to test the validity of partitioning into nested traversals:
+\begin{align*}
+member(&[\text{HBox}, \hole_1], TopDownVisits),\\
+Sched =& [ ~ [\text{\textbf{nested}},  [\text{\textbf{parPre}}, TopDownVisits], ~\hole_2] ~ | ~ \hole_3]
+\end{align*}
+The schedule specifies that the first traversal is nested within an overall parallel preorder structure. The other partitions are specified in $\hole_2$, with the only constraint on them being that the \code{HBox} visit is part of the parallel preorder partition. The specification leaves remaining traversals unconstrained by $\hole_3$.
+
+
 
 \section{Fast Schedule Synthesis}
 \subsection{Search}
