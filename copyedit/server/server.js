@@ -1,7 +1,7 @@
-var DEBUG = true;
+var DEBUG = false;
 var MAX_DOLLARS_BATCH = 2.50; 
 var DOLLARS_PER_LETTER = 0.00007;
-var NUM_READERS = 5;
+var NUM_READERS = 4;
 
 //=================
 /*
@@ -252,9 +252,9 @@ function askAsText (sent) {
 						questionText: '"' + sent + '"',
 						defaultText: 'ok',
 						regex: format
-					}})
-/*					
-				,			
+					}})					
+				,	
+				uniqueAskID: 07302013, //date
 				knownAnswerQuestions:
 					JSON.stringify({
 						answeredQuestions: [
@@ -271,8 +271,7 @@ function askAsText (sent) {
 									regex: format}},
 							 match: {Inexact: '^[^o].*$'}}
 						],
-						percentCorrect: 100})
-*/						
+						percentCorrect: 100})						
 			});
 }
 

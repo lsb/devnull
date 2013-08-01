@@ -121,6 +121,10 @@ p.paragraph.off {
 	background-color: silver;
 }
 
+.real .scrollHighlight {
+	border: 1px solid green;
+}
+
 
 .spell, .gram { color: #000 }
 .spell:hover { color: #000 }
@@ -172,12 +176,13 @@ p.paragraph.off {
 	background-color: rgba(255,51,51,0.3);
 }
 #fixes p.on .comment {
-	 margin: 1px;
+	 margin: 2px;
 	 padding: 0.5em;
 }
 #fixes p.on .comment.highlight {
 	margin: 0;
-	border: 1px dotted gray;
+	border: 2px dotted white;
+	background-color: #FEE;
 }
 
 #fixes p.on .comment + .comment {
@@ -569,7 +574,7 @@ function bindDOM() {
 		 		}
 
 		 		$('#resultCount').text(out.count + ' / ' + flatSentences.length + ' done');
-		 		$('#title').html('FastCheck <small>' + out.count + ' / ' + flatSentences.length + ' sentences checked</small>');
+		 		$('#title').html('PreProof <small>' + out.count + ' / ' + flatSentences.length + ' sentences checked</small>');
 		 		
 		 		if (!out.error && (true || out.count == flatSentences.length)) {
 		 			if (out.count == flatSentences.length)
@@ -998,7 +1003,15 @@ function rebuildScroll () {
 			});
 			sourceWords.map(function (w) { $(w).css('border-bottom','5px solid pink') });					
 			
-			$(this).parent().parent().hover(
+			var comment = $(this).parent().parent();
+			var sent = $('div.comment[comment="' + comment.attr('comment') + '"]', para).parent();;
+
+
+			comment.hover(
+				function () { sent.addClass('scrollHighlight'); },
+				function () { sent.removeClass('scrollHighlight'); });
+			
+			comment.hover(
 				function () {
 					//sources.map(function (elt) { $(elt).css('border','1px solid red') });
 					sourceWords.map(function (w) { $(w).css('background-color','#CCF') });					
@@ -1056,7 +1069,7 @@ window.addEventListener('load',bindDOM);
   <body>
   <div id="header">
 	  <div>
-	  	<h1 id="title">FastCheck</h1>
+	  	<h1 id="title">PreProof</h1>
 		<h2>Progress</h2>
 		<span id="timeOutstanding">Time since launch</span>
 		<br/>
