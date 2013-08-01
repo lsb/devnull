@@ -110,23 +110,19 @@ p.paragraph.off {
 	line-height: 1.5em;
 }
 .real .sentence {
-	margin: 1px;
+	margin: 5px;
 }
-.real .sentence:hover { 
-	border: 1px dotted blue; 
+.real .sentence:hover, .real .sentence.scrollHighlight { 
+	border-left: 5px solid blue; 
+	border-right: 5px solid blue; 
 	margin: 0px;
 }
 .real .sentence:before { content: '  '; }
-.real .sentence + .sentence { margin-left: 2px; }
-.real .sentence + .sentence:hover { margin-left: 1px; }
+.real .sentence + .sentence { margin-left: 5px; }
+.real .sentence + .sentence:hover, .real .sentence + .sentence.scrollHighlight { margin-left: 0px; }
 .real .sentence.off {
 	background-color: silver;
 }
-
-.real .scrollHighlight {
-	border: 1px dotted green;
-}
-
 
 .spell, .gram { color: #000 }
 .spell:hover { color: #000 }
