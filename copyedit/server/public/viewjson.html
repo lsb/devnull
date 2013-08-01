@@ -19,7 +19,9 @@ THROTTLE = (1.0/9) * 1000; //min delay between XHRs
 	<style>
 
 .word { margin: 0.1em; }
-
+.word.highlight { background-color: #CCF; }
+.highlight .key { background-color: #CCF; }
+.word.error {border-bottom: 4px solid #CCF; }
 /* 
 .word:hover { background-color: #CCCCff }
 */
@@ -122,7 +124,7 @@ p.paragraph.off {
 }
 
 .real .scrollHighlight {
-	border: 1px solid green;
+	border: 1px dotted green;
 }
 
 
@@ -577,8 +579,8 @@ function bindDOM() {
 		 		$('#title').html('PreProof <small>' + out.count + ' / ' + flatSentences.length + ' sentences checked</small>');
 		 		
 		 		if (!out.error && (true || out.count == flatSentences.length)) {
-		 			if (out.count == flatSentences.length)
-		 			  console.log('done, got all sentences', flatSentences, out.sentences);
+//		 			if (out.count == flatSentences.length)
+//		 			  console.log('done, got all sentences', flatSentences, out.sentences);
 
 					var flatDoms = Array.prototype.concat.apply([], 
     					paraSents.map(function () { return this.nodes; }));
@@ -857,6 +859,7 @@ $(function () {
 	$('#fixes').mouseover(function () { activeBox = '#fixes'; });
 	
 	
+	
 	$('#book').scroll(function () { 	
 		if (activeBox != '#book') {
 			drawCurves($('p.paragraph',$('#book')));	
@@ -966,61 +969,67 @@ function rebuildScroll () {
 					.filter(function () { return this.nodeType == 3; })
 					.map(function () { return D.$li($(this).text()); })
 					.get());
-		var corrections = 
-			D.$p.apply({},
-				$('.comment', para).clone());
+		var corrections =  D.$p.apply({}, $('.comment', para).clone());
 		
-		$(corrections).hover(
-			function () { $(para).addClass('highlight'); },
-			function () { $(para).removeClass('highlight'); });
-		$(para).hover(
-			function () { $(corrections).addClass('highlight'); },
-			function () { $(corrections).removeClass('highlight'); });
+		//paragraph <--> set of corrections
+		var wordsToHighlight = [];
+		$('.correction', corrections).map(function () {
+			function removePunc (s) { return s.indexOf(',') != -1 ? ',' : s.replace(',','').replace('.',''); }
+			var key = $('.key', this).text().trim().toLowerCase();
+			var hasSplit = /,./.test(key);
+			var left;
+			var right;
+			if (hasSplit) {
+				left = key.split(',')[0].trim() + ',';
+				right = key.split(',')[1].trim();
+			}
+			$('.word', para).map(function () {
+				var word = $(this).text().trim().toLowerCase();
+				if ($(this).parent().hasClass('badSentence') && 
+					(word == key
+					 || (hasSplit && (word.indexOf(left) != -1 || word == right))))
+					wordsToHighlight.push(this);
+			});			
+		});	
+		$(wordsToHighlight).addClass('error');
+		function highlightPara () {
+			$(para).addClass('highlight');
+			$(corrections).addClass('highlight');
+			$(wordsToHighlight).addClass('highlight');
+		}
+		function dimPara () {
+			$(para).removeClass('highlight');
+			$(corrections).removeClass('highlight');		
+			$(wordsToHighlight).removeClass('highlight');
+		}						
+		$(corrections).hover(highlightPara, dimPara);
+		$(para).hover(highlightPara, dimPara);
+
+		//sentence <--> correction	
 		$('div.comment', para).map(function () {
 			var to = $('div.comment[comment="' + $(this).attr('comment') + '"]', $(corrections));
-			console.log($(this).attr('comment'),'to',to);			
 			$(this).parent().hover(
-				function () {
-					to.addClass('highlight');
-				},
-				function () {
-					to.removeClass('highlight');
-				});
+				function () { to.addClass('highlight'); },
+				function () { to.removeClass('highlight'); });
 		});
-		
-		$('.correction', corrections).map(function () {
-			function removePunc (s) { return s == ',' ? s : s.replace(',','').replace('.'); }
-			var key = removePunc($('.key', this).text()).split(/\s/)[0].toLowerCase();
-			var sources = [];	
-			var sourceWords = [];
-			$('.word', para).map(function () {
-				if ($(this).parent().hasClass('badSentence')) {
-					if (removePunc($(this).text().toLowerCase()) == key) {
-						//sources.push($(this).parent());
-						sourceWords.push($(this));
-					}
-				}
-			});
-			sourceWords.map(function (w) { $(w).css('border-bottom','5px solid pink') });					
-			
+		$('div.comment', corrections).map(function () {
+			$(this).hover(		
+				function () { $(this).addClass('highlight'); },
+				function () { $(this).removeClass('highlight'); });
+		});
+	
+		$('.correction', corrections).map(function () {	
 			var comment = $(this).parent().parent();
-			var sent = $('div.comment[comment="' + comment.attr('comment') + '"]', para).parent();;
-
-
+			var sent = $('div.comment[comment="' + comment.attr('comment') + '"]', para).parent();
 			comment.hover(
 				function () { sent.addClass('scrollHighlight'); },
-				function () { sent.removeClass('scrollHighlight'); });
-			
-			comment.hover(
-				function () {
-					//sources.map(function (elt) { $(elt).css('border','1px solid red') });
-					sourceWords.map(function (w) { $(w).css('background-color','#CCF') });					
-				},
-				function () {
-					//sources.map(function (elt) { $(elt).css('border','none') });
-					sourceWords.map(function (w) { $(w).css('background-color','') });									
-				});
+				function () { sent.removeClass('scrollHighlight'); });			
 		});
+		$('div.comment', para)
+			.parent()
+			.hover(
+				function () { $(this).addClass('scrollHighlight'); },
+				function () { $(this).removeClass('scrollHighlight'); });
 		
 		var numCorrections = $('.comment', para).length;
 		$(corrections).addClass(numCorrections > 0 ? 'on' : 'off');

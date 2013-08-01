@@ -1,4 +1,4 @@
-var DEBUG = false;
+var DEBUG = true;
 var MAX_DOLLARS_BATCH = 2.50; 
 var DOLLARS_PER_LETTER = 0.00007;
 var NUM_READERS = 4;
