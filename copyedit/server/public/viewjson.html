@@ -405,8 +405,8 @@ function summarize () {
 	
 function bindDOM() {	
 	var BASE_URL = document.URL.replace("#","").replace("viewjson.html","") + "/";
-	//var FILE =  'serviceHalf.json';
-	var FILE =  'out2.json';
+	var FILE =  'serviceHalf.json';
+	//var FILE =  'out2.json';
 	
 	var jsonP = Z.unit(BASE_URL + FILE).pipeAsync(D.xhrJSON).print('== jsonP');
 	

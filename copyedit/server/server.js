@@ -1,7 +1,7 @@
-var DEBUG = true;
-var MAX_DOLLARS_BATCH = 2.50; 
+var DEBUG = false;
+var MAX_DOLLARS_BATCH = 7.50; 
 var DOLLARS_PER_LETTER = 0.00007;
-var NUM_READERS = 4;
+var NUM_READERS = 5;
 
 //=================
 /*
@@ -254,7 +254,7 @@ function askAsText (sent) {
 						regex: format
 					}})					
 				,	
-				uniqueAskID: 07302013, //date
+				uniqueAskID: 08012013,//07302013, //date
 				knownAnswerQuestions:
 					JSON.stringify({
 						answeredQuestions: [
