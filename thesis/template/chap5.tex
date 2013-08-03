@@ -51,14 +51,14 @@ We provide another mechanism for debugging. The programmer may ask the synthesiz
 As our attribute grammars grew, we wrote sketches to help share code between programmers. Consider a program with a sketch such as the above. Upon receiving a grammar with it, a programmer knows the desired parallelization scheme. Furthermore, the synthesizer checks that edits to the functional specification do not violate the schedule. For example, the synthesizer would detect the addition of a feature that requires the addition of an extra traversal or serialization of a parallel one. We typically ignored changes that do not impact parallelization and applied more careful reasoning whenever a sketch was violated.  In this way, the ability to communicate and enforce schedule specifications helps separate concerns between defining layout feature logic and optimizing layout scheduling.
 
 
-\subsection{Generalizing Holes to Unification}
+\section{Generalizing Holes to Syntactic Unification}
 We provide a more expressive variant of holes for cases that require more high-level control than they provide. For example, we may want to specify that both the width and height are computed in the first traversal over a tree. The programmer should not have to specify the relative order of attributes for every type of node that computes them. Instead, we generalize the sketching construct to syntactic unification over scheduling terms. 
 
 Programmers may specify constraints over schedule terms. For example, the following specification declares that the width and height attributes are computed in the first traversal of a sequence but do not specify their relative order:
 \begin{align*}
 member(&\text{w}, \hole_2), member(\text{w}, \hole_3),\\
 member(&\text{h}, \hole_2), member(\text{h}, \hole_3),\\
-Sched = ~[&~[ \hole_1, ~ [ [\text{HBox}, \hole_2], [\text{VBox}, \hole_3]]], ~\\
+\textbf{\emph{Sched}}  = ~[&~[ \hole_1, ~ [ [\text{HBox}, \hole_2], [\text{VBox}, \hole_3]]], ~\\
 & ~ \textbf{seq},\\
 & ~  [\text{\textbf{parPost}}, ~\hole_4]~]
 \end{align*}
@@ -66,33 +66,202 @@ Term $\hole_1$ will unify with a traversal type and $\hole_2$ and $\hole_3$ will
 
 Our scheduling language is an embedded domain specific language (EDSL~\cite{??}) in Prolog. The language of constraints is arbitrary Prolog. Thus, in the above example, \code{Sched} is a named Prolog variable that must be unified with the schedule constraints and the attribute grammar's functional dependencies. Likewise, unnamed variables $\hole_1$, $\hole_2$, and $\hole_3$ must unify with a correct schedule. Our system provides a library of traversal types such as \code{parPost} and combinators such as \code{seq}, and the attribute grammar introduces attribute terms such as \code{w} and \code{h}. The programmer then uses built-in Prolog predicates to constrain the result such as \code{member} for list membership. Likewise, they may use Prolog's ``,'' operator for conjunction and ``;'' for disjunction. 
 
-We generally used the predicates in two ways. First, we may specify that a traversal type unifies with a parallel form:
+We made several notable uses of the extended sketching constructs:
+\begin{itemize}
+\item \textbf{Attribute sets.} As in the above example, we specify \emph{unordered sets} of attributes for a traversal rather than an \emph{ordered sequence}. The synthesizer determines the order and any additional attributes. Likewise, different classes implementing the same interface share attributes of the same name, we wrote helper functions for expanding an interface attribute to schedule into the instances for the corresponding classes.
+\item \textbf{Requiring parallelization.} We may specify that a traversal type unifies with a parallel form:
 \begin{align*}
 & (\hole_1 = \text{\textbf{parPost}} ; \hole_1 =  \text{\textbf{parPre}}), \\
-& Sched = [~[\hole_1, ~ \hole_2], ~ \text{\textbf{seq}}, ~ [\text{\textbf{parPost}}, ~\hole_3]]
+& \textbf{\emph{Sched}} = [~[\hole_1, ~ \hole_2], ~ \text{\textbf{seq}}, ~ [\text{\textbf{parPost}}, ~\hole_3]]
 \end{align*}
-The sketch specifies a sequence of two traversals where the first traversal type ($\hole_1$) unifies with either  \code{parPost} or \code{parPre} traversal. The schedule does not specify what attributes are computed within the first traversal ($\hole_2$). 
-
-Our second significant use of predicates was to test the validity of partitioning into nested traversals:
+The sketch specifies a sequence of two traversals where the first traversal type ($\hole_1$) unifies with either  \code{parPost} or \code{parPre} traversal. The schedule does not specify what attributes are computed within the first traversal ($\hole_2$). Furthermore, instead of manually specifying the choice for every pass, we wrote a function that does so automatically.
+\item \textbf{Nesting.} We use predicates to test the validity of partitioning into nested traversals. The challenge is to minimize the number of traversals put into a sequential partition. For example, if we thought a node belongs in a parallel partition, we would include that in the sketch;
 \begin{align*}
 member(&[\text{HBox}, \hole_1], TopDownVisits),\\
-Sched =& [ ~ [\text{\textbf{nested}},  [\text{\textbf{parPre}}, TopDownVisits], ~\hole_2] ~ | ~ \hole_3]
+\textbf{\emph{Sched}}  =& [ ~ [\text{\textbf{nested}},  [\text{\textbf{parPre}}, TopDownVisits], ~\hole_2] ~ | ~ \hole_3]
 \end{align*}
-The schedule specifies that the first traversal is nested within an overall parallel preorder structure. The other partitions are specified in $\hole_2$, with the only constraint on them being that the \code{HBox} visit is part of the parallel preorder partition. The specification leaves remaining traversals unconstrained by $\hole_3$.
+The schedule specifies that the first traversal is nested within an overall parallel preorder structure. The preorder portion must handle \code{HBox} nodes and may include other as well. The other partitions are defined by $\hole_2$, which has no additional constraints. The specification leaves remaining traversals unconstrained by $\hole_3$.
+\item \textbf{Schedule heuristics.} For a simple optimization heuristic, we would bias parallel scheduling to use an alternating sequence of \code{parPre} ancd \code{parPost} traversal. The intuition is that long-running dependencies can often be satisfied under these two traversals so that the shortest schedule would be such an alternation. Less obviously, some dependencies require repetition of the same traversal pattern, so the heuristic is to bias to use of the alternate of whatever worked for the previous traversal and otherwise prioritize any other parallel traversal.
+\end{itemize}
+
+In all of the above cases, reasoning is in terms of the syntactic form. For example, the alternating traversal heuristic biases towards one traversal based on equality with the syntactic value of the the previous one. Richer forms of unification that extend beyond syntax may be applicable. As is, syntactic unification for guiding schedules already supports several key tasks.
 
 
 
-\section{Fast Schedule Synthesis}
-\subsection{Search}
-\subsection{Optimization}
-\subsection{Analysis}
 
-\section{Schedule Autotuning}
-\label{sec:schedtuning}
-\subsection{Alternation Heuristic: Off-by-one Optimality}
-\subsection{Enumeration via Incrementalization}
+\section{Fast Algorithm for Schedule Synthesis}
+Our synthesizer takes an attribute grammar and a sketch as input, and outputs a set of schedules. We designed it to support multiple traversal types, multiple solutions, and rich attribute grammar and schedule sketching languages. Our initial implementation used the dependency analysis of \citeauthor{oag}~\cite{oag}, but it was too inflexible. Our new  algorithm optimizes for modularity and speed by using the following design:
+
+\paragraph*{Simple enumerate-and-check} The algorithm enumerates schedules and checks which are correct. Checkers examine the use of individual traversal types and traversal compositors, and we wrote them to function independently of one another. Enumeration is simply syntactic. Combined, adding a new traversal type involves writing a checker and binding it to the proper place.
+
+\paragraph*{Optimization}
+Na\"{\i}ve enumerate-and-check is too slow. Without significantly changing the interface for adding checkers, we optimize synthesizing one schedule to be $O(n^3)$ in the number of attributes. Some features are still slow, such as nested traversals, so we introduce the optimizations of incrementalization, greediness, and greedy sketch unification. 
+
+%We split the problem into 1) finding a correct partitioning of attributes for a fixed schedule of traversals and 2) finding correct schedules of traversals.
+
+\subsection{The Algorithm}
+\label{sec:sub:greedy}
+
+We first discuss optimizations for  finding one correct schedule before considering finding many. Figure~\ref{fig:searchtrace} demonstrates an algorithm trace for enumerating schedules of \mbox{\hlang{}.} Figure~\ref{fig:synthalgs} shows the full algorithm.
+
+\begin{figure}
+\centering
+\begin{minipage}{0.8\columnwidth}
+\begin{lstlisting}[mathescape,escapechar=\`,morekeywords={parPre,parPost,;,||}]
+parPre{x,y,w,h} `\BComment{incorrect: unsat \{x,w,h\}}`
+parPre{y} `\Suppressnumber` `\Comment{correct: continue}`
+$\ldots$ `/* expand subtree to schedule x, w, h */` $\ldots$ `\Reactivatenumber`
+parPost{x,y,w,h} `\BComment{incorrect: unsat \{x,y\}}`
+parPost{w,h} `\Comment{correct: continue}`
+  _ ; parPre{x,y} `\BComment{correct: complete}`
+  _ ; parPost{x,y} `\BComment{incorrect: unsat \{x,y\}}`
+  _ ; (parPre{x} || _) `\Comment{correct: continue}`
+    _ ; (_ || parPre{y}) `\BComment{correct: complete}`
+    _ ; (_ || parPost{y}) `\BComment{incorrect: unsat \{y\}}`
+  _ ; (parPre{y} || _) `\Comment{correct: continue}`
+    _ ; (_ || parPre{x}) `\BComment{correct: complete}`
+    _ ; (_ || parPost{x}) `\BComment{incorrect: unsat \{x\}}`
+  _ ; (parPost{y} || _) `\BComment{incorrect: unsat \{y\}}`
+  _ || parPre{x,y} `\BComment{incorrect: unsat \{x\}}`
+  _ || (parPre{y} ; _) `\Comment{correct: continue}`
+    _ || (_ ; parPre{x}) `\BComment{incorrect: unsat \{x\}}`
+    _ || (_ ; parPost{x}) `\Suppressnumber` `\BComment{incorrect: unsat \{x\}}`
+... `\Reactivatenumber`
+parPost{w}  `\Comment{correct: continue}` 
+  _ || parPre{x,y,h} `\Suppressnumber` `\BComment{incorrect: unsat \{x,h\}}`
+$\ldots$ `\Reactivatenumber`
+\end{lstlisting}
+\end{minipage}
+\caption{\textbf{Trace of synthesizing schedules for \hlang{}}. Note that scheduling of ``$||$'' does not use the optional greedy heuristic.}
+\label{fig:searchtrace}
+\end{figure}
+
+Synthesizing one schedule is $O(A^3)$ in the number of attributes. The algorithm finds an increasingly long and correct prefix of the schedule (\emph{prefix expansion}). At each step, it tries different suffixes until one succeeds, where a suffix such as ``\sched{parPre\{x,y\}}'' is a traversal type and attributes to compute in it. When a correct suffix is found, it is appended to the prefix and the loop continues on to the next suffix. Finding one suffix involves trying different traversal types, and for each one, different attributes. Only the suffix needs to be checked (\emph{incremental checking}), and checking a suffix is fast (\emph{topological sort}). Finally, finding a set of attributes computable by a particular traversal type only requires $O(A)$ attempts (\emph{iterative refinement}).
+
+We consider each optimization in turn:
+
+\begin{enumerate}
+
+\item \textbf{Prefix expansion.} The synthesizer searches for an increasingly large \emph{correct} schedule prefix. Every line of the trace represents a prefix. If a prefix is incorrect, no suffix will yield a correct schedule. Therefore, the only prefixes that get expanded are those that succeed (lines 2, 4, 7, 10, 15, 18). 
+
+To synthesize only one schedule, only one increasingly large prefix is expanded. Line 2 has a correct prefix, so only ``\sched{parPre\{y\}}'' would be explored. Either no schedule is possible at all, or if there are any, one is guaranteed to exist in the expansion. In this case,  ``\sched{parPre\{y\} ; parPost\{w,h\} ; parPre\{x\}}'' would be found.
+
+%Prefixes are trees, such as ``\sched{(p || q) ; (r || \_)}'', not just strings. 
+
+\item \textbf{Incremental checking.} Line 4  checks prefix ``\sched{parPost\{w,h\}}'' for attributes ``w'' and ``h.'' Therefore, lines 5-17 can check the suffix added at each line without rechecking  ``\sched{parPost\{w,h\}}''. 
+
+\item \textbf{Topological sort.} We optimize checking a suffix by topologically sorting the dependency graph of its attributes  (rule $\rrule{check_\beta}$ in the next subsection). Topologically sorting a graph is $O(V + E)$.  It is $O(A)$ in this case because $V = A$, and as the arity of semantic functions is generally small, $E$ is $O(A)$.  
+
+\item \textbf{Iterative refinement.} The algorithm iteratively refines an over-approximation of what attributes can be computed in a suffix by removing under-approximations of what cannot. For example, the check in line 1 for \sched{parPre\{x,y,w,h\}} fails with error \lstinline|{x,w,h}|, which details the attributes with unsatisfiable dependencies. Computing fewer attributes cannot satisfy more dependencies, so no  subset of \lstinline|{x,w,h}| has satisfiable dependencies either. Therefore, the next check is on a set without them: \lstinline|{y}|. 
+
+Subtraction of attributes repeats at most $A$ times before finding a solution or terminating on the empty set. Checking one refinement invokes the $O(A)$ topological sort. Put together, finding the attributes computable by a suffix is $O(A^2)$.
+\end{enumerate}
+
+\noindent Every traversal computes at least one attribute, so there are at most $A$ traversals. A constant number of traversal types are examined for each suffix, and synthesizing each one is $O(A^2)$. Synthesizing one schedule is therefore $O(A^3)$.  The \emph{greedy sketch unification} optimization from the next section may further optimize the synthesis of a single schedule.
+
+
+\section{Schedule Enumeration}
+We provide and optimize the ability to examine many schedules. Our approach benefits several scenarios: picking a fast schedule when many are possible, supporting scheduling language extensions that otherwise resist fast synthesis, and improving synthesis time when partial schedule knowledge is known.
+
+We consider each scenario in turn:
+
+\paragraph{}
+\textbf{Autotuning} There may be an exponential number of schedules, and the choice of the fast is non-obvious. For example, shorter schedules incur less traversal overhead, but also generally expose less parallelism. Likewise, a short sequence of parallel traversals may behave worse than a long sequence when performed on hardware with limited memory. By enumerating all schedules, we can perform \emph{autotuning}: run performance tests to pick the best schedule for a particular architecture. There may be an exponential number of schedules, so we must somehow optimize the enumeration of those to test.
+
+\paragraph{}
+ \textbf{Scheduling extensions.} We provide optional scheduling language extensions, and fast synthesis in their presence requires optimization. For example, nested traversals require partitioning the set of nodes into distinct regions, but many partitions are possible. Partitioning does not enjoy the monotonicity property that we previously exploited and thus, on its own, is slow.
+
+\paragraph{}
+ \textbf{Faster synthesis.} Verification is linear-time in theory yet running the synthesizer to perform it, as is, takes cubic time.  If the programmer provides knowledge of the schedule, such as when recompiling the grammar, synthesis should execute faster. In the limit, providing full schedule knowledge should reduce synthesis time to that of verification.
+
+\paragraph{}
+
+We introduce several optimizations that, together, address the above scenarios. They optimize for when multiple schedules may be valid schedules, and except for backtracking, may also improve the process of finding one schedule. 
+\begin{itemize}
+
+\item \textbf{Backtracking.} To emit multiple schedules, we extend prefix expansion to also perform backtracking. After a schedule is fully completed or a suffix fails, the synthesizer backtracks to the most recent correct prefix. For example, line 8 is a complete and correct schedule. Backtracking returns to the earlier correct prefix of line 7 and tries the alternative suffix of line 9. 
+
+%When synthesizing only one schedule, backtracking must be restricted to trying alternate suffixes until a correct one is found. Consider a grammar that cannot be scheduled and a search that reached a correct prefix that cannot be further expanded. The grammar should be rejected at this point. Otherwise, backtracking to an earlier prefix would make finding the error exponential in the number of traversals. 
+
+
+\item \textbf{Greedy sketch unification.} We use sketches to prune the search. For example,  sketch
+
+$$\text{\textbf{parPost}}~ \hole_1 ~ || ~\hole_2$$ 
+
+enables skipping lines 1-3 because they do not start with a \sched{parPost} traversal. Lines 5-13 could also be skipped because the compositor is not ``$||$''. 
+
+A sketch that provides a full schedule reduces synthesis to verification, which is $O(A)$ (topological sort). Sketching also enable features that otherwise require exponential search to still synthesize in $O(A^3)$. For example, scheduling nested regions is exponential in the number productions, but if just the production partitioning is sketched, synthesis for the remaining schedule terms is still only $O(A^3)$.
+
+\item \textbf{Greedy attribute heuristic.} For any schedule ``\sched{p ; q}'', solving fewer attributes in $p$ will not enable solving $q$ with fewer traversals. Thus, to minimize the number of traversals, all such subsets are pruned. For example, as line 4 found \sched{parPost\{w,h\}}, line 19 skips ``\lstinline[morekeywords={parPost}]|parPost{w} ; _ |'' and proceeds to ``\sched{parPost\{w\} || _}''. 
+
+Greediness reduces enumerating all schedules to only being exponential in the number of traversals. This is significant because, for example, our schedule for CSS has only 9 traversals.
+\end{itemize}
+
+In summary, synthesizing one schedule in our base language is $O(A^3)$, but emitting all of them is exponential. Likewise, scheduling language extensions such as nested traversals still support fast synthesis of surrounding terms when guided by sketches. Our optimizations optimize the process, such as by reducing synthesis complexity to that of verification when increasingly detailed sketches are provided.
+
+
+
+
+
+
+
+\newsavebox{\goodsynth}
+\begin{lrbox}{\goodsynth}% Store first listing
+\begin{minipage}{1\columnwidth}
+\begin{lstlisting}[mathescape,morekeywords={choose,while,yield, backtrack,unify,def},escapechar=+]
+def synthFast(sketch):
+  yield synth($\emptyset$, Attributes, sketch)
+
+def synth(prev,rest,sketch):
+  choose  $\otimes \in$ { +``;''+, +``$||$''+ }
+  if $\otimes$ = +``;''+:
+    choose $\alpha$ $\in$ { +``+parPre+''+, +``+parPost+''+, $\ldots$ }
+    $A$ := iterativeRefine($\alpha$, prev, rest)
+    if $A$ = rest:
+      unify(sketch, $\alpha~A$)
+      yield $\alpha~A$
+    else if $A$ = $\emptyset$:    
+      backtrack
+    else:
+      unify(sketch, $\alpha~A$ ; $rhs_1$)
+      yield $\alpha~A$ ; synth(prev $\cup~A$, rest$~-~A$, $rhs_1$)
+  else:
+    unify(sketch, $lhs_2$ || $rhs_2$)
+    choose $A \subset $ rest
+    $p$ := synth(prev, $A$, $lhs_2$)
+    $q$ := synth(prev, rest - $A$, $rhs_2$)
+    yield $p$ || $q$
+
+def iterativeRefine($\alpha$, prev, rest):
+  overapproxA = rest
+  do:
+    X = check$_\alpha$(prev, overapproxA)
+    overapproxA = overapproxA $-$ X
+  while X $\neq \emptyset$
+  yield overapproxA
+  if nonGreedy:
+    choose overapproxA$'$ $\subset$ overapproxA
+    yield iterativeRefine($\alpha$, prev, overapproxA$'$)
+\end{lstlisting}
+\end{minipage}
+\end{lrbox}
+
+
+
+
+\begin{figure}
+%\subfloat[\textbf{Na\"{\i}ve synthesis algorithm.} Phrased with search operators \texttt{choose,backtrack}, and multi-return \texttt{yield}. Function \texttt{unify} is ``='' in Prolog.]{\label{fig:badsynthalg} \usebox{\badsynth} } \\
+%\subfloat[]{\label{fig:goodsynthalg} } \\
+\usebox{\goodsynth}
+\caption{\textbf{Optimized synthesis algorithm.} Lines 10,15,18: early unification with sketches. Lines 8,27: incremental checking. Line 26: iterative  refinement. Line 31: toggle minimal length schedules. Lines 12,28: pruning of traversals with unsatisfiable dependencies. }
+\label{fig:synthalgs}
+\end{figure}
+
 
 \section{Evaluation}
+We evaluate our schedule synthesizer in several ways. First, we examine the ability to automatically parallelize grammars: which computations we entirely relied upon automatic parallelization and the complexity of sketches written for the rest. Second, we evaluate the speed of our synthesis algorithm on our case studies with a focus on supporting interactive compile times. Finally, we examine schedule quality: we measure the benefit of autotuning and the cost of our greedy heuristic.
+
+
 \subsection{Case Studies: Sketching in Action}
 Show use in CSS and data viz: 
 \begin{itemize}

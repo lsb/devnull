@@ -2,12 +2,12 @@
 \begin{lrbox}{\stagedAllocFull}% Store first listing
 \begin{lstlisting}[mathescape]
 float *drawCircle (float x, float y, float radius) {
-	float *buffer = malloc( (2 * sizeof(float) ) * round(radius))
-	for (int i = 0; i < round(radius); i++) {
-		buffer[2 * i] = x + cos(i * PI/radius);
-		buffer[2 * i + i] = y + sin(i * PI/radius);
-	}
-	return buffer;
+  float *buffer = malloc( (2 * sizeof(float) ) * round(radius))
+  for (int i = 0; i < round(radius); i++) {
+    buffer[2 * i] = x + cos(i * PI/radius);
+    buffer[2 * i + i] = y + sin(i * PI/radius);
+  }
+  return buffer;
 }
 \end{lstlisting}
 \end{lrbox}
@@ -16,7 +16,7 @@ float *drawCircle (float x, float y, float radius) {
 \begin{lrbox}{\stagedAllocAlloc}% Store first listing
 \begin{lstlisting}[mathescape]
 int allocCircle (float x, float y, float radius) {
-	return round(radius);
+  return round(radius);
 }
 \end{lstlisting}
 \end{lrbox}
@@ -26,11 +26,11 @@ int allocCircle (float x, float y, float radius) {
 \begin{lrbox}{\stagedAllocRender}% Store first listing
 \begin{lstlisting}[mathescape]
 int fillCircle(float x, float y, float radius, float *buffer) {
-	for (int i = 0; i < round(radius); i++) {
-		buffer[2 * i] = x + cos(i * PI/radius);
-		buffer[2 * i + i] = y + sin(i * PI/radius);
-	}	
-	return 0;
+  for (int i = 0; i < round(radius); i++) {
+    buffer[2 * i] = x + cos(i * PI/radius);
+    buffer[2 * i + i] = y + sin(i * PI/radius);
+  }	
+  return 0;
 }
 \end{lstlisting}
 \end{lrbox}
@@ -50,10 +50,10 @@ int fillCircle(float x, float y, float radius, float *buffer) {
 \begin{lstlisting}[mathescape]
 CBOX $\rightarrow$ BOX$_1$ BOX$_2$
 {
-	...
-	CBOX.render = 
-		drawCircle(CBOX.x, CBOX.y, CBOX.radius)
-		+ drawCircle(CBOX.x + 10, CBOX.y + 10, CBOX.radius * 0.5);
+  ...
+  CBOX.render = 
+    drawCircle(CBOX.x, CBOX.y, CBOX.radius)
+      + drawCircle(CBOX.x + 10, CBOX.y + 10, CBOX.radius * 0.5);
 }
 \end{lstlisting}
 \end{lrbox}
@@ -63,17 +63,17 @@ CBOX $\rightarrow$ BOX$_1$ BOX$_2$
 \begin{lstlisting}[mathescape]
 CBOX $\rightarrow$ BOX$_1$ BOX$_2$
 {
-	...
-	CBOX.sizeSelf = 
-		allocCircle(CBOX.x, CBOX.y, CBOX.radius)
-		+ allocCircle(CBOX.x + 10, CBOX.y + 10, CBOX.radius * 0.5);
-	CBOX.size = CBOX.sizeSelf +BOX$_1$.size + BOX$_2$.size;
-	BOX$_1$.buffer = CBOX.buffer + CBOX.sizeSelf;
-	BOX$_2$.buffer = BOX$_1$.buffer + BOX$_1$.size;
-	CBOX.render = 
-		fillCircle(CBOX.x, CBOX.y, CBOX.radius, CBOX.buffer)
-		+ fillCircle(CBOX.x + 10, CBOX.y + 10, CBOX.radius * 0.5,
-			CBOX.buffer + allocCircle(CBOX.x, CBOX.y, CBOX.radius));
+  ...
+  CBOX.sizeSelf = 
+    allocCircle(CBOX.x, CBOX.y, CBOX.radius)
+      + allocCircle(CBOX.x + 10, CBOX.y + 10, CBOX.radius * 0.5);
+  CBOX.size = CBOX.sizeSelf +BOX$_1$.size + BOX$_2$.size;
+  BOX$_1$.buffer = CBOX.buffer + CBOX.sizeSelf;
+  BOX$_2$.buffer = BOX$_1$.buffer + BOX$_1$.size;
+  CBOX.render = 
+    fillCircle(CBOX.x, CBOX.y, CBOX.radius, CBOX.buffer)
+      + fillCircle(CBOX.x + 10, CBOX.y + 10, CBOX.radius * 0.5,
+            CBOX.buffer + allocCircle(CBOX.x, CBOX.y, CBOX.radius));
 }
 \end{lstlisting}
 \end{lrbox}
@@ -83,10 +83,10 @@ CBOX $\rightarrow$ BOX$_1$ BOX$_2$
 \begin{lstlisting}[mathescape]
 CBOX $\rightarrow$ BOX$_1$ BOX$_2$
 {
-	...
-	CBOX.render = 
-		@Circle(CBOX.x, CBOX.y, CBOX.radius)
-		+ @Circle(CBOX.x + 10, CBOX.y + 10, CBOX.radius * 0.5);
+  ...
+  CBOX.render = 
+      @Circle(CBOX.x, CBOX.y, CBOX.radius)
+      + @Circle(CBOX.x + 10, CBOX.y + 10, CBOX.radius * 0.5);
 }
 \end{lstlisting}
 \end{lrbox}

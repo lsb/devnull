@@ -164,6 +164,8 @@ The dynamic data dependency graph leads to a simple semantics for the result of 
 
 A simple procedure solves an instance of a system of equations: topological traversal. The algorithm is as follows:
 \begin{figure}
+\centering
+\begin{minipage}{0.8\columnwidth}
 \begin{lstlisting}[mathescape,language=C++,morekeywords={for,in,where,input,output,repeat,until,return}]
 input: $G = (V,E)$
 output: $Map$
@@ -177,6 +179,7 @@ for $a \in V' \texttt{where} \not\exists (n,a) \in E'$:
 repeat until $E' = \emptyset$
 return $Map$
 \end{lstlisting}
+\end{minipage}
 \caption{\textbf{Dynamic attribute grammar evaluator.} It selects attributes in a safe order by dynamically removing dependency edges as they are resolved. }
 \label{fig:dyneval}
 \end{figure}
@@ -320,6 +323,8 @@ class VBoxBinary : BoxI {
 
 
 \begin{figure}
+\centering
+\begin{minipage}{0.8\columnwidth}
 \begin{lstlisting}[language=C++,morekeywords={spawn,join,reverse,parallel_for}]
 {"class": "HBox",
  "children": {
@@ -331,7 +336,8 @@ class VBoxBinary : BoxI {
    "right": {
      {"class": "HBox", "w": 15, "h": 5}}}}
 \end{lstlisting}
-\caption{\textbf{Input tree as graph with labeled nodes and edges}. Specified in the JSON notation.}
+\end{minipage}
+\caption{\textbf{Input tree as a graph with labeled nodes and edges}. Specified in the JSON notation.}
 \label{fig:hboxjson}
 \end{figure}
 
@@ -351,6 +357,8 @@ We depart from the correspondence for the encoding of trees in two ways. First, 
 Our second departure from the canonical attribute grammar encoding optimizes the data representation by eliding intermediate interface nodes. The reduction to attribute grammars suggests adding a new non-terminal for each interface, but doing so in the data representation doubles the number of nodes in the concrete tree. Making the interface pattern a language construct with compiler support eliminates associated costs, such as cutting file size for runtime parsing of big data visualizations.
 
 \begin{figure}
+\centering
+\begin{minipage}{0.8\columnwidth}
 \begin{lstlisting}[language=C++,morekeywords={interface,class,var,input,int,float}]
 interface BoxI {
   var x : float;
@@ -362,9 +370,8 @@ class HBoxLeaf : BoxI {
     input h : int = 10;
   }
 }
-
-
 \end{lstlisting}
+\end{minipage}
 \caption{\textbf{Input tree as graph with labeled nodes and edges}. Specified in the JSON notation.}
 \label{fig:hboxjson}
 \end{figure}
@@ -391,6 +398,8 @@ Our analyzer ignores the value type annotations such as \code{x : float} and \co
 In practice, we  use attribute definitions in interfaces for information hiding across classes and lightweight specification of relationships between similar classes. An attribute declared inside of a class is \emph{local} to constraints in the class: only the class's constraints can read or write to the attribute. Conversely, declaring a \emph{var} inside of an interface hints that it is meant to be reused by outside classes, such as part of a tree traversal.
 
 \begin{figure}
+\centering
+\begin{minipage}{0.8\columnwidth}
 \begin{lstlisting}[language=C++,morekeywords={trait,class,attributes,actions}]
 trait Rectangle {
   attributes { render : int; }
@@ -398,6 +407,7 @@ trait Rectangle {
 }
 class HBox(Rectangle) : BoxI { ... }
 \end{lstlisting}
+\end{minipage}
 \caption{\textbf{Trait construct}. Adds shared rendering code to the HBox class.}
 \label{fig:trait}
 \end{figure}
@@ -407,10 +417,9 @@ As with many object systems, we support a trait construct for cross-cutting code
 
 
 
-
-
-
 \begin{figure}
+\centering
+\begin{minipage}{0.8\columnwidth}
 \begin{lstlisting}[language=C++,morekeywords={spawn,join,reverse,parallel_for}]
 interface BoxI {
   var w : int;
@@ -432,6 +441,7 @@ class HBox : BoxI {
   }
 }
 \end{lstlisting}
+\end{minipage}
 \caption{\textbf{Input tree as graph with labeled nodes and edges}. Specified in the JSON notation.}
 \label{fig:loops}
 \end{figure}
@@ -565,6 +575,7 @@ Visualizations often require non-Euclidean layouts, such as the polar layout for
 
 For example, in a sunburst diagram (Figure~\ref{fig:renderings:sunburst}), a node should be rendered  far from the center of the chart if its level is high. In our implementation, each node transitively computes its  radius as a function of its parent's. Likewise, the center of visualization propagates from parent to child, with the root node representing the center:
 
+\begin{minipage}{0.8\columnwidth}
 \begin{lstlisting}
 class Radial : Node {
   ...
@@ -577,6 +588,8 @@ class Radial : Node {
 	... Arc(rootCenterX, rootCenterY, show * (parentTotR + r), ...);
 }
 \end{lstlisting}
+\end{minipage}
+
 The full example is available in Appendix~\ref{???}.
 
 
@@ -712,7 +725,8 @@ The \code{columnsAppendRow} function computes the column position during placeme
 
 \newsavebox{\tabledyna}
 \begin{lrbox}{\tabledyna}% Store first listing
-\begin{lstlisting}[language=C++,morekeywords={spawn,join,reverse,parallel_for}]
+\centering
+\begin{lstlisting}[language=C++,morekeywords={spawn,join,reverse,parallel_for},xleftmargin=10.0ex]
 Schedule {
   Col.childs[i].relX <- Col.cellsready
   Col.childs[i].absX <- Col.cellsready
@@ -721,7 +735,8 @@ Schedule {
 
 \newsavebox{\tabledynb}
 \begin{lrbox}{\tabledynb}% Store first listing
-\begin{lstlisting}[language=C++,morekeywords={spawn,join,reverse,parallel_for}]
+\centering
+\begin{lstlisting}[language=C++,morekeywords={spawn,join,reverse,parallel_for},xleftmargin=10.0ex]
 schedule { 
   asserta(assignment(col, self, childs_relx_step, self, cellsready)),
   asserta(assignment(col, self, childs_absx_step, self, cellsready))
@@ -731,11 +746,14 @@ schedule {
 
 \begin{figure}
 \subfloat[\textbf{Surface Syntax} (Proposed)]{\label{fig:tabledyndep:clean}
-\begin{minipage}{0.5\columnwidth}\centering
+
+\centering
+\begin{minipage}{0.5\columnwidth}
 \usebox{\tabledyna}
-\end{minipage}}
+\end{minipage}}\\
 \subfloat[\textbf{Low-level constraint}]{\label{fig:tabledyndep:raw}
-\begin{minipage}{0.5\columnwidth}\centering
+\centering
+\begin{minipage}{0.5\columnwidth}
 \usebox{\tabledynb}
 \end{minipage}}
 \caption{\textbf{Specifying dynamic dependencies.}}

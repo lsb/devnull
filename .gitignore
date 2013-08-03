@@ -78,3 +78,5 @@ copyedit/tmp/moar.txt
 copyedit/tmp/serviceFull.txt
 
 copyedit/tmp/serviceHalf.txt
+
+copyedit/server/node_modules/sqlite3/*

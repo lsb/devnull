@@ -26,9 +26,34 @@
 \usepackage{amsmath}
 
 \usepackage{listings}
-\newcommand{\Suppressnumber}{}
-\newcommand{\Reactivatenumber}{}
+%\newcommand{\Suppressnumber}{}
+%\newcommand{\Reactivatenumber}{}
 %\newcommand{\text}{\texttt}
+
+
+%%%%%% search traces
+%\definecolor{grey}{RGB}{102,102,102}
+%\newcommand{\olds}[1]{\sout{\textcolor{grey}{#1}}}
+%\newcommand{\redo}[1]{\textcolor{grey}{#1}}
+
+\lstset{numbers=left,numberblanklines=false,escapeinside=||,xleftmargin=10.0ex}
+\let\origthelstnumber\thelstnumber %suppress line numbers
+\makeatletter
+\newcommand*\Suppressnumber{%
+  \lst@AddToHook{OnNewLine}{%
+    \let\thelstnumber\relax%
+     \advance\c@lstnumber-\@ne\relax%
+    }%
+}
+
+\newcommand*\Reactivatenumber{%
+  \lst@AddToHook{OnNewLine}{%
+   \let\thelstnumber\origthelstnumber%
+   \advance\c@lstnumber\@ne\relax}%
+}
+%%%%%%
+
+
 
 \usepackage{semantic}
 \newcommand{\rrule}[1]{{\scriptstyle\textbf #1}}

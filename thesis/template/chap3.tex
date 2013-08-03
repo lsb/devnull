@@ -30,7 +30,8 @@ Instead, a schedule statically specifies most of the scheduling decisions.  It s
 
 \newsavebox{\seqtraversals}
 \begin{lrbox}{\seqtraversals}% Store first listing
-\begin{minipage}{1\columnwidth}
+\centering
+\begin{minipage}{0.8\columnwidth}
 \begin{lstlisting}[mathescape,language=C++,morekeywords={spawn,join}]
 void preorder(void (*visit)(Prod &), Prod &p) {
   visit(p);
@@ -56,7 +57,8 @@ void recursive(void (*visit)(Prod &, int), Prod &p) {
 
 \newsavebox{\seqtraversalsequence}
 \begin{lrbox}{\seqtraversalsequence}% Store first listing
-\begin{minipage}{1\columnwidth}
+\centering
+\begin{minipage}{0.8\columnwidth}
 \begin{lstlisting}[mathescape,language=C++,morekeywords={spawn,join}]
 postorder(visit1, start); 
 preorder(visit2, start);
@@ -67,7 +69,8 @@ preorder(visit2, start);
 
 \newsavebox{\hboxvisitors}
 \begin{lrbox}{\hboxvisitors}% Store first listing
-\begin{minipage}{1\columnwidth}
+\centering
+\begin{minipage}{0.8\columnwidth}
 \begin{lstlisting}[mathescape,language=C++]
 void visit1 (Prod &p) {
   switch (p.type) {
@@ -208,7 +211,7 @@ The relationship between \code{recursive} traversals and \code{postorder} and \c
 
 \newsavebox{\hboxdecomp}
 \begin{lrbox}{\hboxdecomp}% Store first listing
-\begin{minipage}{1\columnwidth}
+\begin{minipage}{0.8\columnwidth}
 \begin{lstlisting}[mathescape,morekeywords={parPre,parPost}]
 parPost
   HBOX$_0$ $\rightarrow$ HBOX$_1$ HBOX$_2$ { HBOX$_0$.w HBOX$_0$.h }
