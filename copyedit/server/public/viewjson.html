@@ -279,6 +279,19 @@ function toggle (d) {
 	return toggleOn;
 }
 
+
+function disableShortSentences () {
+	$("#book .sentence").map(function () {
+		var words = $('.word', this).text();
+		if (words.length < 50) {
+			$(this).removeClass('on');
+			$(this).addClass('off');
+			console.log('disabling short sentence', words);
+		}
+	});
+	summarize();
+}
+
 function summarize () {
 
 	//paragraphs
@@ -345,6 +358,7 @@ function summarize () {
 					
 					var res = D.$span.apply({}, words); 
 					$(res).addClass('on').addClass('sentence');
+					
 					$(res).click(function (event) {
 						if ($(resP).hasClass('on')) {
 							var toggleOn = toggle(this);
@@ -770,14 +784,20 @@ function bindDOM() {
 		launchTimer();
 	});
 
-	docP.pipe(summarize).pipe(rebuildScroll);
+	docP.pipe(function () {
+		$('#short').click(function (event) {
+			disableShortSentences();
+			event.stopPropagation();
+		});
+		summarize();
+	}).pipe(rebuildScroll);
 }
 
 
 
 $(function () {
 	/*! jQuery visible 1.0.0 teamdf.com/jquery-plugins | teamdf.com/jquery-plugins/license */
-	(function(d){d.fn.visible=function(e,i){var a=d(this).eq(0),f=a.get(0),c=d(window),g=c.scrollTop();c=g+c.height();var b=a.offset().top,h=b+a.height();a=e===true?h:b;b=e===true?b:h;return!!(i===true?f.offsetWidth*f.offsetHeight:true)&&b<=c&&a>=g}})(jQuery);
+	(function(d){d.fn.visible=function(e,i){var a=d(this).eq(0),f=a.get(0),c=d(window),g=c.scrollTop();c=g+c.height();var b=(a.offset() ? a.offset().top : 0),h=b+a.height();a=e===true?h:b;b=e===true?b:h;return!!(i===true?f.offsetWidth*f.offsetHeight:true)&&b<=c&&a>=g}})(jQuery);
 
 	/*
 	* jQuery scrollintoview() plugin and :scrollable selector filter
@@ -1089,6 +1109,7 @@ window.addEventListener('load',bindDOM);
 		<input id="humano" type="button" value="human/o (flush to turk)"/>
 		<input id="humani" type="button" value="human/i (check turk)"/>
 		<input id="summarize" type="button" value="summarize"/>
+		<input id="short" type="button" value="hide short"/>
 	  </div>
   </div>
   <div>
