@@ -1,7 +1,7 @@
 var DEBUG = false;
 var MAX_DOLLARS_BATCH = 7.50; 
 var DOLLARS_PER_LETTER = 0.00007;
-var NUM_READERS = 5;
+var NUM_READERS = 3;
 
 //=================
 /*
@@ -69,14 +69,13 @@ function updateBatch(jobID, i, result) {
 	batches[jobID].lastTime = time;
 }
 
-
-function fetchGet (url, sent, sentenceI, jobID) {
+function fetchGet (url, sent, sentenceI, jobID, cb) {
 
 	if (DEBUG) {
 		if (Math.random() > 0.5) {
 			console.log('GET fake delay', sent);
 			setTimeout(
-				function () { fetchGet(url, sent, sentenceI, jobID); }, 
+				function () { fetchGet(url, sent, sentenceI, jobID, cb); }, 
 				Math.random() * 3 * 1000);
 		} else {
 			var nonce = Math.random();
@@ -90,6 +89,7 @@ function fetchGet (url, sent, sentenceI, jobID) {
 				: ['ok','ok','ok'];
 			console.log('GET fake result', out);
 			updateBatch(jobID, sentenceI, out);			
+			cb(out);
 		}	
 		return;
 	}
@@ -99,23 +99,24 @@ function fetchGet (url, sent, sentenceI, jobID) {
 	request(url, function (err, response, body) {
 		if (!response) {
 			console.log('no response (offline?), try again in ' + (delay / 1000) + ' seconds...');
-			setTimeout(function () { fetchGet(url, sent, sentenceI, jobID); }, delay);
+			setTimeout(function () { fetchGet(url, sent, sentenceI, jobID, cb); }, delay);
 		} else if (response.statusCode == 404) {
 			console.log('404, try again in ' + (delay / 1000) + ' seconds...');
-			setTimeout(function () { fetchGet(url, sent, sentenceI, jobID); }, delay);
+			setTimeout(function () { fetchGet(url, sent, sentenceI, jobID, cb); }, delay);
 		} else if (response.statusCode == 412) {
 			console.log('412, ERROR: need to do a PUT before a GET');
 			//die
 			//TODO: tell client?
 		} else if (response.statusCode == 502) {
 			console.log('502 (down), try again in ' + (delay / 1000) + ' seconds...'); 
-			setTimeout(function () { fetchGet(url, sent, sentenceI, jobID); }, delay);
+			setTimeout(function () { fetchGet(url, sent, sentenceI, jobID, cb); }, delay);
 		} else {
 			try {
 				var out = JSON.parse(body);
 				console.log('Result');
 				console.log(body, sent);
 				updateBatch(jobID, sentenceI, out);
+				cb(out);
 			} catch (exn) {
 				console.log('error', err);
 				console.log('response', response);
@@ -151,7 +152,6 @@ app.get('/api/improvements', function (req, res) {
 	console.log('sending result', out);
 	res.send(JSON.stringify(out));	
 }); 
-
 
 //DEPRECATED
 function askAsRadio (sent) {
@@ -275,6 +275,8 @@ function askAsText (sent) {
 			});
 }
 
+
+
 app.post('/api/turkit', function (req, res) {
 	var sents = req.body.sentences ? req.body.sentences : [];
 
@@ -282,8 +284,7 @@ app.post('/api/turkit', function (req, res) {
 		console.log("PUT");
 		console.log('sample',i, sents[i]);
 	}
-	
-	
+		
 	var estCost = sents.join(',').length * DOLLARS_PER_LETTER * NUM_READERS;
 	if (estCost >  MAX_DOLLARS_BATCH) {	
 		console.error('Too big a job!');
@@ -303,13 +304,9 @@ app.post('/api/turkit', function (req, res) {
 	res.send(JSON.stringify({jobID: jobID}));
 	console.log('got sents', sents);
 	
-	function buildUrl (sent) {
-		return 'http://vivam.us/human/ask?' + askAsText(sent);
-	}	
-	
 	sents.map(function (sent, idx) {
 		console.log('asking for', sent);
-		var url = buildUrl(sent);
+		var url = 'http://vivam.us/human/ask?' + askAsText(sent);
 		console.log('url', url);	
 		if (DEBUG) {
 			console.log("Fake PUT");
@@ -317,7 +314,10 @@ app.post('/api/turkit', function (req, res) {
 		} else {
 			request.put(url, function (error, response, body) { /* whatevs */  });
 		}
-		fetchGet(url, sent, idx, jobID);	
+		fetchGet(url, sent, idx, jobID, 
+			function (answers) {
+				/* noop */
+			}); 
 	});
 
 });
