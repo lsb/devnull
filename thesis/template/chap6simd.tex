@@ -42,7 +42,7 @@ void parPreClustered(void (*visit)(Prod &), List<List<Array<Prod>>>  &levels) {
 
 \begin{figure}
  \usebox{\bfsClusteredVisitor}  
-\caption{\textbf{ASDF.}}
+\caption{\textbf{Clustered parallel preorder traversal.}}
 \label{fig:clusteredeval}
 \end{figure}
 
@@ -55,7 +55,9 @@ parallel_for (prod in Cluster) {
   switch (firstProd.type) {
     case S $\rightarrow$ HBOX:  break;
     case HBOX $\rightarrow$ $\epsilon$:
-      HBOX.w = input(); HBOX.h = input(); break;
+      HBOX.w = input(); 
+      HBOX.h = input(); 
+      break;
     case HBOX $\rightarrow$ HBOX$_1$ HBOX$_2$:
       HBOX$_0$.w = HBOX$_1$.w + HBOX$_2$.w;
       HBOX$_0$.h = MAX(HBOX$_1$.h, HBOX$_2$.h);
@@ -73,7 +75,8 @@ Prod firstProd = cluster[0]
     case S $\rightarrow$ HBOX:  break;
     case HBOX $\rightarrow$ $\epsilon$:
       parallel_for (prod in Cluster) {
-          HBOX.w = input(); HBOX.h = input();
+          HBOX.w = input(); 
+          HBOX.h = input();
      }
       break;
     case HBOX $\rightarrow$ HBOX$_1$ HBOX$_2$:

@@ -54,6 +54,8 @@
 %%%%%%
 
 
+%%%PRETTY PRINTING
+%\usepackage[none]{hyphenat} 
 
 \usepackage{semantic}
 \newcommand{\rrule}[1]{{\scriptstyle\textbf #1}}
@@ -93,6 +95,17 @@
 \bibliography{references}
 
 \hyphenation{mar-gin-al-ia}
+
+%\usepackage{comment}
+%\excludecomment{figure}
+%\renewenvironment{tabular}{}
+%\renewenvironment{lstlisting}{\begin{comment}}{\end{comment}}
+%\renewenvironment{figure}{\begin{comment}}{\end{comment}}
+%\renewenvironment{equation}{\begin{comment}}{\end{comment}}
+
+
+%\newcommand{\beq}{\begin{equation}}
+%\newcommand{\eeq}{\end{equation}}
 
 \begin{document}
 
@@ -156,7 +169,8 @@ I want to thank my advisor for advising me.
 \end{frontmatter}
 
 \pagestyle{headings}
-
+%PRETTY PRINTING
+%%%%\pagestyle{empty}
 
 
 \lstset{basicstyle=\scriptsize}

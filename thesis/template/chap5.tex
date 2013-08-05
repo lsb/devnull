@@ -259,21 +259,53 @@ def iterativeRefine($\alpha$, prev, rest):
 
 
 \section{Evaluation}
-We evaluate our schedule synthesizer in several ways. First, we examine the ability to automatically parallelize grammars: which computations we entirely relied upon automatic parallelization and the complexity of sketches written for the rest. Second, we evaluate the speed of our synthesis algorithm on our case studies with a focus on supporting interactive compile times. Finally, we examine schedule quality: we measure the benefit of autotuning and the cost of our greedy heuristic.
+We evaluate the automation capabilities of our schedule synthesizer for our case studies of data visualization and document layout. First, we examine whether the synthesizer could find parallelism and how much guidance it needed. Second, we evaluate whether our synthesis algorithm can achieve interactive or same-day compile times. Finally, we examine the quality of schedules: we measure the benefit of autotuning and the cost of our greedy heuristic.
+
+\begin{figure}
+\centering
+\begin{tabular}{|l|r|r|r|r|r|r|} \hline
+name & loc & 1st & sketch & found & avg \\ \hline
+hbox++ & 305 & 5.6s & 9.6s & 54 & 2.7s   \\
+spiral & 144 & 0.7s & 0.9s & 12 & 0.4s   \\
+votes & 327 &  15.4s & 22.0s & 36 & 8.0s  \\
+css & 1132 & 1919.6s & 65.1s & 100 & 445.4s \\ \hline
+\end{tabular}
+\caption{\textbf{Synthesizer speed:} \texttt{1st} is the time to first schedule without using a sketch. \texttt{sketch} is the time to first schedule using a sketch of the traversal sequence. \texttt{found} is the number of schedules found. \texttt{avg} is the average time to find a sketch.}
+\label{fig:synthperf}
+\end{figure}
+
+\subsection{Automatic Parallelization}
+We first evaluate whether the synthesizer automatically detected parallelism and the amount of schedule guidance we provided.
+
+For all of the data visualizations (tree map, single and multiple time series, hbox, and sunburst), we successfully relied upon the synthesizer to automatically find parallelism. We performed an iterative design process where we would iterate between adding a feature and checking that the compiler could automatically parallelize it. Once the compiler accepted one functional specification, we would extend the specification with the next feature. When satisfied with the visualization, we would specify the sketch of parallel traversals, but only for communicating requirements to future programmers.
+
+The CSS specification required guidance. On its own, the synthesizer would find a sequence of parallel preorder and postorder traversals. The exception is one traversal that requires nested partitions  for parallelization, so to improve synthesis times, we specified the structure of that traversal. Furthermore, due to the many cross-cutting data dependencies in CSS, we specified schedule sketches throughout the design process. The sketches ensured that extensions to the functional specification did not violate our understanding of the parallel behavior.
+
+Figure~\ref{fig:synthperf} shows the lines of declarative code for each specification. The generated code was over a magnitude more depending on the compiler backend. The number of parallel traversals ranged from 3 to 9.
 
 
-\subsection{Case Studies: Sketching in Action}
-Show use in CSS and data viz: 
-\begin{itemize}
-\item when automatic is fine
-\item when sketch needed for checking/debugging
-\item when sketch needed for sharing
-\end{itemize}
-\subsection{Speed of synthesis}
-Success, fail, enumerate
-\subsection{Line counts of extensions}
-\subsection{Loss from greedy heuristic}
-\subsection{Benefit from autotuning}
+
+
+\subsection{Synthesis Speed}
+Performing synthesis in less than a minute enables interactive use by programmers, and even faster times would support runtime compilation. We measured the time to synthesize several attribute grammars. Figure~\ref{fig:synthperf} shows the lines of code for each one and various timings on a 2.66GHz Intel Core i7 with 4GB of RAM.
+
+Generally, synthesizing a schedule, whether an arbitrary one (\texttt{1st}) or from a sketch specifying the traversal sequence (\texttt{sketch}), takes less than 30 seconds. The exception was CSS, which we discuss later and was still fast. 
+
+Emitting all schedules is even faster per emitted schedule (\texttt{avg}) than just finding the first. While the total time to emit all schedules can be slow, we note that enumeration is for offline autotuning. Finally, the greedy heuristic was necessary for enumerating schedules. Even after one day of running the non-greedy algorithm for CSS, most of the greedy CSS schedules were still not emitted. 
+
+Overall, we see that synthesis is fast enough for interactive use by the programmer.
+
+
+\subsection{Autotuning}
+
+We evaluated schedule autotuning speedups for \hlangpp{} on \texttt{laptop}:
+
+\paragraph*{Comparing greedy schedules} We enumerated greedy schedules for \hlangpp{} and compared performance on 1 and 2 cores. The relative standard deviation for performance of different schedules ($\sigma / \mu$) is 8\%. The best schedules for 1 and 2 cores are different. Swapping them leads to 20-30\% performance degradation, and the difference between the best and worst schedules for the two scenarios are 32\% and 42\%, respectively. Autotuning schedules improves performance. 
+
+\paragraph*{Comparing greedy to non-greedy}
+Our schedule enumeration is not exhaustive because of the greedy heuristic, and therefore may miss fast schedules (Section~\ref{sec:check}).  For a fixed schedule of traversals with a greedy attribute schedule, non-greedy attribute schedules were 0-6\% faster. On average, however,  non-greedy schedules were 5\% slower. Greedy scheduling was safe for \hlangpp{}.
+
+In our case studies, much of the benefit of autotuning derives from trying to greedy schedules: one that starts with a parallel preorder traversal and then alternatives with parallel postorder ones, and vice-versa. We did see exceptions however, such as CSS benefiting from a nested traversal, and some grammars requiring occasional repetition of preorder and postorder traversals. 
 
 
 %
