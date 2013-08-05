@@ -85,6 +85,7 @@ function fetchGet (url, sent, sentenceI, jobID, cb) {
 				: Math.random() > 0.5 ?
 					['<is> ' + nonce + ' ha hah a long description goes here ok', 
 					 '<the> ' + nonce + ' another long description goes here asdf asdf asdf',
+					 '<the> ' + nonce + ' short des',
 					 '<if> ' + nonce + ' this sentence is going to be long and take space too due to its redundancy']
 				: ['ok','ok','ok'];
 			console.log('GET fake result', out);
@@ -179,7 +180,7 @@ function askAsRadio (sent) {
 			});
 }
 
-function askAsText (sent) {
+function askAsText (sent, batchID) {
 
 	var instructions = 
 	  'Proofread: describe mistakes in these sentences\n'
@@ -214,7 +215,7 @@ function askAsText (sent) {
 ////////////////
 	  '==========================',
 	  '',
-	  'If you have suggestions on how to improve the design of this HIT, please email LMeyerov+mt@gmail.com .',
+	  'If you have suggestions on how to improve the design of this HIT, please email LMeyerov+mt' + (batchID > 1 ? batchID : '') + '@gmail.com .',
 	  'Thank you for helping!'
 	].join('\n');
 /*	
@@ -254,7 +255,7 @@ function askAsText (sent) {
 						regex: format
 					}})					
 				,	
-				uniqueAskID: 08012013,//07302013, //date
+				uniqueAskID: '' + batchID,
 				knownAnswerQuestions:
 					JSON.stringify({
 						answeredQuestions: [
@@ -280,6 +281,7 @@ function askAsText (sent) {
 app.post('/api/turkit', function (req, res) {
 	var sents = req.body.sentences ? req.body.sentences : [];
 
+	console.log('PUT batchID', req.body.batchID);
 	for (var i = 0; i < Math.min(sents.length, 5); i++) {
 		console.log("PUT");
 		console.log('sample',i, sents[i]);
@@ -306,7 +308,7 @@ app.post('/api/turkit', function (req, res) {
 	
 	sents.map(function (sent, idx) {
 		console.log('asking for', sent);
-		var url = 'http://vivam.us/human/ask?' + askAsText(sent);
+		var url = 'http://vivam.us/human/ask?' + askAsText(sent, batchID);
 		console.log('url', url);	
 		if (DEBUG) {
 			console.log("Fake PUT");

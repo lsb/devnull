@@ -30,6 +30,10 @@ THROTTLE = (1.0/9) * 1000; //min delay between XHRs
 	font-family: Georgia;
 }
 
+.flaggers { }
+.whoFlagged span:before { content: 'R'; }
+.whoFlagged span + span:before { content: ' R'; }
+
 
 html, body {
 	margin: 0;
@@ -112,6 +116,26 @@ p.paragraph.off {
 .real .sentence {
 	margin: 5px;
 }
+.real .sentence.noRatings {
+	color: #333;
+	background-color: #FFF;
+}
+.real .sentence.querying {
+    color: #999;
+}
+.real .sentence.allOk {
+	color: #333;
+	background-color: #FFF;
+}
+
+.real .sentence.somewhatBad {
+	color: #A11;
+}
+
+.real .sentence.reallyBad {
+	color: #E11;
+}
+
 .real .sentence:hover, .real .sentence.scrollHighlight { 
 	border-left: 5px solid blue; 
 	border-right: 5px solid blue; 
@@ -262,6 +286,9 @@ p.paragraph .comment {
 	<script>
 
 
+
+var batchID = 0;
+
 function toggle (d) {
 	var style = $(d).attr('class');	
 	var toggleOn = style.indexOf('off') == -1 ? true : false;
@@ -277,6 +304,16 @@ function toggle (d) {
 	}	
 	$(d).attr('class', style);
 	return toggleOn;
+}
+
+function clearSentenceState (d) {
+	$(d)
+		.removeClass('querying')
+		.removeClass('noRatings')
+		.removeClass('allOk')
+		.removeClass('badSentence')
+		.removeClass('somewhatBad')
+		.removeClass('reallyBad');
 }
 
 
@@ -480,16 +517,18 @@ function bindDOM() {
     $insertDB('#doc', docP);
     
     var toggleAllOn = true;
-    $('#toggleAll').click(function () {
+    $('#toggleAll').click(function (event) {
     	toggleAllOn = !toggleAllOn;
-    	$('.paragraph').attr('class','paragraph' + (toggleAllOn ? ' on' : ' off'));
+    	$('.paragraph').removeClass(toggleAllOn ? 'off' : 'on').addClass(toggleAllOn ? 'on' : 'off')
+    	$('.paragraph .sentence').removeClass(toggleAllOn ? 'off' : 'on').addClass(toggleAllOn ? 'on' : 'off')
     	summarize();    
+    	event.stopPropagation();
     });
 
 
 	function getParagraph (i) {
 		var res = null;
-		$("p.paragraph").map(function (idx, d) { if (idx == i) res = this; });
+		$("#book p.paragraph").map(function (idx, d) { if (idx == i) res = this; });
 		return res;
 	}
 	function mapOffSents (offs) {
@@ -504,25 +543,43 @@ function bindDOM() {
 	function deTag (i) { 
 		return i.replace(/</g,'&lt;').replace(/>/g,'&gt;'); 
 	}
+	
+	
+	function tagRatings (ratings, batchID) {
+		return ratings.map(function (r, i) {
+			return {batchID: batchID, val: r, reviewer: i};
+		});
+	}
 
-	function makeTip (ratings) {
-		var numOk = ratings.filter(function (o) { return o == 'ok'; }).length;
+	function getRatingsBefore (anchor, batchID) {
+		var out = [];
+		$('.des', anchor).map(function () {
+			var id = parseInt($(this).attr('batchID'));
+			if (id < batchID) {
+				out.push({
+					reviewer: $(this).attr('reviewer'),
+					batchID: id,
+					val: '<' + $('.key', $(this).parent()).text() + '> ' + $(this).text()
+				});		
+			}
+		}); 
+		return out;
+	}
 
-		var flagged = 
-			ratings.map(function (o, i) { return [o, i + 1]; })
-					.filter(function (arr) { return arr[0] != 'ok'; })
-					.map(function (arr) { return arr[1]; })
-					.join(', R');
-					
+	function makeTip (taggedRatings) {		
+		var numOk = taggedRatings.filter(function (o) { return o.val == 'ok'; }).length;
 
+		//comment keywords
 		var words = {};
-
 		Array.prototype.concat.apply([],
-		ratings	
-				.filter(function (i) { return i != 'ok' && i != 'ok:'; })							
-				.map(function (i) { return i.split(/\n/); }))
-		.forEach(function (line) {
-			var keyM = line.match(/<[^>]*>/);
+		taggedRatings
+				.filter(function (i) { return i.val != 'ok' && i.val != 'ok:'; })							
+				.map(function (i, idx) { 
+					return i.val.split(/\n/).map(function (line) {
+						return {batchID: i.batchID, line: line, reviewer: idx};
+					}); }))
+		.forEach(function (taggedLine) {
+			var keyM = taggedLine.line.match(/<[^>]*>/);
 			if (!keyM) {
 				//console.log('no keyM', line);
 				return;
@@ -530,14 +587,18 @@ function bindDOM() {
 			var key = keyM[0];
 			if (!words.hasOwnProperty(key))
 				words[key] = [];
-			words[key].push(line.substring(key.length));
+			words[key].push({
+				batchID: taggedLine.batchID, 
+				text: taggedLine.line.substring(key.length), 
+				reviewer: taggedLine.reviewer});
 		});
 		
+		//partition into longest des for each keyword and remaining
 		var bestWords = {};
 		var remaining = {};
 		for (var i in words) {
 			var sorted = words[i].sort(
-				function (a, b) { return b.length - a.length; });
+				function (a, b) { return b.text.length - a.text.length; });
 			bestWords[i] = sorted[0];
 			sorted.forEach(function (o, j) {
 				if (j > 0) {
@@ -546,9 +607,8 @@ function bindDOM() {
 				}
 			});
 		}
-
-
 		
+		//render
 		var bests = [];
 		for (var i in bestWords) 
 			bests.push([i.replace('<','').replace('>',''), bestWords[i]]);		
@@ -558,7 +618,12 @@ function bindDOM() {
 				extras.push([i.replace('<','').replace('>',''), remaining[i][j]]);
 
 		function errToDiv (arr) { 
-			var elt = D.$div(D.$b('<', $(D.$span(arr[0])).addClass('key')[0], '> '), arr[1]);			
+			var elt = D.$div(
+				D.$b('<', $(D.$span(arr[0])).addClass('key')[0],  '> '), 
+				$(D.$span(arr[1].text))
+					.attr('batchID', arr[1].batchID)
+					.attr('reviewer', arr[1].reviewer)
+					.addClass('des')[0]);			
 			$(elt).addClass('correction')
 			return elt;
 		}
@@ -566,9 +631,23 @@ function bindDOM() {
 		var des = extras.length == 0 ? 
 			D.$span.apply({}, bestsD)
 			: D.$span.apply({}, bestsD.concat(D.$hr()).concat(extras.map(errToDiv)));
+
+		var flagged = 
+			D.$span.apply({},
+				taggedRatings
+					.map(function (o, i) { return [o.val, i + 1]; })
+					.filter(function (arr) { return arr[0] != 'ok'; })
+					.map(function (arr) { return arr[1]; })
+					.map(function (v) { 
+						return $(D.$span(''+ v)).attr('batchID', batchID)[0]
+					}));
 									
 		return D.$div(
-				D.$b(''+  (ratings.length - numOk) + " Flagged (R" + flagged + ")"),
+				$(D.$b(
+					$(D.$span('' + (taggedRatings.length - numOk))).addClass('numFlagged')[0], 
+					D.$span(" Flagged ("), 
+					$(flagged).addClass('whoFlagged')[0], 
+					D.$span(")"))).addClass('flaggers')[0],
 				D.$hr(),
 				des);
 	}
@@ -589,7 +668,8 @@ function bindDOM() {
 		 		$('#resultCount').text(out.count + ' / ' + flatSentences.length + ' done');
 		 		$('#title').html('PreProof <small>' + out.count + ' / ' + flatSentences.length + ' sentences checked</small>');
 		 		
-		 		if (!out.error && (true || out.count == flatSentences.length)) {
+		 		
+		 		if (!out.error && (true || out.count == flatSentences.length)) {		 				 		
 //		 			if (out.count == flatSentences.length)
 //		 			  console.log('done, got all sentences', flatSentences, out.sentences);
 
@@ -598,38 +678,46 @@ function bindDOM() {
 		 			
 		 			out.sentences.map(function (ratings, i) {
 
+						var prevRatings = 0;
+
+
 						//$(flatDoms[i]).replaceWith($(flatDoms[i]).clone()); //clear handlers
 
 		 				if (!ratings) {
 		 					//console.log('nothing for',i);
 		 					return;
 		 				}
+		 				
+		 				clearSentenceState($(flatDoms[i]))		 					
+		 					
+		 				var existingRatings = $('.correction', flatDoms[i]);	
 						
-		 				if (ratings.length == 0) {
-		 					$(flatDoms[i])
-		 					  .fadeTo(1000, 1.0)
-		 					  .css('color','#333')
-		 					  .css('background-color','#FFF');
+		 				if (ratings.length == 0) {		 					
+		 					if (out.count == flatSentences.length) {
+								$(flatDoms[i]).addClass('noRatings')		 					
+		 					} else {
+								$(flatDoms[i]).addClass('querying')
+							}
+		 					  
 		 				} else {
 							var numOk = ratings.filter(function (o) { return o == 'ok'; }).length;
 							if (numOk != ratings.length) {
 								var ratio = ratings.length == 0 ? 0 : (numOk / ratings.length);		 				
 								
 								$(flatDoms[i])
-									.css('color','#000')
-									.css("background-color", 
-										/*"rgb(255," 
-											+ Math.round((ratio) * 200 + 55) + "," 
-											+ Math.round((ratio) * 200 + 55) + ")")*/
-										ratio < 0.3 ? '#FD9' : '#FF9')									
-									.addClass('badSentence');
+									.addClass('badSentence')
+									.addClass(ratio < 0.3 ? 'somewhatBad' : 'reallyBad');
 							
 
 								//tool tip
 						 		var moveLeft = 20;
 								var moveDown = 10;
 								
-								var tipText = makeTip(ratings);														
+								var oldRatings = getRatingsBefore(flatDoms[i], batchID);
+								var newRatings = tagRatings(ratings, batchID);
+								var combinedRatings = oldRatings.concat(newRatings);
+								var tipText = makeTip(combinedRatings);														
+								if (i == 0) console.log('ratings', oldRatings, newRatings);
 								/*
 								$(flatDoms[i])
 									.hover(function(e) {
@@ -657,7 +745,7 @@ function bindDOM() {
 									.append($(tipText).addClass('comment').attr('comment',i));
 																
 							} else {
-								$(flatDoms[i]).css('color','#333').css('background-color','#FFF');
+								$(flatDoms[i]).addClass('allOk');
 //								console.log('all ok',$(flatDoms[i]).text());
 							}
 						}
@@ -678,17 +766,16 @@ function bindDOM() {
 	}
 	
 	
-    
-    var batchID = 0;
-    $('#query').click(function () {    
-    	batchID++;
+	//based on DOM state
+	//select on sentences from on paragraphs
+	function buildQuery() {
+		batchID++;
     	var summary = summarize(); //{paras: paras, onParas: on, offSents: offSents};
     	
     	var offSentMap = mapOffSents(summary.offSents);
     	
     	// {text: [ string ], nodes: [ dom] }
-    	global2 = summary;
-    	console.log('summary', summary);
+//    	console.log('summary', summary);
     	var paraSents = summary.paras.map(function (id) {
     		if (summary.onParas.indexOf(id) == -1) return [];
     		
@@ -724,15 +811,26 @@ function bindDOM() {
     			});
     		}));
     	
-    	global = paraSents;
-    	console.log(paraSents, paraSents.map(function (i) { return this.text; }));
-    	console.log('sending', flatSentences);
+    	return {post: {sentences: flatSentences, batchID: batchID}, 
+    			paraSents: paraSents};
+	}
+	
+	
+    
+    $('#query').click(function () {    
+
+		var query = buildQuery();
     	
-    	$('.real .sentence')
-    		.css('color','#999')
-    		.css('background-color', '#EEE');
+//    	console.log(query.paraSents, query.paraSents.map(function (i) { return this.text; }));
+    	console.log('sending', query.post.sentences);
+
+		
+    	$('.real .sentence.on')
+    		.map(function () { clearSentenceState(this); });
+    	$('.real .sentence.on')
+    		.addClass('querying');    	
     	
-    	$.post('api/turkit', {sentences: flatSentences, batchID: batchID})
+    	$.post('api/turkit', query.post)
 			.done(function (data) {
 				if (data && data.error) {
 					alert("Error: " + data.error);
@@ -742,7 +840,7 @@ function bindDOM() {
 			
 				try {
 					console.log('got back', data);
-					fetchResults(JSON.parse(data).jobID, flatSentences, batchID, paraSents);			
+					fetchResults(JSON.parse(data).jobID, query.post.sentences, query.post.batchID, query.paraSents);			
 				} catch (exn) {
 					console.log('failed to parse data', data, exn);
 				}
@@ -751,36 +849,37 @@ function bindDOM() {
 
     });    
     
-    $('#humani').click(function () {
+    $('#humani').click(function (event) {
 		$.ajax({
 			url: 'http://vivam.us/human/i',
 			type: 'POST',
 			success: function(result) {
 				console.log('human/i result',result);
-				global = result;
 			}
-		});    	    
+		});    	   
+		event.stopPropagation(); 
     });
-    $('#humano').click(function () {
+    $('#humano').click(function (event) {
 		$.ajax({
 			url: 'http://vivam.us/human/o',
 			type: 'POST',
 			success: function(result) {
 				console.log('human/o result',result);
-				global = result;
 			}
-		});    	    
+		}); 
+		event.stopPropagation();   	    
     });
     
 
     
-    $('#summarize').click(function () {
+    $('#summarize').click(function (event) {
     	$('.badSentence').map(function () {
     		console.log('bad', $(this).text());
     	});
+		event.stopPropagation();
     }); 
     
-    $('#query').click(function () {
+    $('#query').click(function (event) {
 		launchTimer();
 	});
 
@@ -790,6 +889,18 @@ function bindDOM() {
 			event.stopPropagation();
 		});
 		summarize();
+		
+		
+		$('#uncommented').click(function (event) {
+			$('#book .real .sentence')
+				.filter(function () { return $('.comment', this).length > 0; })
+				.removeClass('on').addClass('off');
+
+			summarize();
+			
+			event.stopPropagation();		
+		});
+		
 	}).pipe(rebuildScroll);
 }
 
@@ -977,7 +1088,7 @@ $(function () {
 function rebuildScroll () {
 
 	$('#fixes').html('');
-    var paragraphs = $('p.paragraph');
+    var paragraphs = $('#book p.paragraph');
 	var nodes = $.map(paragraphs, function (para) {
 		var spellingMistakes = 
 			D.$ol.apply({}, 
@@ -986,11 +1097,13 @@ function rebuildScroll () {
 					.filter(function () { return this.nodeType == 3; })
 					.map(function () { return D.$li($(this).text()); })
 					.get());
-		var corrections =  D.$p.apply({}, $('.comment', para).clone());
+					
+		var baseCorrections = $('.comment .correction', para);
+		var corrections =  D.$p.apply({}, $('.comment', para).clone());		
 		
 		//paragraph <--> set of corrections
 		var wordsToHighlight = [];
-		$('.correction', corrections).map(function () {
+		$('.correction', corrections).map(function (i) {
 			function removePunc (s) { return s.indexOf(',') != -1 ? ',' : s.replace(',','').replace('.',''); }
 			var key = $('.key', this).text().trim().toLowerCase();
 			var hasSplit = /,./.test(key);
@@ -1000,7 +1113,7 @@ function rebuildScroll () {
 				left = key.split(',')[0].trim() + ',';
 				right = key.split(',')[1].trim();
 			}
-			$('.word', para).map(function () {
+			$('.word', $(baseCorrections[i]).parent().parent().parent()).map(function () {
 				var word = $(this).text().trim().toLowerCase();
 				if ($(this).parent().hasClass('badSentence') && 
 					(word == key
@@ -1083,34 +1196,37 @@ function stopLaunchTimer () {
 $(function () {
 	var on = true;	
 	$('#header').click(function () {
+		return;
 		on = !on;
 		$(this).css('height', on ? 'auto' : '3.5em');
 	});
 });
 
 window.addEventListener('load',bindDOM);
-	
+
 	</script>
   </head>
   <body>
-  <div id="header">
+  <div id="header" style="max-height: 6em; overflow: auto">
+	  <h1 id="title">PreProof</h1>
+	  <div>	
+		<input id="toggleAll" type="button" value="toggle all"/>
+		<input id="short" type="button" value="disable short"/>
+<!--		<input id="humano" type="button" value="human/o (flush to turk)"/>
+		<input id="humani" type="button" value="human/i (check turk)"/> -->
+		<input id="uncommented" type="button" value="disable marked"/>		
+<!--		<input id="summarize" type="button" value="summarize"/> -->
+		<input id="query" type="button" value="proofread!"/>
+	  </div>
+
+
 	  <div>
-	  	<h1 id="title">PreProof</h1>
 		<h2>Progress</h2>
 		<span id="timeOutstanding">Time since launch</span>
 		<br/>
 		<span id="resultCount">No sentences done</span>      
 	  </div>
 	  <div id="summary"></div>
-	  <div>
-		<h2>Commands</h2>
-		<input id="toggleAll" type="button" value="toggle all"/>
-		<input id="query" type="button" value="proofread!"/>
-		<input id="humano" type="button" value="human/o (flush to turk)"/>
-		<input id="humani" type="button" value="human/i (check turk)"/>
-		<input id="summarize" type="button" value="summarize"/>
-		<input id="short" type="button" value="hide short"/>
-	  </div>
   </div>
   <div>
   	<div id="book">
