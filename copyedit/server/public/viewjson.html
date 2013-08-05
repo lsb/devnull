@@ -83,8 +83,7 @@ p.paragraph .real {
 	display: block;
 }
 p.paragraph.off {
-	opacity: 0.3;
-	background-color: silver;
+	background-color: #EEE;
 }
 
 .spell > span { 
@@ -145,7 +144,7 @@ p.paragraph.off {
 .real .sentence + .sentence { margin-left: 5px; }
 .real .sentence + .sentence:hover, .real .sentence + .sentence.scrollHighlight { margin-left: 0px; }
 .real .sentence.off {
-	background-color: silver;
+	background-color: #DDD;
 }
 
 .spell, .gram { color: #000 }
@@ -927,9 +926,9 @@ $(function () {
 	var cnvJ = $('#linkage');
 	var cnv = cnvJ[0];
 	var ctx = cnv.getContext('2d');
-	cnvJ.attr('height',$('#book').height() + 'px');
 
 	function drawCurves (paras) {
+		cnvJ.attr('height',$('#book').height() + 'px');
 		var w = cnvJ.width();
 		ctx.clearRect(0, 0, w, cnvJ.height());
 		var matches = $("#corrections p");
