@@ -83,7 +83,7 @@ p.paragraph .real {
 	display: block;
 }
 p.paragraph.off {
-	background-color: #EEE;
+	background-color: #F6F6F6;
 }
 
 .spell > span { 
@@ -144,7 +144,7 @@ p.paragraph.off {
 .real .sentence + .sentence { margin-left: 5px; }
 .real .sentence + .sentence:hover, .real .sentence + .sentence.scrollHighlight { margin-left: 0px; }
 .real .sentence.off {
-	background-color: #DDD;
+	background-color: #E9E9E9;
 }
 
 .spell, .gram { color: #000 }
@@ -229,6 +229,12 @@ p.paragraph.off {
 }
 
 
+.correction.primaryCorrection {
+	color: black;
+}
+.correction.secondaryCorrection {
+	color: maroon;
+}
 
 
 
@@ -626,10 +632,11 @@ function bindDOM() {
 			$(elt).addClass('correction')
 			return elt;
 		}
-		var bestsD = bests.map(errToDiv);
+		var bestsD = $(bests.map(errToDiv)).addClass('mainCorrection').toArray();
 		var des = extras.length == 0 ? 
 			D.$span.apply({}, bestsD)
-			: D.$span.apply({}, bestsD.concat(D.$hr()).concat(extras.map(errToDiv)));
+			: D.$span.apply({}, bestsD.concat(D.$hr()).concat(
+				$(extras.map(errToDiv)).addClass('secondaryCorrection').toArray()));
 
 		var flagged = 
 			D.$span.apply({},
@@ -652,8 +659,8 @@ function bindDOM() {
 	}
 	
 	
-	function fetchResults(jobID, flatSentences, batchID, paraSents) {
-		$.get('api/improvements?jobID=' + jobID)
+	function fetchResults(getApi, jobID, flatSentences, batchID, paraSents, cb) {
+		$.get('api/' + getApi + '?jobID=' + jobID)
 		 .done(function (data) {
 //		 	try {
 		 	    console.log('fetched', data);
@@ -679,8 +686,6 @@ function bindDOM() {
 
 						var prevRatings = 0;
 
-
-						//$(flatDoms[i]).replaceWith($(flatDoms[i]).clone()); //clear handlers
 
 		 				if (!ratings) {
 		 					//console.log('nothing for',i);
@@ -717,26 +722,6 @@ function bindDOM() {
 								var combinedRatings = oldRatings.concat(newRatings);
 								var tipText = makeTip(combinedRatings);														
 								if (i == 0) console.log('ratings', oldRatings, newRatings);
-								/*
-								$(flatDoms[i])
-									.hover(function(e) {
-									  $('#tooltip')
-										.html(tipText)
-										.show()
-										.attr('class','tip' + i)
-										.css('position', 'absolute')
-										.css('top', e.pageY + moveDown)
-										.css('left', e.pageX + moveLeft)
-										.css('background-color','yellow')
-										.css('border', '1px solid black')								
-										;
-									}, function() {
-										setTimeout(function() { 
-											if ($('#tooltip').attr('class') == 'tip' + i)
-												$('#tooltip').fadeOut(1000); 
-										}, 3000);
-									});
-								*/
 								var words = $(flatDoms[i]).children().filter('.word').clone();
 								$(flatDoms[i]).children().remove();
 								$(flatDoms[i])
@@ -745,7 +730,6 @@ function bindDOM() {
 																
 							} else {
 								$(flatDoms[i]).addClass('allOk');
-//								console.log('all ok',$(flatDoms[i]).text());
 							}
 						}
 		 			});
@@ -753,13 +737,14 @@ function bindDOM() {
 		 		if (out.count != flatSentences.length) {
 		 			console.log('Try again in ', out.repollDelayMS, 'ms, only got ', out.count, ' / ', flatSentences.length);
 		 			setTimeout(function () {
-		 					fetchResults(jobID, flatSentences, batchID, paraSents);
+		 					fetchResults(getApi, jobID, flatSentences, batchID, paraSents, cb);
 		 				}, out.repollDelayMS);
 		 		} else {
 		 			stopLaunchTimer();
+		 			if (cb) cb();
 		 		}
 
-		 	rebuildScroll();
+		 		rebuildScroll();
 
 		 });		 
 	}
@@ -815,37 +800,37 @@ function bindDOM() {
 	}
 	
 	
-    
-    $('#query').click(function () {    
-
-		var query = buildQuery();
-    	
-//    	console.log(query.paraSents, query.paraSents.map(function (i) { return this.text; }));
-    	console.log('sending', query.post.sentences);
-
-		
+	function postAndGet(putApi, getApi, cb) {
+		var query = buildQuery();    	
+    	console.log('sending', query.post.sentences);		
     	$('.real .sentence.on')
     		.map(function () { clearSentenceState(this); });
     	$('.real .sentence.on')
-    		.addClass('querying');    	
-    	
-    	$.post('api/turkit', query.post)
+    		.addClass('querying');    	    	
+    	$.post('api/' + putApi, query.post)
 			.done(function (data) {
 				if (data && data.error) {
 					alert("Error: " + data.error);
 					console.error("PUT error", data.error);
 					return;
-				}
-			
+				}			
 				try {
 					console.log('got back', data);
-					fetchResults(JSON.parse(data).jobID, query.post.sentences, query.post.batchID, query.paraSents);			
+					fetchResults(getApi, JSON.parse(data).jobID, query.post.sentences, query.post.batchID, query.paraSents, cb);			
 				} catch (exn) {
 					console.log('failed to parse data', data, exn);
 				}
-			});
-				
+			});		
+	}
+	
+	
+    
+    $('#querySpell').click(function () {   
+    	postAndGet('turkit', 'improvements', function () {});			
+    });    
 
+    $('#queryStyle').click(function () {   
+    	postAndGet('turkitStyle', 'improvementsStyle', function () {});			
     });    
     
     $('#humani').click(function (event) {
@@ -878,7 +863,7 @@ function bindDOM() {
 		event.stopPropagation();
     }); 
     
-    $('#query').click(function (event) {
+    $('#querySpell, #queryStyle').click(function (event) {
 		launchTimer();
 	});
 
@@ -1215,7 +1200,8 @@ window.addEventListener('load',bindDOM);
 		<input id="humani" type="button" value="human/i (check turk)"/> -->
 		<input id="uncommented" type="button" value="disable marked"/>		
 <!--		<input id="summarize" type="button" value="summarize"/> -->
-		<input id="query" type="button" value="proofread!"/>
+		<input id="querySpell" type="button" value="proofread!"/>
+		<input id="queryStyle" type="button" value="style check!"/>
 	  </div>
 
 

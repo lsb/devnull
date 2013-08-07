@@ -80,3 +80,13 @@ copyedit/tmp/serviceFull.txt
 copyedit/tmp/serviceHalf.txt
 
 copyedit/server/node_modules/sqlite3/*
+
+thesis/template/chap5.top
+
+thesis/template/chap5.tui
+
+*.tmp
+
+*.tui
+
+*.top

@@ -61,7 +61,13 @@ function makeBatch (sentences, batchID) {
 function getBatch (jobID) {
     return batches[jobID];
 }
-function updateBatch(jobID, i, result) {
+function updateBatch(jobID, i, resultRaw) {
+	var result = 
+		resultRaw
+			.filter(function (o) { 
+		  		return o.hasOwnProperty('Pass') && o.Pass.hasOwnProperty('value'); })
+		  	.map(function (o) { return o.Pass.value; });
+
 	var time = new Date().getTime();
 	batches[jobID][i] = result;
 	batches[jobID].count++;
@@ -79,6 +85,7 @@ function fetchGet (url, sent, sentenceI, jobID, cb) {
 				Math.random() * 3 * 1000);
 		} else {
 			var nonce = Math.random();
+			function toRec(v) { return {Pass: {value: v}}; }
 			var out = 
 				Math.random() > 0.5 ?
 					['ok', 'ok', '<or> ' + nonce + ' asdf asdf']
@@ -88,6 +95,7 @@ function fetchGet (url, sent, sentenceI, jobID, cb) {
 					 '<the> ' + nonce + ' short des',
 					 '<if> ' + nonce + ' this sentence is going to be long and take space too due to its redundancy']
 				: ['ok','ok','ok'];
+			out = out.map(toRec);
 			console.log('GET fake result', out);
 			updateBatch(jobID, sentenceI, out);			
 			cb(out);
@@ -128,31 +136,7 @@ function fetchGet (url, sent, sentenceI, jobID, cb) {
 	});
 }
 
-app.get('/api/improvements', function (req, res) {
-	var jobID = req.query.jobID; 
-	
-	console.log('got request for batch', jobID);
-	var currentResult = getBatch(jobID);
-	
-	if (!currentResult) {
-		res.send(JSON.stringify({error: 'could not find GET request, did you forget to PUT?'}));
-		console.log('GET without PUT');
-		return;
-	}
-	
-	var out = {
-		startTime: currentResult.startTime, //put
-		lastTime: currentResult.lastTime, //most recent mturk response
-		responseTime: new Date().getTime(), //now
-		ticks: currentResult.ticks, //for each sentence that came in, {i: int, time: ms}
-		count: currentResult.count,  //how many have come in
-		sentences: currentResult,  //{i: [ String ]}
-		jobID: jobID, //internal id
-		batchID: currentResult.batchID, //user id
-		repollDelayMS: delay}; //server delay; no point in polling faster than this
-	console.log('sending result', out);
-	res.send(JSON.stringify(out));	
-}); 
+
 
 //DEPRECATED
 function askAsRadio (sent) {
@@ -200,13 +184,6 @@ function askAsText (sent, batchID) {
 	  '==========================',
 	  '=== Example 2 Sentence ===',
 ////////////////
-/*
-	  'The quickly broown fox jumps over the lazy dog.',
-	  '--- Answer -----',
-	  "<quickly> looks wrong",
-	  '<broown> spelling',
-*/
-////////////////
 	  'The quickly broown fox jumps over the lazy dog, I ate a fish.',
 	  '--- Answer -----',
 	  "<quickly> doesn't agree with fox",
@@ -215,32 +192,10 @@ function askAsText (sent, batchID) {
 ////////////////
 	  '==========================',
 	  '',
-	  'If you have suggestions on how to improve the design of this HIT, please email LMeyerov+mt' + (batchID > 1 ? batchID : '') + '@gmail.com .',
+	  'If you have suggestions on how to improve the design of this HIT, please email LMeyerov+mt@gmail.com .',
 	  'Thank you for helping!'
 	].join('\n');
-/*	
-	var instructions = 
-	  'Proofread: at first glance, which sentences have spelling mistakes, grammar mistakes, or seem awkward?\n'
-	+ [
-	  'Put every mistake in the sentence on a new line.',
-	  'If there are no mistakes, leave the box as "ok".',
-	  'Here are two examples:',
-	  '=====',
-	  '"The quickly broown fox juumps over the lazy fog."',
-	  '-----',
-	  'broown -> brown',
-	  'quickly looks wrong',
-	  'juumps -> jumps',
-	  '*fog* cannot be jumped over, did you mean dog?',
-	  '=====',
-	  '"The quick brown fox jumps over the lazy dog."',
-	  '-----',
-	  'ok',
-	  '=====',	  
-	  'If you have suggestions on how to improve the design of the HIT, please email LMeyerov+mt@gmail.com .',
-	  'Thank you for helping!'
-	].join('\n');
-*/
+
 	var format = "(^ok$)|(^(<([^>]+)>[^\\n]+)(\\n+<([^>]+)>[^\\n]+)*\\n*$)";
 
 	return qs.stringify({
@@ -255,7 +210,7 @@ function askAsText (sent, batchID) {
 						regex: format
 					}})					
 				,	
-				uniqueAskID: '' + batchID,
+				uniqueAskId: '' + batchID,
 				knownAnswerQuestions:
 					JSON.stringify({
 						answeredQuestions: [
@@ -278,51 +233,157 @@ function askAsText (sent, batchID) {
 
 
 
-app.post('/api/turkit', function (req, res) {
-	var sents = req.body.sentences ? req.body.sentences : [];
+function askAsTextStyle (sent, batchID) {
 
-	console.log('PUT batchID', req.body.batchID);
-	for (var i = 0; i < Math.min(sents.length, 5); i++) {
-		console.log("PUT");
-		console.log('sample',i, sents[i]);
-	}
-		
-	var estCost = sents.join(',').length * DOLLARS_PER_LETTER * NUM_READERS;
-	if (estCost >  MAX_DOLLARS_BATCH) {	
-		console.error('Too big a job!');
-		console.error('Estimated cost', estCost);
-		console.error('Max cost', MAX_DOLLARS_BATCH);
-		console.error('Characters', sents.join(',').length);
-		console.error('Readers', NUM_READERS);
-		res.send({error: 'Estimated cost of $' + estCost +  ' bigger than cap of $' + MAX_DOLLARS_BATCH});
-		return;
-	} else {
-		console.log("Estatimated cost: $" + estCost + " for " + sents.join(',').length + " characters");
-	}
+	var instructions = 
+	  'Proofread: describe style mistakes in these sentences\n'
+	+ [
+	  'Is the phrasing awkward or unclear? Does it feel clunky?',
+	  'Describe each issue on a new line (a sentence may have multiple problems).',
+	  'Preface each issue by a key word in it and then what is the issue, such as "<hellllo> spelling mistake".',
+	  'If there are no issues, leave the box as "ok".',
+	  'You can ignore text formatting notes such as \\Chapter{The Beginning}, Figure~., [ii], and ----',
+	  '',
+	  'Here are two examples:',
+	  '',
+	  '=== Example 1 Sentence ===',
+	  'The quick \\highlight{brown} fox jumps over the lazy dog.',
+	  '----Answer -----',
+	  'ok',
+	  '==========================',
+	  '=== Example 2 Sentence ===',
+////////////////
+	  ' I am not, indeed, sure whether it is not true to say that the Milton who once seemed not unlike a seventeenth-century Shelley had not become, out of an experience ever more bitter in each year, more alien [sic] to the founder of that Jesuit sect which nothing could induce him to tolerate.',
+	  '--- Answer -----',
+	  "<not> The negatives are confusing",
+	  '<,> Difficult to follow and communicating too many ideas',
+////////////////
+	  '==========================',
+	  '',
+	  'If you have suggestions on how to improve the design of this HIT, please email LMeyerov+mt@gmail.com .',
+	  'Thank you for helping!'
+	].join('\n');
+
+	var format = "(^ok$)|(^(<([^>]+)>[^\\n]+)(\\n+<([^>]+)>[^\\n]+)*\\n*$)";
+
+	return qs.stringify({
+//				cost: 2,
+				distinctUsers: NUM_READERS,
+				instructions: instructions,
+				question: 
+					JSON.stringify({
+					  ConstrainedText: {
+						questionText: '"' + sent + '"',
+						defaultText: 'ok',
+						regex: format
+					}})					
+				,	
+				uniqueAskId: '' + batchID,
+				knownAnswerQuestions:
+					JSON.stringify({
+						answeredQuestions: [
+							{question: {
+								ConstrainedText:{
+									questionText: 'Lomonosov sent me to Sweden to inspect the route.',
+									defaultText: 'ok',
+									regex: format}},
+							 match: {Exact: 'ok'}},
+							{question: {
+								ConstrainedText:{
+									questionText: 'Derutra asked me to find as steamer whose dimensions allowed through the locks.',
+									defaultText: 'ok',
+									regex: format}},
+							 match: {Inexact: '^[^o].*$'}}
+						],
+						percentCorrect: 100})						
+			});
+}
+
+
+
+
+function makePut(putUrl, asker) {
+	app.post('/api/' + putUrl, function (req, res) {
+		var sents = req.body.sentences ? req.body.sentences : [];
 	
-	
-	var batchID = req.body.batchID;
-	var jobID = makeBatch(sents, batchID);
-	res.send(JSON.stringify({jobID: jobID}));
-	console.log('got sents', sents);
-	
-	sents.map(function (sent, idx) {
-		console.log('asking for', sent);
-		var url = 'http://vivam.us/human/ask?' + askAsText(sent, batchID);
-		console.log('url', url);	
-		if (DEBUG) {
-			console.log("Fake PUT");
-			console.log(url);
-		} else {
-			request.put(url, function (error, response, body) { /* whatevs */  });
+		console.log('PUT batchID', req.body.batchID);
+		for (var i = 0; i < Math.min(sents.length, 5); i++) {
+			console.log("PUT");
+			console.log('sample',i, sents[i]);
 		}
-		fetchGet(url, sent, idx, jobID, 
-			function (answers) {
-				/* noop */
-			}); 
+			
+		var estCost = sents.join(',').length * DOLLARS_PER_LETTER * NUM_READERS;
+		if (estCost >  MAX_DOLLARS_BATCH) {	
+			console.error('Too big a job!');
+			console.error('Estimated cost', estCost);
+			console.error('Max cost', MAX_DOLLARS_BATCH);
+			console.error('Characters', sents.join(',').length);
+			console.error('Readers', NUM_READERS);
+			res.send({error: 'Estimated cost of $' + estCost +  ' bigger than cap of $' + MAX_DOLLARS_BATCH});
+			return;
+		} else {
+			console.log("Estatimated cost: $" + estCost + " for " + sents.join(',').length + " characters");
+		}
+				
+		var batchID = req.body.batchID;
+		var jobID = makeBatch(sents, batchID);
+		res.send(JSON.stringify({jobID: jobID}));
+		console.log('got sents', sents);
+		
+		sents.map(function (sent, idx) {
+			console.log('asking for', sent);
+			var url = 'http://vivam.us/human/ask?' + asker(sent, batchID);
+			console.log('url', url);	
+			if (DEBUG) {
+				console.log("Fake PUT");
+				console.log(url);
+			} else {
+				request.put(url, function (error, response, body) { /* whatevs */  });
+			}
+			fetchGet(url, sent, idx, jobID, 
+				function (answers) {
+					/* noop */
+				}); 
+		});
+	
 	});
+} 
 
-});
+function makeGet(getUrl) {
+	app.get('/api/' + getUrl, function (req, res) {
+		var jobID = req.query.jobID; 
+		
+		console.log('got request for batch', jobID);
+		var currentResult = getBatch(jobID);
+		
+		if (!currentResult) {
+			res.send(JSON.stringify({error: 'could not find GET request, did you forget to PUT?'}));
+			console.log('GET without PUT');
+			return;
+		}
+		
+		var out = {
+			startTime: currentResult.startTime, //put
+			lastTime: currentResult.lastTime, //most recent mturk response
+			responseTime: new Date().getTime(), //now
+			ticks: currentResult.ticks, //for each sentence that came in, {i: int, time: ms}
+			count: currentResult.count,  //how many have come in
+			sentences: currentResult,  //{i: [ String ]}
+			jobID: jobID, //internal id
+			batchID: currentResult.batchID, //user id
+			repollDelayMS: delay}; //server delay; no point in polling faster than this
+		console.log('sending result', out);
+		res.send(JSON.stringify(out));	
+	}); 
+}
+
+makePut('turkit', askAsText);
+makeGet('improvements');
+
+
+makePut('turkitStyle', askAsTextStyle);
+makeGet('improvementsStyle');
+
 
 app.listen(3000);
 console.log('Listening on port 3000');
