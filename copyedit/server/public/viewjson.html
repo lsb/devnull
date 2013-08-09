@@ -18,6 +18,8 @@ THROTTLE = (1.0/9) * 1000; //min delay between XHRs
 	<script src="promptjs/d.js"></script>
 	<style>
 
+#fixes .turkitRewrite span:before { content: 'EDIT: '; }
+
 .word { margin: 0.1em; }
 .word.highlight { background-color: #CCF; }
 .highlight .key { background-color: #CCF; }
@@ -235,10 +237,7 @@ p.paragraph.off {
 .correction.secondaryCorrection {
 	color: maroon;
 }
-
-
-
-	</style>
+</style>
 
 
 <style type="text/css" media="screen">
@@ -288,26 +287,13 @@ p.paragraph .comment {
 
 	
 	
-	<script>
+<script>
+var batchIDs = {};
 
-
-
-var batchID = 0;
 
 function toggle (d) {
-	var style = $(d).attr('class');	
-	var toggleOn = style.indexOf('off') == -1 ? true : false;
-	toggleOn = !toggleOn;
-	if (toggleOn) {
-		if (style.indexOf('off') != -1) style = style.replace('off','on');
-		else if (style.indexOf('on') != -1) { /* nop */ }
-		else style = style + " on";
-	} else {
-		if (style.indexOf('on') != -1) style = style.replace('on','off');
-		else if (style.indexOf('off') != -1) { /* nop */ }
-		else style = style + " off";	
-	}	
-	$(d).attr('class', style);
+	var toggleOn = $(d).hasClass('off');
+	$(d).removeClass(toggleOn ? 'off' : 'on').addClass(toggleOn ? 'on' : 'off');
 	return toggleOn;
 }
 
@@ -461,17 +447,15 @@ function summarize () {
 	
 function bindDOM() {	
 	var BASE_URL = document.URL.replace("#","").replace("viewjson.html","") + "/";
-	var FILE =  'serviceHalf.json';
+	//var FILE =  'serviceHalf.json';
 	//var FILE =  'out2.json';
 	//var FILE = 'thesis.json';
+	var FILE = 'socioplt.json';
 	
-	var jsonP = Z.unit(BASE_URL + FILE).pipeAsync(D.xhrJSON).print('== jsonP');
-	
-	DOC = jsonP.pipe(function (v) { DOC = v; });
-	
+	var jsonP = Z.unit(BASE_URL + FILE).pipeAsync(D.xhrJSON);//.print('== jsonP');
 	
 	var docP = jsonP.pipe(function (arr) {
-	
+
 		var paragraphs = arr.map(function (o, i) { return {m: o, v: formatParagraph(o, i)}; });
 
 		//add file breaks
@@ -481,14 +465,14 @@ function bindDOM() {
 				var files = o.m.file.split('/');
 				if (files.length > 0) {
 					var lastStr = files.pop();
-					var last = $(D.$span(lastStr)).attr('class', 'fileName')[0];
-					var dir = $(D.$span(files.join('/') + '/')).attr('class', 'dirName')[0];
+					var last = $(D.$span(lastStr)).addClass('fileName')[0];
+					var dir = $(D.$span(files.join('/') + '/')).addClass('dirName')[0];
 					elt = D.$span(dir, last);
 				} else {
 					elt = D.$span(o.m.file);
 				}			
 			
-				var lastFileD = $(D.$p(elt)).attr('class','file')[0];
+				var lastFileD = $(D.$p(elt)).addClass('file').addClass('on')[0];
 				
 				$(lastFileD).click(function () {
 				    var toggleOn = toggle(this);
@@ -497,8 +481,10 @@ function bindDOM() {
 					//$(this).attr('class','file' + (toggleOn ? '' : ' off'));
 					var rSib = this.nextSibling;
 					while (rSib) {
-						if ($(rSib).attr('class').indexOf('paragraph') != -1) {
-							$(rSib).attr('class', 'paragraph' + (toggleOn ? '' : ' off'));
+						if ($(rSib).hasClass('paragraph')){							
+							$(rSib)
+								.removeClass(toggleOn ? 'off' : 'on')
+								.addClass(toggleOn ? 'on' : 'off');
 							rSib = rSib.nextSibling;
 						} else {
 							rSib = false;
@@ -515,7 +501,7 @@ function bindDOM() {
 		}, {arr: [], lastFile: false});
 		
 		return D.$div.apply({}, pages.arr.map(function (o) { return o.v; }));
-	}).print('== docP');
+	});//.print('== docP');
 
 
 
@@ -525,7 +511,8 @@ function bindDOM() {
     $('#toggleAll').click(function (event) {
     	toggleAllOn = !toggleAllOn;
     	$('.paragraph').removeClass(toggleAllOn ? 'off' : 'on').addClass(toggleAllOn ? 'on' : 'off')
-    	$('.paragraph .sentence').removeClass(toggleAllOn ? 'off' : 'on').addClass(toggleAllOn ? 'on' : 'off')
+    	if (toggleAllOn)
+    		$('.paragraph .sentence').removeClass(toggleAllOn ? 'off' : 'on').addClass(toggleAllOn ? 'on' : 'off')
     	summarize();    
     	event.stopPropagation();
     });
@@ -550,43 +537,54 @@ function bindDOM() {
 	}
 	
 	
-	function tagRatings (ratings, batchID) {
+	function tagRatings (ratings, batchID, putURL) {
 		return ratings.map(function (r, i) {
-			return {batchID: batchID, val: r, reviewer: i};
+			return {batchID: batchID, value: r, reviewer: i, putURL: putURL};
 		});
 	}
 
-	function getRatingsBefore (anchor, batchID) {
+	function getRatingsBefore (anchor, batchID, putURL) {
 		var out = [];
-		$('.des', anchor).map(function () {
-			var id = parseInt($(this).attr('batchID'));
-			if (id < batchID) {
-				out.push({
-					reviewer: $(this).attr('reviewer'),
-					batchID: id,
-					val: '<' + $('.key', $(this).parent()).text() + '> ' + $(this).text()
-				});		
-			}
-		}); 
+//		console.log('how many', $('.correction', anchor).length);
+		
+		$('.correction', anchor).map(function () {
+			var correction = this;
+			$('.des', correction).map(function () {
+				var id = parseInt($(this).attr('batchID'));
+				if (!$(correction).hasClass(putURL) || id != batchID) {
+					out.push({
+						reviewer: $(this).attr('reviewer'),
+						batchID: id,
+						putURL: $(correction).attr('putURL'),
+						value: '<' + $('.key', $(this).parent()).text() + '> ' + $(this).text()
+					});		
+				}
+			}); 
+		
+		});
+		
+		
 		return out;
 	}
 
 	function makeTip (taggedRatings) {		
-		var numOk = taggedRatings.filter(function (o) { return o.val == 'ok'; }).length;
+		var numOk = taggedRatings.filter(function (o) { return o.value == 'ok'; }).length;
 
 		//comment keywords
-		var words = {};
-		Array.prototype.concat.apply([],
-		taggedRatings
-				.filter(function (i) { return i.val != 'ok' && i.val != 'ok:'; })							
+		var lines = Array.prototype.concat.apply([],
+			taggedRatings
+				.filter(function (i) { return i.value != 'ok' && i.value != 'ok:'; })							
 				.map(function (i, idx) { 
-					return i.val.split(/\n/).map(function (line) {
-						return {batchID: i.batchID, line: line, reviewer: idx};
-					}); }))
-		.forEach(function (taggedLine) {
+					return i.value.split(/\n/).map(function (line) {
+						return {batchID: i.batchID, line: line, reviewer: idx, putURL: i.putURL};
+					}); }));
+		var words = {};
+		var others = [];
+		lines.forEach(function (taggedLine) {
 			var keyM = taggedLine.line.match(/<[^>]*>/);
 			if (!keyM) {
 				//console.log('no keyM', line);
+				others.push(taggedLine);
 				return;
 			}
 			var key = keyM[0];
@@ -595,7 +593,8 @@ function bindDOM() {
 			words[key].push({
 				batchID: taggedLine.batchID, 
 				text: taggedLine.line.substring(key.length), 
-				reviewer: taggedLine.reviewer});
+				reviewer: taggedLine.reviewer,
+				putURL: taggedLine.putURL});
 		});
 		
 		//partition into longest des for each keyword and remaining
@@ -629,24 +628,31 @@ function bindDOM() {
 					.attr('batchID', arr[1].batchID)
 					.attr('reviewer', arr[1].reviewer)
 					.addClass('des')[0]);			
-			$(elt).addClass('correction')
+			$(elt).addClass('correction').addClass(arr[1].putURL).attr('putURL', arr[1].putURL);
 			return elt;
 		}
 		var bestsD = $(bests.map(errToDiv)).addClass('mainCorrection').toArray();
-		var des = extras.length == 0 ? 
+		var othersD =
+			others.map(function (line) {
+				return $(D.$div(D.$span(line.line)))
+					.addClass('correction')
+					.addClass('secondaryCorrection')
+					.addClass(line.putURL)
+					.attr('putURL',line.putURL)[0] });
+		var des = extras.length == 0 && others.length == 0? 
 			D.$span.apply({}, bestsD)
 			: D.$span.apply({}, bestsD.concat(D.$hr()).concat(
-				$(extras.map(errToDiv)).addClass('secondaryCorrection').toArray()));
+				$(extras.map(errToDiv)).addClass('secondaryCorrection').toArray()).concat(othersD));
 
 		var flagged = 
 			D.$span.apply({},
 				taggedRatings
-					.map(function (o, i) { return [o.val, i + 1]; })
-					.filter(function (arr) { return arr[0] != 'ok'; })
-					.map(function (arr) { return arr[1]; })
-					.map(function (v) { 
-						return $(D.$span(''+ v)).attr('batchID', batchID)[0]
+					.map(function (o, i) { return [o, i + 1]; })
+					.filter(function (arr) { return arr[0].value != 'ok'; })
+					.map(function (arr) { 
+						return $(D.$span(''+ arr[1])).attr('batchID', arr[0].batchID)[0]
 					}));
+					
 									
 		return D.$div(
 				$(D.$b(
@@ -658,22 +664,18 @@ function bindDOM() {
 				des);
 	}
 	
-	
-	function fetchResults(getApi, jobID, flatSentences, batchID, paraSents, cb) {
-		$.get('api/' + getApi + '?jobID=' + jobID)
+	function fetchResults(getURL, putURL, jobID, flatSentences, batchID, paraSents, cb) {
+		$.get('api/' + getURL + '?jobID=' + jobID)
 		 .done(function (data) {
 //		 	try {
 		 	    console.log('fetched', data);
 		 		var out = JSON.parse(data);
-		 		
-		 		
-		 		if (out.error) {
-		 			console.error('Bad get', out.error);		 			
-		 		}
+		 				 		
+//		 		console.log('ret type', out.putURL);		 		
+		 		if (out.error) console.error('Bad get', out.error);		 			
 
 		 		$('#resultCount').text(out.count + ' / ' + flatSentences.length + ' done');
-		 		$('#title').html('PreProof <small>' + out.count + ' / ' + flatSentences.length + ' sentences checked</small>');
-		 		
+		 		$('#title').html('PreProof <small>' + out.count + ' / ' + flatSentences.length + ' sentences checked</small>');		 		
 		 		
 		 		if (!out.error && (true || out.count == flatSentences.length)) {		 				 		
 //		 			if (out.count == flatSentences.length)
@@ -686,42 +688,31 @@ function bindDOM() {
 
 						var prevRatings = 0;
 
-
 		 				if (!ratings) {
 		 					//console.log('nothing for',i);
 		 					return;
 		 				}
 		 				
-		 				clearSentenceState($(flatDoms[i]))		 					
+		 				clearSentenceState($(flatDoms[i]));				
+
+						var oldRatings = getRatingsBefore(flatDoms[i], batchID, out.putURL);
+						var newRatings = tagRatings(ratings, batchID, out.putURL);
+						var combinedRatings = oldRatings.concat(newRatings);
 		 					
-		 				var existingRatings = $('.correction', flatDoms[i]);	
-						
-		 				if (ratings.length == 0) {		 					
-		 					if (out.count == flatSentences.length) {
-								$(flatDoms[i]).addClass('noRatings')		 					
-		 					} else {
-								$(flatDoms[i]).addClass('querying')
-							}
-		 					  
+		 				if (combinedRatings.length == 0) {
+		 					$(flatDoms[i]).addClass(
+		 						out.count == flatSentences.length ? 'noRatings' : 'querying');
 		 				} else {
-							var numOk = ratings.filter(function (o) { return o == 'ok'; }).length;
-							if (numOk != ratings.length) {
-								var ratio = ratings.length == 0 ? 0 : (numOk / ratings.length);		 				
-								
+							var numOk = combinedRatings.filter(function (o) { return o.value == 'ok' || o.value == 'perfect'; }).length;
+							if (numOk != combinedRatings.length) {
+						
+								var ratio = combinedRatings.length == 0 ? 0 : (numOk / combinedRatings.length);		 												
 								$(flatDoms[i])
 									.addClass('badSentence')
 									.addClass(ratio < 0.3 ? 'somewhatBad' : 'reallyBad');
-							
 
-								//tool tip
-						 		var moveLeft = 20;
-								var moveDown = 10;
-								
-								var oldRatings = getRatingsBefore(flatDoms[i], batchID);
-								var newRatings = tagRatings(ratings, batchID);
-								var combinedRatings = oldRatings.concat(newRatings);
 								var tipText = makeTip(combinedRatings);														
-								if (i == 0) console.log('ratings', oldRatings, newRatings);
+//								if (i == 0) console.log('ratings', oldRatings, newRatings);
 								var words = $(flatDoms[i]).children().filter('.word').clone();
 								$(flatDoms[i]).children().remove();
 								$(flatDoms[i])
@@ -737,7 +728,7 @@ function bindDOM() {
 		 		if (out.count != flatSentences.length) {
 		 			console.log('Try again in ', out.repollDelayMS, 'ms, only got ', out.count, ' / ', flatSentences.length);
 		 			setTimeout(function () {
-		 					fetchResults(getApi, jobID, flatSentences, batchID, paraSents, cb);
+		 					fetchResults(getURL, putURL, jobID, flatSentences, batchID, paraSents, cb);
 		 				}, out.repollDelayMS);
 		 		} else {
 		 			stopLaunchTimer();
@@ -752,8 +743,10 @@ function bindDOM() {
 	
 	//based on DOM state
 	//select on sentences from on paragraphs
-	function buildQuery() {
-		batchID++;
+	function buildQuery(putURL, getURL) {
+		
+		batchIDs[putURL]++;		
+				
     	var summary = summarize(); //{paras: paras, onParas: on, offSents: offSents};
     	
     	var offSentMap = mapOffSents(summary.offSents);
@@ -781,33 +774,22 @@ function bindDOM() {
     			var paraText = this.text;
     			return this.text.map(function (str, i) {
     				return str;
-/*    				
-    				var out = '';
-    				if (i > 0) 
-    				  out += paraText[i - 1] + '\n';
-    				out += "<<<\n";
-    				out += str + "\n";
-    				out += ">>>";
-    				if (i + 1 < paraText.length) 
-    				  out += '\n' + paraText[i + 1];
-    				return out;
-*/    				
     			});
     		}));
     	
-    	return {post: {sentences: flatSentences, batchID: batchID}, 
+    	return {post: {sentences: flatSentences, batchID: batchIDs[putURL]}, 
     			paraSents: paraSents};
 	}
 	
 	
-	function postAndGet(putApi, getApi, cb) {
-		var query = buildQuery();    	
+	function postAndGet(putURL, getURL, cb) {
+		var query = buildQuery(putURL, getURL);    	
     	console.log('sending', query.post.sentences);		
     	$('.real .sentence.on')
     		.map(function () { clearSentenceState(this); });
     	$('.real .sentence.on')
     		.addClass('querying');    	    	
-    	$.post('api/' + putApi, query.post)
+    	$.post('api/' + putURL, query.post)
 			.done(function (data) {
 				if (data && data.error) {
 					alert("Error: " + data.error);
@@ -816,7 +798,7 @@ function bindDOM() {
 				}			
 				try {
 					console.log('got back', data);
-					fetchResults(getApi, JSON.parse(data).jobID, query.post.sentences, query.post.batchID, query.paraSents, cb);			
+					fetchResults(getURL, putURL, JSON.parse(data).jobID, query.post.sentences, query.post.batchID, query.paraSents, cb);			
 				} catch (exn) {
 					console.log('failed to parse data', data, exn);
 				}
@@ -824,14 +806,15 @@ function bindDOM() {
 	}
 	
 	
+	
+	function bindQueryButton(id, putter, getter) {
+		batchIDs[putter] = 0;
+		$(id).click(function () { postAndGet(putter, getter, function () {}); });    		
+	}
     
-    $('#querySpell').click(function () {   
-    	postAndGet('turkit', 'improvements', function () {});			
-    });    
-
-    $('#queryStyle').click(function () {   
-    	postAndGet('turkitStyle', 'improvementsStyle', function () {});			
-    });    
+    bindQueryButton($('#querySpell'), 'turkit', 'improvements');
+    bindQueryButton($('#queryStyle'), 'turkitStyle', 'improvementsStyle');
+    bindQueryButton($('#queryRewrite'), 'turkitRewrite', 'improvementsRewrite');
     
     $('#humani').click(function (event) {
 		$.ajax({
@@ -853,9 +836,7 @@ function bindDOM() {
 		}); 
 		event.stopPropagation();   	    
     });
-    
-
-    
+        
     $('#summarize').click(function (event) {
     	$('.badSentence').map(function () {
     		console.log('bad', $(this).text());
@@ -863,7 +844,7 @@ function bindDOM() {
 		event.stopPropagation();
     }); 
     
-    $('#querySpell, #queryStyle').click(function (event) {
+    $('.sender').click(function (event) {
 		launchTimer();
 	});
 
@@ -872,9 +853,7 @@ function bindDOM() {
 			disableShortSentences();
 			event.stopPropagation();
 		});
-		summarize();
-		
-		
+		summarize();				
 		$('#uncommented').click(function (event) {
 			$('#book .real .sentence')
 				.filter(function () { return $('.comment', this).length > 0; })
@@ -884,7 +863,6 @@ function bindDOM() {
 			
 			event.stopPropagation();		
 		});
-		
 	}).pipe(rebuildScroll);
 }
 
@@ -1074,6 +1052,7 @@ function rebuildScroll () {
 	$('#fixes').html('');
     var paragraphs = $('#book p.paragraph');
 	var nodes = $.map(paragraphs, function (para) {
+/*	
 		var spellingMistakes = 
 			D.$ol.apply({}, 
 				$('.spell', para)
@@ -1081,7 +1060,7 @@ function rebuildScroll () {
 					.filter(function () { return this.nodeType == 3; })
 					.map(function () { return D.$li($(this).text()); })
 					.get());
-					
+*/					
 		var baseCorrections = $('.comment .correction', para);
 		var corrections =  D.$p.apply({}, $('.comment', para).clone());		
 		
@@ -1090,6 +1069,7 @@ function rebuildScroll () {
 		$('.correction', corrections).map(function (i) {
 			function removePunc (s) { return s.indexOf(',') != -1 ? ',' : s.replace(',','').replace('.',''); }
 			var key = $('.key', this).text().trim().toLowerCase();
+			if (!key) return;
 			var hasSplit = /,./.test(key);
 			var left;
 			var right;
@@ -1180,7 +1160,6 @@ function stopLaunchTimer () {
 $(function () {
 	var on = true;	
 	$('#header').click(function () {
-		return;
 		on = !on;
 		$(this).css('height', on ? 'auto' : '3.5em');
 	});
@@ -1191,7 +1170,7 @@ window.addEventListener('load',bindDOM);
 	</script>
   </head>
   <body>
-  <div id="header" style="max-height: 6em; overflow: auto">
+  <div id="header" style="max-height: 20em; overflow: auto">
 	  <h1 id="title">PreProof</h1>
 	  <div>	
 		<input id="toggleAll" type="button" value="toggle all"/>
@@ -1200,8 +1179,9 @@ window.addEventListener('load',bindDOM);
 		<input id="humani" type="button" value="human/i (check turk)"/> -->
 		<input id="uncommented" type="button" value="disable marked"/>		
 <!--		<input id="summarize" type="button" value="summarize"/> -->
-		<input id="querySpell" type="button" value="proofread!"/>
-		<input id="queryStyle" type="button" value="style check!"/>
+		<input class="sender" id="querySpell" type="button" value="proofread!"/>
+		<input class="sender" id="queryStyle" type="button" value="style check!"/>
+		<input class="sender" id="queryRewrite" type="button" value="rewrite"/>
 	  </div>
 
 

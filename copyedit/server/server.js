@@ -46,7 +46,7 @@ var delay = 10 * 1000;
 
 var jobCounter = 0;
 var batches = [];
-function makeBatch (sentences, batchID) {
+function makeBatch (sentences, batchID, putUrl) {
 	jobCounter++;
 	var res = [];
 	res.count = 0;
@@ -54,6 +54,7 @@ function makeBatch (sentences, batchID) {
 	res.startTime = new Date().getTime();
 	res.lastTime = new Date().getTime();
 	res.ticks = [];
+	res.putURL = putUrl;
 //	res.sentences = sentences;
 	batches[jobCounter] = res;	
 	return jobCounter;
@@ -75,65 +76,107 @@ function updateBatch(jobID, i, resultRaw) {
 	batches[jobID].lastTime = time;
 }
 
-function fetchGet (url, sent, sentenceI, jobID, cb) {
+
+//retrySync :: () -> ()  (call if fail, can call async)
+//cb :: [ {Pass: {value: ...}} ] -> () (call if succeed)
+function dummyGet (retrySync, cb) {
+
+	if (Math.random() > 0.5) {
+		console.log('GET fake delay');
+
+		setTimeout(retrySync, Math.random() * 1 * 1000);		
+
+	} else {
+		var nonce = Math.random();
+		function toRec(v) { return {Pass: {value: v}}; }
+		var out = 
+			Math.random() > 0.5 ?
+				['ok', 'ok', '<or> ' + nonce + ' asdf asdf']
+			: Math.random() > 0.5 ?
+				['<is> ' + nonce + ' ha hah a long description goes here ok', 
+				 '<the> ' + nonce + ' another long description goes here asdf asdf asdf',
+				 '<the> ' + nonce + ' short des',
+				 '<if> ' + nonce + ' this sentence is going to be long and take space too due to its redundancy']
+			: ['ok','ok','ok'];
+		out = out.map(toRec);
+		console.log('GET fake result', out);
+
+		cb(out);
+
+	}	
+}
+
+//retrySync :: () -> ()  (call if fail, can call async)
+//cb :: [ {Pass: {value: ...}} ] -> () (call if succeed)
+function dummyGetRewrite (retrySync, cb) {
+
+	if (Math.random() > 0.5) {
+		console.log('GET fake delay');
+
+		setTimeout(retrySync, Math.random() * 3 * 1000);		
+
+	} else {
+		var nonce = Math.random();
+		function toRec(v) { return {Pass: {value: v}}; }
+		var out = 
+			Math.random() > 0.5 ?
+				[nonce + ' This is a sentence', 'This is also a sentence ' + nonce]
+			: Math.random() > 0.5 ?
+				[nonce + ' ha hah a long description goes here ok', 
+				 nonce + ' another long description goes here asdf asdf asdf',
+				 nonce + ' short des',
+				 nonce + ' this sentence is going to be long and take space too due to its redundancy']
+			: ['ok','ok','ok'];
+		out = out.map(toRec);
+		console.log('GET fake result', out);
+
+		cb(out);
+
+	}	
+}
+
+
+
+// ... -> ()
+function fetchGet (putUrl, url, sent, sentenceI, jobID, dummyGenerator, cb) {
+
+	function retry () { fetchGet(putUrl, url, sent, sentenceI, jobID, dummyGenerator, cb); }
+	function retryAsync () { setTimeout(retry, delay); }
 
 	if (DEBUG) {
-		if (Math.random() > 0.5) {
-			console.log('GET fake delay', sent);
-			setTimeout(
-				function () { fetchGet(url, sent, sentenceI, jobID, cb); }, 
-				Math.random() * 3 * 1000);
-		} else {
-			var nonce = Math.random();
-			function toRec(v) { return {Pass: {value: v}}; }
-			var out = 
-				Math.random() > 0.5 ?
-					['ok', 'ok', '<or> ' + nonce + ' asdf asdf']
-				: Math.random() > 0.5 ?
-					['<is> ' + nonce + ' ha hah a long description goes here ok', 
-					 '<the> ' + nonce + ' another long description goes here asdf asdf asdf',
-					 '<the> ' + nonce + ' short des',
-					 '<if> ' + nonce + ' this sentence is going to be long and take space too due to its redundancy']
-				: ['ok','ok','ok'];
-			out = out.map(toRec);
-			console.log('GET fake result', out);
-			updateBatch(jobID, sentenceI, out);			
-			cb(out);
-		}	
-		return;
-	}
-
-	//////////////////////////////////////////
-
-	request(url, function (err, response, body) {
-		if (!response) {
-			console.log('no response (offline?), try again in ' + (delay / 1000) + ' seconds...');
-			setTimeout(function () { fetchGet(url, sent, sentenceI, jobID, cb); }, delay);
-		} else if (response.statusCode == 404) {
-			console.log('404, try again in ' + (delay / 1000) + ' seconds...');
-			setTimeout(function () { fetchGet(url, sent, sentenceI, jobID, cb); }, delay);
-		} else if (response.statusCode == 412) {
-			console.log('412, ERROR: need to do a PUT before a GET');
-			//die
-			//TODO: tell client?
-		} else if (response.statusCode == 502) {
-			console.log('502 (down), try again in ' + (delay / 1000) + ' seconds...'); 
-			setTimeout(function () { fetchGet(url, sent, sentenceI, jobID, cb); }, delay);
-		} else {
-			try {
-				var out = JSON.parse(body);
-				console.log('Result');
-				console.log(body, sent);
-				updateBatch(jobID, sentenceI, out);
-				cb(out);
-			} catch (exn) {
-				console.log('error', err);
-				console.log('response', response);
-				console.log('body', body);
-				console.log('exn', exn);
+		dummyGenerator(retry, function (out) { 
+			updateBatch(jobID, sentenceI, out); cb(out); });
+	} else {
+		request(url, function (err, response, body) {
+			if (!response) {
+				console.log('no response (offline?), try again in ' + (delay / 1000) + ' seconds...');
+				retryAsync();
+			} else if (response.statusCode == 404) {
+				console.log('404, try again in ' + (delay / 1000) + ' seconds...');
+				retryAsync();
+			} else if (response.statusCode == 412) {
+				console.log('412, ERROR: need to do a PUT before a GET');
+				//die
+				//TODO: tell client?
+			} else if (response.statusCode == 502) {
+				console.log('502 (down), try again in ' + (delay / 1000) + ' seconds...'); 
+				retryAsync();
+			} else {
+				try {
+					var out = JSON.parse(body);
+					console.log('Result');
+					console.log(body, sent);
+					updateBatch(jobID, sentenceI, out);
+					cb(out);
+				} catch (exn) {
+					console.log('error', err);
+					console.log('response', response);
+					console.log('body', body);
+					console.log('exn', exn);
+				}
 			}
-		}
-	});
+		}); //end request(..);
+	} //end if DEBUG
 }
 
 
@@ -225,7 +268,7 @@ function askAsText (sent, batchID) {
 									questionText: 'Derutra asked me to find as steamer whose dimensions allowed through the locks.',
 									defaultText: 'ok',
 									regex: format}},
-							 match: {Inexact: '^[^o].*$'}}
+							 match: {Inexact: '^[^o]|(o[^k])|(ok.+)'}}
 						],
 						percentCorrect: 100})						
 			});
@@ -293,16 +336,60 @@ function askAsTextStyle (sent, batchID) {
 									questionText: 'Derutra asked me to find as steamer whose dimensions allowed through the locks.',
 									defaultText: 'ok',
 									regex: format}},
-							 match: {Inexact: '^[^o].*$'}}
+							 match: {Inexact: '^[^o]|(o[^k])|(ok.+)'}}
 						],
 						percentCorrect: 100})						
 			});
 }
 
 
+function askAsTextRewrite (sent, batchID) {
+
+	var instructions = 
+	  'Rewrite each sentence to make it better\n'
+	+ [
+	  'Fix mistakes and increase the clarity, flow, and beauty of each sentence.',
+	  'Take care not to change the original meaning.',
+	  'If a sentence cannot be improved, leave it described as "ok".',
+////////////////
+	  '==========================',
+	  '',
+	  'If you have suggestions on how to improve the design of this HIT, please email LMeyerov+mt@gmail.com .',
+	  'Thank you for helping!'
+	].join('\n');
+
+	return qs.stringify({
+//				cost: 2,
+				distinctUsers: NUM_READERS,
+				instructions: instructions,
+				question: 
+					JSON.stringify({
+					  ConstrainedText: {
+						questionText: '"' + sent + '"',
+						defaultText: 'perfect',
+					}})					
+				,	
+				uniqueAskId: '' + batchID,
+				knownAnswerQuestions:
+					JSON.stringify({
+						answeredQuestions: [
+							{question: {
+								ConstrainedText:{
+									questionText: 'Lomonosov sent me to Sweden.',
+									defaultText: 'perfect'}},
+							 match: {Exact: 'perfect'}},
+							{question: {
+								ConstrainedText:{
+									questionText: 'Derutra asked me to find as steamer whose dimensions allowed through the locks.',
+									defaultText: 'perfect'},
+							 match: {Inexact: '^[^o]|(o[^k])|(ok.+)'}}}
+						],
+						percentCorrect: 100})						
+			});
+}
 
 
-function makePut(putUrl, asker) {
+function makePut(putUrl, asker, dummyGet) {
 	app.post('/api/' + putUrl, function (req, res) {
 		var sents = req.body.sentences ? req.body.sentences : [];
 	
@@ -326,7 +413,7 @@ function makePut(putUrl, asker) {
 		}
 				
 		var batchID = req.body.batchID;
-		var jobID = makeBatch(sents, batchID);
+		var jobID = makeBatch(sents, batchID, putUrl);
 		res.send(JSON.stringify({jobID: jobID}));
 		console.log('got sents', sents);
 		
@@ -340,7 +427,8 @@ function makePut(putUrl, asker) {
 			} else {
 				request.put(url, function (error, response, body) { /* whatevs */  });
 			}
-			fetchGet(url, sent, idx, jobID, 
+			fetchGet(putUrl, url, sent, idx, jobID,
+				dummyGet, 
 				function (answers) {
 					/* noop */
 				}); 
@@ -353,12 +441,12 @@ function makeGet(getUrl) {
 	app.get('/api/' + getUrl, function (req, res) {
 		var jobID = req.query.jobID; 
 		
-		console.log('got request for batch', jobID);
+		console.log('got request for batch', jobID, getUrl);
 		var currentResult = getBatch(jobID);
 		
 		if (!currentResult) {
 			res.send(JSON.stringify({error: 'could not find GET request, did you forget to PUT?'}));
-			console.log('GET without PUT');
+			console.log('GET before PUT');
 			return;
 		}
 		
@@ -371,19 +459,21 @@ function makeGet(getUrl) {
 			sentences: currentResult,  //{i: [ String ]}
 			jobID: jobID, //internal id
 			batchID: currentResult.batchID, //user id
+			putURL: currentResult.putURL, //how sentence was input
 			repollDelayMS: delay}; //server delay; no point in polling faster than this
 		console.log('sending result', out);
 		res.send(JSON.stringify(out));	
 	}); 
 }
 
-makePut('turkit', askAsText);
+makePut('turkit', askAsText, dummyGet);
 makeGet('improvements');
 
-
-makePut('turkitStyle', askAsTextStyle);
+makePut('turkitStyle', askAsTextStyle, dummyGet);
 makeGet('improvementsStyle');
 
+makePut('turkitRewrite', askAsTextRewrite, dummyGetRewrite);
+makeGet('improvementsRewrite');
 
 app.listen(3000);
 console.log('Listening on port 3000');
