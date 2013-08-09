@@ -177,8 +177,8 @@ P.prototype.pipeAsync = function (f) {
 	});
 };
 P.prototype.print = function (lbl) { //purely side-effect; returns original
-	this.pipe(function (v) { console.log(lbl ? lbl : 'print', v); });
-	this.pipeErr(function (v) { console.error(lbl ? lbl : 'print', v); });
+	this.pipe(function (v) { console.log(lbl ? lbl : 'print', v); return v; });
+//	this.pipeErr(function (v) { console.error(lbl ? lbl : 'print', v); return v;});
 	return this;
 };
 
