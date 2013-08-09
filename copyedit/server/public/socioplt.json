@@ -1,0 +1,829 @@
+[
+{"errors": [], "paragraph": "                                             #1}\n", "spans": [[0, 49]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "                                                           \\textbf{#1} }\n", "spans": [[0, 73]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "\\title{Empirical Analysis of Programming Language Adoption}\n", "spans": [[0, 60]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "           {UC Berkeley                                                                                                                                                                                                                                                                        }                      \n", "spans": [[0, 311]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "           {lmeyerov@eecs.berkeley.edu}\n", "spans": [[0, 40]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "           {Princeton University}\n", "spans": [[0, 34]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "           {asrabkin@cs.princeton.edu}\n", "spans": [[0, 39]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Some programming languages become widely popular while others fail to grow beyond their niche or disappear altogether. This paper uses survey methodology to identify the factors that lead to language adoption. We analyze large datasets, including over 200,000 SourceForge projects, 590,000 projects tracked by Ohloh, and multiple surveys of 1,000-13,000 programmers. \n", "spans": [[0, 118], [119, 209], [210, 368]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "We report several prominent findings. \n", "spans": [[0, 39]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "First, language adoption follows a power law; a small number of languages account for most language use, but the programming market supports many languages with niche user bases. Second, intrinsic features have only secondary importance in adoption.\n", "spans": [[0, 178], [179, 250]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Open source libraries, existing code, and experience strongly influence \n", "spans": [[0, 73]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "developers when selecting a language for a project. \n", "spans": [[0, 53]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Language features such as performance, reliability, and simple semantics do not. \n", "spans": [[0, 82]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Third, developers will steadily learn and forget languages. The overall number of languages developers are familiar with  is independent of age.\n", "spans": [[0, 59], [60, 145]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Finally, when considering intrinsic aspects of languages, developers prioritize expressivity over correctness. They perceive static types as primarily helping with the latter, hence partly explaining the popularity of dynamic languages.\n", "spans": [[0, 110], [111, 237]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Languages, Human Factors\n", "spans": [[0, 25]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "programming language adoption, survey research\n", "spans": [[0, 47]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "\\section{Introduction}\n", "spans": [[0, 23]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Some programming languages succeed and others fail.\n", "spans": [[0, 52]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "Understanding this process is a foundational step towards influencing it,\n", "spans": [[0, 74]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": " assisting language designers and advocates in fostering adoption.\n", "spans": [[0, 67]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "Likewise, understanding adoption will aid developers in determining when and whether to bet on a new, experimental language.\n", "spans": [[0, 125]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "To date, the language adoption process has not been quantitatively studied at a large scale.\n", "spans": [[0, 93]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "This paper addresses that gap.\n", "spans": [[0, 31]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "We use a combination of survey research and software repository mining to investigate the factors that influence developer language choices. \n", "spans": [[0, 142]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "Since little is quantified about the programming language adoption process, we focus on broad research questions:\n", "spans": [[0, 114]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "We begin (Section \\ref{sec:macro})  with an empirical analysis of language use across many open source projects. Such a macro-scale analysis reveals what trajectories languages tend to follow. Our analysis includes the overall distribution of language use, and how it varies based on the kind of project and developer experience.\n", "spans": [[0, 112], [113, 192], [193, 330]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "We found that popularity follows a power law, which means that most usage is concentrated in a small number of languages, but many unpopular languages will still find a user base. \n", "spans": [[0, 181]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "The popular languages are used across a variety of application domains while\n", "spans": [[0, 77]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "less popular ones tend to be used for niche domains. Even in niche domains, popular languages are still more typically used. \n", "spans": [[0, 52], [53, 126]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "                                                                                            Section \\ref{sec:motives} examines the subjective motivations of developers when picking languages for specific projects. \n", "spans": [[0, 215]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "Knowing what matters to developers helps language designers and advocates address their perceived needs.\n", "spans": [[0, 105]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "Through multiple surveys, we saw that developers value open source libraries as the dominant factor in choosing programming languages. Social factors not tied to intrinsic language features, such as existing personal or team experience, also rate highly. \n", "spans": [[0, 134], [135, 256]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "Knowledge about the learning process is important because developers are much more likely to use a language they already know. In Section \\ref{sec:learning}, we examine how age and education shape language learning. \n", "spans": [[0, 126], [127, 217]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "We found that developers rapidly and frequently learn languages. Factors such as age play a smaller role than suggested by media. In contrast, which languages developers learn is influenced by their education, and in particular, curriculum design.\n", "spans": [[0, 64], [65, 129], [130, 248]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "Whereas Section \\ref{sec:motives} looks at how developers pick languages for specific projects, Section \\ref{sec:believe} examines their feelings about intrinsic features of languages, such as type systems. \n", "spans": [[0, 208]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "The results can help designers craft better languages and advocate them, and even influence curriculum design due by exposing knowledge gaps.\n", "spans": [[0, 142]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "We found that developers generally value expressiveness and speed of development over language-enforced correctness. They see more value in unit tests than types, both for debugging and overall. How features are presented strongly influences developer feelings about them: developers rank class interfaces more highly than static types.\n", "spans": [[0, 116], [117, 194], [195, 337]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "Before addressing the above research questions, \n", "spans": [[0, 49]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "we describe our data sets and methodology. We finish the paper by discussing threats to the validity of our results (Section \\ref{sec:discuss}), related work (Section \\ref{sec:relwork}), and our conclusions (Section \\ref{sec:conclusions}).\n", "spans": [[0, 42], [43, 240]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec1-intro.tex"}
+,
+{"errors": [], "paragraph": "\\section{Methodology and Data}\n", "spans": [[0, 31]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "This paper is based on several different surveys and data sources: we used software repositories, \n", "spans": [[0, 99]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "surveys conducted by others, and a survey conducted by us.\n", "spans": [[0, 59]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "These were used in a sequence; the results of one analysis informed the design of the next. \n", "spans": [[0, 93]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "We began with pre-existing data from the SourceForge repository and The Hammer Principle, a long-running online survey\n", "spans": [[0, 119]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "about programming languages. \n", "spans": [[0, 30]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "These led us to preliminary hypotheses, which we investigated with surveys. Finally, we cross-validated our results with the Ohloh project database. \n", "spans": [[0, 75], [76, 150]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{Data}\n", "spans": [[0, 18]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "We now describe our data sets in more detail. In chronological order, we used:\n", "spans": [[0, 45], [46, 79]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "\\textbf{1. Open Source Repository Metadata: \\emph{SourceForge}}. We wrote a crawler to download descriptions of 213,471 projects from SourceForge~                      , an online repository for open source software. Of most relevance to our analysis, the downloaded metadata for each projects documents the project's languages used,  primary project category (e.g., accounting), date of creation, and the project's owners. The languages are drawn from a list of 100 curated by SourceForge; the categories, from a set of 223.\n", "spans": [[0, 10], [11, 64], [65, 216], [217, 423], [424, 526]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "The years examined are 2000-2010. This data set is a reasonable proxy for open source behavior because, for most of the analyzed period, SourceForge was the dominant software repository. For example, its modern competitor GitHub was not even created until mid 2008. \n", "spans": [[0, 33], [34, 186], [187, 267]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "Open source community behavior is important in its own right, and as our results will show, commercial developers prioritize open source when making their own adoption decisions.\n", "spans": [[0, 179]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "\\textbf{2. Online Poll: \\emph{Hammer}}. ``The Hammer Principle'' is a website that invites readers to compare various items, such as programming languages, based on a multidimensional series of metrics~                      . Respondents pick a set of languages that they are comfortable with out of a pool of 51 languages. They picked 7 languages on average. Respondents are then shown a randomly sorted series of statements, such as ``When I write code in this language I can be very sure it is correct.'' For each statement, the respondent orders the languages that they selected based on how well they match the statement. The survey includes 111 statements, and respondents sorted languages for an average of 10 statements each before tiring. The survey period was 2010-2012.\n", "spans": [[0, 10], [11, 39], [40, 225], [226, 323], [324, 359], [360, 505], [505, 626], [627, 747], [748, 781]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "The raw and anonymized data was provided by the site's maintainer, David MacIver. For each statement, we used a variant of the Glicko-2 ranking algorithm~                     to convert the sparse data of inconsistent pair-wise comparisons into a total ranking of languages. A prior publication~                          describes this analysis in further detail.  \n", "spans": [[0, 81], [82, 274], [275, 366]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "The intuition is that we treat each statement as a tournament between languages. Glicko converts the sparse pair-wise comparison into a total order. The Glicko family of algorithms is used in chess tournaments and online game rankings for producing a complete ranking of players without every pairwise comparison: beating a highly ranked language contributes more than beating a low-ranked language. Each player (i.e., language) has an absolute rank and a statistical confidence for it. \n", "spans": [[0, 80], [81, 148], [149, 399], [400, 488]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "\\textbf{3. Course Surveys: \\emph{MOOC}}. We gained access to a survey of 1,185 students in a massive online open course (MOOC) on software-as-a-service (SaaS). The survey was administered at the beginning of the course, so student beliefs were not be altered by the instructors, though the results do reflect sample bias towards programmers with an interest in SaaS development.\n", "spans": [[0, 10], [11, 40], [41, 159], [160, 379]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "Most respondents were \\emph{not} traditional undergraduate students. Their median age was 30 and a majority (62 %) described themselves as professional programmers.\n", "spans": [[0, 68], [69, 165]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "The survey was primarily conducted for pedagogical purposes, not research. However, we advised the instructors on question wording, and were given access to the raw collected data. Respondents were asked if they consented to research use of their responses; 1,142 said yes (96.5 % of all responses). We only analyze responses from adults who agreed to research use.\n", "spans": [[0, 74], [75, 180], [181, 299], [300, 366]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "Respondents were randomly divided into four subsamples. Some questions were asked to every respondent (\\emph{MOOC all}) while others were only asked to one subsample. We divided the questions to avoid fatigue in respondents from overly long surveys while still achieving enough responses for statistically significant analysis of many questions. Only two of the subsamples (\\emph{MOOC b} and \\emph{MOOC d}) are relevant to the questions addressed in this paper. \n", "spans": [[0, 55], [56, 166], [167, 345], [346, 463]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "\\textbf{4. Online Survey: \\textbf{Slashdot}}. We created interactive visualizations of the Hammer data set and put them on a public website. These attracted a substantial amount of web traffic. Viewers were invited to answer a short survey. Most of the readers arrived via links from popular websites such as Slashdot and Wired; we refer to this as the ``Slashdot'' survey. Over 97 % of the responses were collected during a two-week span in the summer of 2012. %Since we conducted the survey, we had access to the raw collected data.\n", "spans": [[0, 10], [11, 45], [46, 140], [141, 193], [194, 240], [241, 373], [374, 461], [462, 535]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "\\textbf{5. Ohloh}\n", "spans": [[0, 10], [11, 18]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "We cross-validated some results using Ohloh~            . Ohloh is a website, bought by SourceForge, that tracks over 590,000 open source projects hosted on SourceForge, GitHub, and elsewhere. We used it for queries such as how many repositories contain a Java file.\n", "spans": [[0, 57], [58, 192], [193, 267]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Overview of data sets and populations.} Degree = percentage with at least a bachelor's in CS or related field. Pro = Professional programmers.}\n", "spans": [[0, 55], [55, 127], [128, 159], [159, 161]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Most popular languages in surveyed populations.} There is substantial, but not total, overlap.}\n", "spans": [[0, 64], [64, 111], [111, 113]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "Raw anonymized data from the MOOC and Slashdot surveys are available online, as are the visualization and data exploration tools for the Hammer data (and underlying correlations).                                                                                                             and                                                                              , respectively} The accessed SourceForge webpages and Ohloh API are publicly accessible at time of writing.\n", "spans": [[0, 179], [288, 477]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Summary of where each data source is used}.            = data source used in that section, + indicates that the result is cross-validated against a related result elsewhere in the paper.}\n", "spans": [[0, 60], [72, 203], [203, 205]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "Not every data source is applicable to every question we ask.\n", "spans": [[0, 62]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "Table \\ref{source_use_summary} summarizes how the data was used in various sections.\n", "spans": [[0, 85]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{Respondent Demographics}\n", "spans": [[0, 37]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "We tracked demographic information on the MOOC and Slashdot surveys.\n", "spans": [[0, 69]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "For both surveys, the respondent populations are primarily professional developers. A majority in each have computer science degrees.\n", "spans": [[0, 83], [84, 134]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "The MOOC population skews younger than Slashdot and towards fewer professionals (Table~\\ref{demog_data}), though the majority are still adult professionals with degrees.\n", "spans": [[0, 170]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "Comparing the results from the MOOC and Slashdot surveys helps us tease out population-specific and wording-specific effects. \n", "spans": [[0, 127]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "Programmers are diverse. \n", "spans": [[0, 26]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "Professional developers are estimated to be a minority of all individuals who write code at work or as hobbyists~                             . Our research therefore does not exhaust the universe of programmers.\n", "spans": [[0, 143], [144, 213]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "However, studying professional developers is of particular interest for understanding adoption, both in terms of societal impact and understanding the relevance of best-effort practices such as technical education. We therefore emphasize the results for professionals.\n", "spans": [[0, 214], [215, 269]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "We qualitatively validate our sample against that of previous work. Table \\ref{popularity_data} compares the six most popular languages of our surveys against the TIOBE index, which measures the volume of web search results for programming languages~                . The tables suggest that our survey samples are broadly in alignment with one another and with the TIOBE survey. Differences appear attributable to details in question wording. For example, programmers might use CSS and XML regularly, but not think of it as a programming language unless prompted to include it. They might use SQL, but not consider themselves experts. Finally, they might use a shell scripting language, but not consider it important. We performed similar grounding comparisons against other results throughout our work.\n", "spans": [[0, 67], [68, 267], [268, 379], [380, 443], [444, 578], [579, 635], [636, 718], [719, 805]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{Methodology}\n", "spans": [[0, 25]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "To maximize the quality of our surveys, we applied standard methodology for iterative gathering of large-scale and cross-sectional data.\n", "spans": [[0, 137]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "Throughout the survey design process, we drew upon external sources. At the start, we examined adoption studies in various social sciences, such as the diffusion of innovation model by Rogers~             . We also performed a literature survey on beliefs of prominent language designers~                        . Finally, we engaged in a series of open-ended discussions with programmers and language designers. The interviewees were primarily visitors to UC Berkeley, attendees at programming language and software engineering workshops and conferences, Bay Area startup employees, and were academic, industrial, and government programmers and language designers. These discussions covered several pre scripted questions and were otherwise driven by the participant. The interviews helped frame hypotheses as well as helped inform us on how to phrase subsequent survey questions neutrally and broadly.\n", "spans": [[0, 68], [69, 206], [207, 313], [314, 412], [413, 665], [666, 768], [769, 904]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "Overall, we received advice and input from about 30 people.\n", "spans": [[0, 60]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "To improve the survey instruments themselves, we applied several techniques.\n", "spans": [[0, 77]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "      \\emph{Piloting questions.} In developing survey questions, we first prepared a preliminary questionnaire and tested it on several undergraduate and graduate students. We then held a discussion with about 10 graduate students in programming languages about hypotheses. We then repeatedly revised the questions, asking undergraduates, graduate students, visiting researchers and professionals how they understood each question. %Surveys ?? and ?? were pretested on only 2 undergraduates, but were based off of survey X. \n", "spans": [[0, 31], [31, 172], [173, 273], [274, 431], [432, 443], [444, 450], [451, 525]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "      \\emph{Free response.} Each survey asked respondents if any questions were confusing and, after some individual questions, whether they had more to add. We do not report on questions that respondents flagged as confusing. To preserve anonymity, we do not release the answers to free response questions.\n", "spans": [[0, 26], [26, 157], [158, 226], [227, 308]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "      \\emph{Demographic questions.} We applied two techniques to detect and compensate for sample bias. First, we included a variety of demographic questions, such as for age and education. Second, we compare results from several different surveys and different populations.\n", "spans": [[0, 34], [34, 103], [104, 189], [190, 275]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "Our cross-sectional survey methods have limitations. For example, while we asked several questions about respondent's early experiences with programming languages, a longitudinal study might assist future work that explores specific hypotheses. Likewise, we focus on correlations. To support future examination of causation, we solicited information on potentially confounding factors such as developer demographics. Further discussion of our methodology and the challenges of survey research on programmers appeared at PLATEAU 2012~                         .\n", "spans": [[0, 52], [53, 244], [245, 280], [281, 416], [417, 560]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec2-methodology.tex"}
+,
+{"errors": [], "paragraph": "\\section{Popularity and Niches}\n", "spans": [[0, 32]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "We first examine the macro-level question of how adoption of popular languages differs from unpopular ones. We divide the analysis into three sub-questions:                                                                                                                                                                                          \n", "spans": [[0, 107], [108, 343]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{Usage Falls Off Quickly, then Plateaus}\n", "spans": [[0, 52]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "The distribution of usage across different languages indicates the risk/reward trade-off for creating a language. \n", "spans": [[0, 115]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "If the median language has significant usage, that makes creating a language a more promising endeavor than if the median language accounts for a negligible fraction of usage.\n", "spans": [[0, 176]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "(Even in the latter case, there may still be utility in building a language, but the creator has fewer grounds to expect usage.)\n", "spans": [[0, 127], [127, 129]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "                \\caption{\\textbf{Probability Mass Function}.  Each point represents a language.}\n", "spans": [[0, 60], [62, 95], [95, 97]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "                \\caption{\\textbf{Cumulative Distribution Function}. Each point represents the set of languages with the number of projects listed on the x axis.}\n", "spans": [[0, 67], [68, 160], [160, 162]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Language popularity}. Slashdot survey data follows a heavy-tailed power law while curated SourceForge and Ohloh data better follow an exponential curve.}\n", "spans": [[0, 38], [39, 169], [169, 171]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "Figure~\\ref{fig:langpop:zipf} shows that a small number of languages account for most usage on SourceForge and Ohloh repositories and in the Slashdot survey results. On SourceForge, the top six languages account for 75 % of the projects; the top 20 languages for 95 %. \n", "spans": [[0, 165], [166, 270]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "General-purpose languages comprise most of the top 20 languages in all three data sets. \n", "spans": [[0, 89]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "Some domain-specific languages also rank highly.\n", "spans": [[0, 49]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "Considering only a project's primary language, SQL is the only domain-specific language in the top 20 languages. \n", "spans": [[0, 114]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "But if we include all languages for a project, SQL, HTML, and CSS are in the top 20. We cross-validated with Ohloh's analysis of overall language use in actual repositories. Ohloh reports that XML, HTML, and CSS are the top three languages in terms of any use. SQL and               are also in the top 20. That a small set of general-purpose languages dominate language use is not surprising. However, none of the language designers we interviewed suggested that a language such as CSS, a constraint-based language for web page layout, would be more popular than all of the general-purpose languages such as C and Java. The prominence of domain-specific languages among other popular languages is surprising.\n", "spans": [[0, 84], [85, 173], [174, 260], [261, 306], [307, 393], [394, 620], [621, 710]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "We turn now from the most popular to the least-popular languages, the tail of the popularity distribution.\n", "spans": [[0, 107]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "Our initial analysis of SourceForge shows an exponential decline in language popularity, as does cross-validation with Ohloh (Figure~\\ref{fig:langpop:zipf}). In contrast, popularity in the distribution's tail plateaus in the Slashdot survey of developers. The average difference in rank for languages in common between the Slashdot and SourceForge is only 6.9, suggesting that the two rankings are reporting on similar underlying usage. \n", "spans": [[0, 157], [158, 255], [256, 438]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "The disparity in tail behavior stems from the fact that the SourceForge and Ohloh language counts are based on a curated list of languages. In contrast, the Slashdot results include all responses and thus tail behavior is not filtered out.                                                                           %; the tail is not a data cleaning artifact.}\n", "spans": [[0, 139], [140, 239], [314, 358], [358, 360]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "Even though the Slashdot survey measures orders of magnitudes fewer projects, it yields a similar number of languages to SourceForge and Ohloh. \n", "spans": [[0, 145]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "The different data sets do not include the same languages, however: they diverge in tail languages. Over half of the languages reported in Slashdot are not tracked by Ohloh. For example, Slashdot respondents report using SAS. Although manual verification shows SAS being used in covered projects, Ohloh does not count it. We conclude that programming language popularity has a heavy tail but that experimental artifacts can conceal this in many data sources. \n", "spans": [[0, 99], [100, 173], [174, 225], [226, 321], [322, 460]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "The heavy tail covers many unpopular languages. For example, the least popular languages (those with only a single project) in Slashdot cover 6 % of the projects (Figure~\\ref{fig:langpop:cdf}). Three such languages cover 0.2 % of the projects. Lacking the heavy tail, SourceForge and Ohloh show an equivalent percentage of less than 0.002 % for three of the least-popular languages. The unpopular languages can be quite domain-specific in practice. For example, one respondent reported developing in the Linden Scripting Language, used for the Second Life virtual world system. The heavy tail in our data shows that the market for languages supports creating many unpopular languages, not just extending the few relatively popular ones such as Java and Haskell.\n", "spans": [[0, 47], [48, 193], [194, 243], [244, 382], [383, 448], [449, 577], [578, 762]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{Unpopular Languages are Niche Languages}\n", "spans": [[0, 53]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "Our next question is how the popularity of a language relates to its domain-specificity.\n", "spans": [[0, 89]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "To evaluate this, we use the project category labels provided by the SourceForge metadata.\n", "spans": [[0, 91]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "For each language, we compared its overall popularity (as a fraction of all projects) to its popularity in each category (e.g., accounting).\n", "spans": [[0, 141]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "We formalize this comparison as the coefficient of variation (standard deviation divided by mean).\n", "spans": [[0, 99]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "Figure \\ref{fig:langdispersion} plots the coefficient of variation of language usage against the percentage of projects using them (i.e., popularity).\n", "spans": [[0, 151]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "Table \\ref{fig:plcstats} shows several languages in detail.\n", "spans": [[0, 60]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Dispersion of language popularity across project categories.} \n", "spans": [[0, 77], [77, 80]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "The less popular the language, the more variable its popularity is across application domains.  (SourceForge data set).}\n", "spans": [[0, 94], [96, 119], [119, 121]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "We find that popular languages receive broad-based support while unpopular languages tend to be used in a few particular domains. \n", "spans": [[0, 131]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": " For example, Java is used by 20 % of the projects. For 70 % of the project categories, Java is  used by 10--30 % of the projects within that category; for those categories, Java's popularity is within 50 % of its overall popularity. In contrast, a relatively unpopular language like Prolog is only used in a handful of categories. For 70 % of categories, Prolog's popularity within a category will differ from its overall popularity by +/- 800 % rather than Java's +/-50 %.\n", "spans": [[0, 51], [52, 233], [234, 331], [332, 475]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "A few outliers stand out in our analysis. Assembly ($    = 0.011,        =0.03$)  and Fortran ($   =0.002,       = 0.03$) vary in popularity across categories 3-6X more than our model predicts based on their overall popularity.\n", "spans": [[0, 41], [42, 228]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "In effect, these are domain-specific languages for low-level or numeric programming, respectively. That makes them unusual cases of domain-specific languages that are popular overall.\n", "spans": [[0, 98], [99, 184]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "A possible explanation is that both used to be viewed as general-purpose languages; they have held onto niches, rather than colonized them for the first time.\n", "spans": [[0, 159]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "VBScript is an outlier of the opposite sort: our model predicts more variability across categories than actually occurs. We hypothesize that, since VBScript is a scripting language packaged with and made for Windows, it attracted a varied base of developers that were performing a wide range of tasks. \n", "spans": [[0, 120], [121, 303]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "Despite occasional outliers such as Fortran and VBScript, Figure~\\ref{fig:langdispersion} shows a clear curve that relates overall popularity to the variation in popularity across niches. \n", "spans": [[0, 189]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Fraction of projects in each language for different project categories.}  Y axis is the top 20 (95 %) languages and X axis is project categories with at least 100 projects written in any language. Dark red cells indicate a high probability of using a particular language within a given project category. (SourceForge).}\n", "spans": [[0, 88], [88, 213], [214, 320], [321, 335], [335, 337]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "\\textbf{Top 6 Languages}\n", "spans": [[0, 25]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "\\textbf{Top 25-30 Languages}\n", "spans": [[0, 29]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Mean, variance, and standard error of language popularity in different project categories.}  Only project categories with at least 100 projects are considered. We show the top six (75 % total usage) popular languages and also languages 25-30 (1.2 % total usage). Order of categories is arbitrary. (SourceForge). }\n", "spans": [[0, 107], [107, 176], [177, 279], [280, 313], [314, 328], [329, 331]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "Even though unpopular languages have their usage concentrated in a few niches, they are rarely the most popular languages in those niches: the consistently popular languages tend to win out. \n", "spans": [[0, 192]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "Figure~\\ref{fig:plc} illustrates this with a heat-map showing the relative popularity of languages across niches. \n", "spans": [[0, 115]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "The languages are sorted by popularity, with the bottom rows containing the most popular languages.\n", "spans": [[0, 100]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "There are cases where a language that is less popular overall will beat out more-popular languages in specific niches. For example, C++ is more popular than C in general but not for compilers in particular. Figure~\\ref{fig:plc} shows that PHP, C, and C++ (the top three languages) vary in relative popularity across domains.\n", "spans": [[0, 118], [119, 206], [207, 325]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "This effect is largely limited to the top few languages, however. Beyond that, a niche-specific language's comparative advantage is dominated by the overall popularity of the top overall languages.\n", "spans": [[0, 65], [66, 198]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{Developer Migration}\n", "spans": [[0, 33]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Probability of picking a language given the language of the previous project.} Y axis shows the language of the previous project and X axis shows the language of the next: each point is the probability $p(L'=x ~|~ L=y)$. Languages with less than 100 projects are elided. (SourceForge)}\n", "spans": [[0, 94], [94, 237], [238, 287], [288, 303]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "Developers work on many projects over the course of their careers. We do not expect one language selection decision to be independent of the next,\n", "spans": [[0, 66], [67, 147]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "so we examine how developers move from language to language. More precisely, we ask how using a language for one project influences a developer's selection for the next.\n", "spans": [[0, 60], [61, 170]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "Karus and Gall have analyzed the commit logs from 22 open source projects, and report that developers tend to stick to ``clusters'' of languages --- for example, they report that only a small fraction of Java developers also use C/C++ (7 %), and C/C++ developers are five times as likely as Java developers to use Perl~                             .\n", "spans": [[0, 350]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "We hypothesized that we would see a similar  clustering pattern in our data.\n", "spans": [[0, 77]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "We again used SourceForge data to answer this question.\n", "spans": [[0, 56]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "For each developer that contributed to multiple projects, we examined how the choice of language for a project influenced the language choice for the project with the chronologically next creation date.\n", "spans": [[0, 203]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "We present the results in Figure \\ref{fig:pll}. Each row depicts the probability that a developer's next SourceForge project will use the language on the bottom, given that the developer was previously in a project that used the language labeled on the right. The bright diagonal line shows that developers often keep using the same languages.\n", "spans": [[0, 47], [48, 259], [260, 344]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "If we select a first language uniformly at random, developers will keep to that language 18 % of the time. More often -- 52 % of the time -- they will switch to one of the top six languages overall.  These overall-popular languages correspond to the vertical bands in Figure~\\ref{fig:pll}. \n", "spans": [[0, 106], [107, 198], [200, 291]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "A given prior language only occasionally correlated with the choice of a specific different language for the next project. Most notably, developers have high propensities to switch between Windows scripting and application languages, such as VBScript and C #. These languages also correlate with Microsoft web-development languages such as ASP.\n", "spans": [[0, 122], [123, 259], [260, 345]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": " Such correlations are also visible in the results of Karus and Gall~                             , who found groupings such as WSDL and XML being used in conjunction with Java. \n", "spans": [[0, 179]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "Notably, we do              see significant exploration within linguistic families. \n", "spans": [[0, 85]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "There is a relatively low probability of switching between Scheme and LISP, or between Ruby, Python, and Perl. \n", "spans": [[0, 112]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "We conclude that developer movement between languages is driven more by external factors such as the developer's background or technical ecosystem than by similarity of the underlying languages. \n", "spans": [[0, 196]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "This implies that language advocates should focus on a domain and try to convince programmers in that domain, instead of trying to convince programmers who use languages with semantic similarities to the new language.\n", "spans": [[0, 218]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "One limitation of our result is that project participation is an imperfect proxy for language use. Some cases of language reuse may be due to developers that only \\emph{saw} a language being used on one project and then used it themselves on the next. Likewise, we only sample SourceForge projects: the effects we report may be stronger in general because they may carry through intermediate projects not reported on SourceForge.\n", "spans": [[0, 98], [99, 251], [252, 430]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "Overall, we found a simple and representative model describes language selection: language popularity and prior use predicts over 75 % of the language selection decisions in SourceForge. Despite our model's simplicity, it is effective. More complicated refinements to ours would only need to address 25 % of the unexplained projects.\n", "spans": [[0, 186], [187, 235], [236, 334]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec3-macro.tex"}
+,
+{"errors": [], "paragraph": "\\section{Decision Making}\n", "spans": [[0, 26]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Importance of different factors when picking a language}. Self-reported for every respondent's last project.  \n", "spans": [[0, 74], [75, 128]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "Bars show standard error.\n", "spans": [[0, 26]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "E = Extrinsic factor, I = Intrinsic, M = Mixed.\n", "spans": [[0, 48]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "Shows results broken down by company size for respondents describing a work project\n", "spans": [[0, 84]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "and who indicated company size. (Slashdot, n = 1679)}\n", "spans": [[0, 31], [32, 54]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "Above, we analyzed the overall ``macro''-level process of language adoption, with results such as that most unpopular languages have their popularity concentrated in a few niches.\n", "spans": [[0, 180]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "We now offer a ``micro'' view: we focus on how individual developers make decisions. \n", "spans": [[0, 86]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "The central research question being investigated is \\emph{which factors influence developer selection of languages?} \n", "spans": [[0, 115], [115, 118]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "We break this into two parts: how do developers weigh features of languages when they are making choices, and how do\n", "spans": [[0, 117]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "demographics affect the languages that developers pick?\n", "spans": [[0, 56]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{Extrinsic properties dominate intrinsic ones}\n", "spans": [[0, 58]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "In the Slashdot survey, we asked respondents to rate the influence of particular %extrinsic and intrinsic \n", "spans": [[0, 107]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "factors in picking the language for their most recent project on a four-point scale from ``none'' to ``strong''. By asking about their most recent project, we encourage reflection upon a historical event and deemphasize ideal preferences that might not be acted upon in practice. Respondents assigned individual priorities to 14 factors (Figure \\ref{fig:projinfluence}). We selected the 14 categories such that the dominant choice for picking a language would be represented. Pretesting helped form the list, and free response comments from final respondents suggest that no significant categories are missing.  \n", "spans": [[0, 112], [113, 279], [280, 370], [371, 475], [476, 613]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "We wanted to see how these results depend on a developer's work environment. \n", "spans": [[0, 78]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "To do this, we broke out those respondents who picked a work project and who indicated an organization size. \n", "spans": [[0, 110]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "Of respondents with who marked the size of their company, we split them into those in companies with fewer than 100 employees and those with more than 100. (This threshold is closest to splitting the data set evenly, facilitating comparison.) The results for these subpopulations are also shown in Figure~\\ref{fig:projinfluence}. \n", "spans": [[0, 155], [156, 241], [241, 331]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "A wide gap separates the most and least influential factors. The most influential factor, the availability of open source libraries, was ``strong'' or ``medium'' for over 60 % of respondents. For the least influential factor, simplicity, only 25 % said the same. \n", "spans": [[0, 60], [61, 191], [192, 264]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "As organization size increases, we found that commercial libraries become more important, and open source libraries become less so (although open source is still weighted quite highly).\n", "spans": [[0, 186]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "Correctness becomes a more influential factor, while simplicity, platform constraints, and development speed matter less for large companies.\n", "spans": [[0, 142]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "Group experience and legacy code mattered more in larger organizations.\n", "spans": [[0, 72]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "Some of the factors, such as the language's features or simplicity, depend on the language design, not on its user base. Others, such as whether a developer already knows the language or the ease of hiring developers who know it, are extrinsic and depend on the social context of the language. Some factors include a mix of extrinsic and intrinsic aspects. For example, the presence of libraries or good development tools is a combination of social and technical factors. Figure \\ref{fig:projinfluence} is labeled with our judgement about whether a factor was intrinsic, extrinsic, or mixed.\n", "spans": [[0, 120], [121, 293], [294, 356], [357, 471], [472, 592]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "We emphasize four results from the data:\n", "spans": [[0, 41]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "                                     } Open source libraries are the most influential factor for language choice overall and the most influential factor for commercial projects at small companies. They are an important factor, but not the most important factor, at large companies. \n", "spans": [[0, 196], [197, 283]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "                                                  } Existing code or expertise with the language are four of the top five factors for adoption. In contrast, intrinsic factors, such as a language's simplicity or safety, rank low.\n", "spans": [[0, 143], [144, 229]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "Implementation attributes, like performance and tool quality, have both intrinsic and extrinsic components. (Some languages lend themselves more easily than others to a high-performance implementation.)\n", "spans": [[0, 107], [108, 201], [201, 203]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "These mixed attributes vary in importance. \n", "spans": [[0, 44]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "                                     } Libraries, developer experience, and legacy code are all important in language selection.\n", "spans": [[0, 129]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "These factors are often associated with particular application domains. Thus, the developer emphasis on these attributes helps\n", "spans": [[0, 71], [72, 127]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "explain the result in Section \\ref{subsec:niches} that less-popular languages are more niche-specific. \n", "spans": [[0, 104]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "                                    } Employees at larger companies place significantly more value on legacy code and knowledge than do employees at small companies. \n", "spans": [[0, 167]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "These results help inform language designers seeking adoption where to focus their efforts.\n", "spans": [[0, 92]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "Developing high-value open source libraries is likely to have a large influence to language adoption, particularly\n", "spans": [[0, 115]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "for individuals and small companies.\n", "spans": [[0, 37]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "Simplicity will not attract many programmers.\n", "spans": [[0, 46]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "Smaller companies are less constrained by legacy code and experience.\n", "spans": [[0, 70]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "We suspect that they are therefore likely more willing to adopt new languages that are not backward-compatible.\n", "spans": [[0, 112]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "In contrast, a backward-compatible change to a language might be more valuable to a large company.\n", "spans": [[0, 99]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Demographic influences on selecting particular languages}. Self-reported for every respondent's last project.  \n", "spans": [[0, 75], [76, 129]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "Bars show standard error. (Slashdot, n$_{          }$ = 1679, n$_{                     }$ = 290, n$_{                    }$ = 790, n$_{                25}$ = 154, n$_{           > 25}$ = 1382).}\n", "spans": [[0, 25], [26, 193], [193, 195]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{Demographic influences on language selection}\n", "spans": [[0, 58]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "We now look at how developer demographics affect the languages that developers select.\n", "spans": [[0, 87]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "Understanding this extrinsic factor clarifies the generality of our results and its role for future empirical analysis or targeting of developers . %Furthermore, how the demographics surface dictates the applicability of different models of adoption and may guide language designers on targeting developers.\n", "spans": [[0, 147], [148, 308]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "We observed significant correlations when distinguishing the different demographics that selected a particular language. Figure~\\ref{fig:langdemos} shows that, for languages selected by Slashdot respondents, age and company size strongly influence whether a particular language was selected. For example, employees at small companies are 1.4-3.0 times more likely to use Objective-C than the typical respondent. Likewise, when looking at age, developers under 25 rarely use Perl but disproportionately select Python.  \n", "spans": [[0, 120], [121, 291], [292, 411], [412, 519]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "Compared to the breakdowns of Figure~\\ref{fig:projinfluence}, we see that language selection is especially sensitive to demographic effects.\n", "spans": [[0, 141]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "Notice also that different languages are sensitive to different demographic variables: Perl and Python are age sensitive, but appear insensitive to company size; Objective-C is sensitive to company size, not to age.\n", "spans": [[0, 216]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "A consequence of this is that we should expect different language communities to be different; our observations suggest that it is\n", "spans": [[0, 131]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "unsafe to generalize about which ways a particular demographic variable will correlate with language usage.\n", "spans": [[0, 108]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec4-motives.tex"}
+,
+{"errors": [], "paragraph": "\\section{Language Acquisition}\n", "spans": [[0, 31]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "We now switch focus from the decision to use a language at a particular instant to the process of learning languages.  We examine three related questions: \\emph{How long does it take developers to learn languages? When in their careers do they learn? And how does education affect learning?}\n", "spans": [[0, 117], [119, 213], [214, 250], [251, 290], [290, 292]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "The previous section demonstrated that developers prefer to use languages they already know. Understanding how quickly developers learn and what induces them to learn helps explain this adoption factor. \n", "spans": [[0, 92], [93, 204]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{Learning speed}\n", "spans": [[0, 28]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "We examine learning speed because it limits how many languages a programmer can use.\n", "spans": [[0, 85]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "For the language used on their most recent project, the Slashdot survey asked respondents\n", "spans": [[0, 90]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "to estimate how long it took to learn to use the language well.  To ``know a language well'' is an intentionally\n", "spans": [[0, 63], [65, 113]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "imprecise and subjective standard. We showed above that when developers pick languages \n", "spans": [[0, 34], [35, 88]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "for a project, they are heavily influenced by the languages they believe they know: developers will\n", "spans": [[0, 100]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "be using a standard that is also subjective.\n", "spans": [[0, 45]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Figure \\ref{lang_learn_speed} shows the results for all languages for which we had at least 50 responses. The question was framed as multiple choice; the y-axis labels of Figure \\ref{lang_learn_speed} were the available options.\n", "spans": [[0, 105], [106, 229]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "The median learning times for the most challenging language and the most approachable differ by a factor of ten. Programmers report C++ as the slowest to learn while the fastest are PHP, Python, and Ruby. Java and C #, which are semantically similar, are between these extremes and have similar learning times. \n", "spans": [[0, 112], [113, 204], [205, 312]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "The relative time to learn PHP is noteworthy. PHP is notorious for its ad-hoc design while Python is well-regarded for its simplicity. Despite their differences, both languages have comparable reported learning times of just a few months. We infer that developers determine that they can  ``use the language well''  even if they have not mastered every nuance. Developers may only need to learn a subset sufficient for completing routine work.\n", "spans": [[0, 45], [46, 134], [135, 238], [239, 360], [361, 444]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "More fundamentally, the relative ease of learning PHP suggests that, while complexity is a barrier to adoption~             , what makes a language complicated for developers need not be what makes it complicated for a designer or researcher (e.g., convoluted formal semantics). For the same reason, what makes a language simple in a formal sense need not make it simple for developers and otherwise adoptable. \n", "spans": [[0, 278], [279, 412]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Reported speed of language acquisition.}  Bars are standard error. (Slashdot, n = 1679)}\n", "spans": [[0, 56], [56, 83], [84, 106]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{On-site language learning}\n", "spans": [[0, 39]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Probability of learning the primary language during a project.} Shading denotes demographics and bars are standard error. (Slashdot, n = 1536) }\n", "spans": [[0, 79], [79, 138], [139, 162]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "We now examine the relationship between developer demographics and the languages that they learn. Knowing which demographics are likely to learn helps language proponents target their outreach at those potential early adopters.\n", "spans": [[0, 97], [98, 228]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "The Slashdot survey asked respondents whether, during their last project, they learned the primary\n", "spans": [[0, 99]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "language for it.\n", "spans": [[0, 17]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": " Figure~\\ref{fig:langlearningoverall} shows the results broken down by\n", "spans": [[0, 71]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": " age and organization size. \n", "spans": [[0, 29]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "We found that younger developers are more prone to learning new languages.  \n", "spans": [[0, 77]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Overall, 21 % of respondents learned a language for their most recent project.\n", "spans": [[0, 79]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "That rate increases to 29 % for 21-to-22-year olds. While a jump for \n", "spans": [[0, 51], [52, 70]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "younger programmers is not surprising due to inexperience or perhaps \n", "spans": [[0, 70]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "eagerness, we had expected to see a much higher increase in learning rate. \n", "spans": [[0, 76]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "The difference quickly tapers off, with developers aged 25-30 behaving similarly to\n", "spans": [[0, 84]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "those aged 31-40 olds (20 % vs. 19 %).\n", "spans": [[0, 31], [32, 39]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Relative to age, organization size has minimal influence.\n", "spans": [[0, 58]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Our analysis shows that developers in our sample steadily learn languages through their career.\n", "spans": [[0, 96]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "As a result, they are not limited by the languages that were popular when \n", "spans": [[0, 75]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "they were young or in school. \n", "spans": [[0, 31]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "This means that the time scale of language adoption is not driven by the career timelines of developers because young developers will keep pick up old languages and old developers will pick up new ones.\n", "spans": [[0, 203]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "One might think, from these results on learning rates, that age has an important role in language knowledge.\n", "spans": [[0, 109]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "However, as we show in the next subsection, these differences in language learning between older and younger developers have limited effect on the overall distribution of language knowledge.\n", "spans": [[0, 191]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{Languages over time}\n", "spans": [[0, 33]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "The next sub-question we examine is how a developer's age influences the languages that the developer knows. \n", "spans": [[0, 110]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Some professional recruiters claim that there are large and significant differences in the languages that older and younger developers use~                         . Our results refute this claim. \n", "spans": [[0, 165], [166, 198]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Figure \\ref{lang_lines_fig} shows the median age for programmers who claim to know each of the indicated languages, along with the 25th and 75th percentiles of age. \n", "spans": [[0, 166]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "The distributions are all very close. This is surprising: we would have expected changes in education over time to result in large\n", "spans": [[0, 37], [38, 131]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "deviations, such as Pascal skewing old, and Ruby skewing young. \n", "spans": [[0, 65]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Instead, the 95 % confidence interval for every language includes the overall response mean age (38). The deviations are not statistically significant. We observed similar age invariance patterns in the results of the MOOC survey. There as well, developers of different ages know a similar number of languages and a similar mix of languages. \n", "spans": [[0, 101], [102, 151], [152, 230], [231, 343]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "This shows that differences in learning by age, described above, get washed out over the course of a career.\n", "spans": [[0, 109]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "In our surveys,\n", "spans": [[0, 16]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "programmers of any age are equally likely to remember or newly learn older languages like Pascal. Young programmers catch up to old ones, and older ones keep learning.\n", "spans": [[0, 97], [98, 168]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Popular languages do not thrive or wither based on the age breakdown of their adherents. Programmers keep learning, and learn often enough and quickly enough that their age\n", "spans": [[0, 88], [89, 173]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "does not predict which languages they know.\n", "spans": [[0, 44]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Number of languages by age.} Developers of different ages seem to know a similar number of languages. Lightly shaded rectangles show 25th and 75th percentiles, error bars show standard error of mean. (Slashdot, n = 1679) }\n", "spans": [[0, 44], [44, 118], [119, 216], [217, 240]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Mean, standard error, and 25th and 75th percentiles for ages of programmers who claim to know each language.} Languages are sorted by creation date. Distributions are nearly the same for every language. (Slashdot, n = 1679)}\n", "spans": [[0, 125], [125, 165], [166, 219], [220, 242]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "We now look at the overall number of languages a developer knows.\n", "spans": [[0, 66]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "The Slashdot survey asked developers to estimate the number of languages they have learned, and also to list the languages that they know well.\n", "spans": [[0, 144]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "These different questions capture different levels of knowledge and familiarity and we include both in our results.\n", "spans": [[0, 116]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Figure \\ref{age_lines_fig} plots the mean number of languages known by developers against their age, along with the inter-quartile range.\n", "spans": [[0, 138]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Both lines are remarkably flat. The mean respondent to our survey claims to have learned ten languages, and lists six that they ``know well.'' Likewise, the upper and lower quartile range does not show any clear trend over time; the gap between the 25th and 75th percentile of number of languages does not change over time in a systematic way.\n", "spans": [[0, 31], [32, 140], [140, 344]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "The MOOC survey asked developers to list the languages they know well and the number they know slightly. The results are shown in Figure \\ref{age_lines_fig_mooc}. Compared to the Slashdot survey, the average developer in the MOOC survey knows fewer languages. However, the results are qualitatively similar in that there is no age trend. This shows that our result is robust to both varying the detailed wording of the question and to a change in the underlying population.\n", "spans": [[0, 104], [105, 162], [163, 259], [260, 337], [338, 474]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "There is a tension between the flat lines on Figures \\ref{age_lines_fig} and \\ref{age_lines_fig_mooc} and the fact that developers are steadily learning.\n", "spans": [[0, 154]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Since developers of different ages are similarly likely to have\n", "spans": [[0, 64]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "learned a language for their last project, we might expect \n", "spans": [[0, 60]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "the number of languages they know to rise over time. \n", "spans": [[0, 54]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Instead, older and younger developers report a similar degree of \n", "spans": [[0, 66]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "multilingualism. It follows that developers are losing languages as well as gaining them.\n", "spans": [[0, 16], [17, 90]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "They are forgetting -- or at least, forgetting to mention -- some languages. \n", "spans": [[0, 78]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Number of languages by age.} As with Figure \\ref{age_lines_fig}; there is no clear trend with age. (MOOC, n = 1142) }\n", "spans": [[0, 44], [44, 115], [116, 135]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "This result shows that adult developers effectively have a limited capacity for languages. They typically maintain skill in a limited number of languages, and will forget as many languages as they learn.\n", "spans": [[0, 90], [91, 204]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "This implies that immediate developer familiarity is a limited resource for which languages must compete. Such competition is the basis for ecological theories of adoption~                        .\n", "spans": [[0, 105], [106, 198]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{Effects of education}\n", "spans": [[0, 34]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Probability of knowing at least one language in the indicated family, overall and grouped by major and specific educational experience.} Also shows correlation coefficients between knowing a language in that family and (a) having a CS degree, and (b) having learned a language in that family in school. Whether developers learn a language in that family in school has much more influence than being a CS major.  Shown below each correlation is the 95th percentile confidence interval. (Slashdot, n = 1679)}\n", "spans": [[0, 152], [152, 319], [320, 427], [429, 501], [502, 524]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "We also looked to see how a respondent's computer science education affected their subsequent programming language knowledge.\n", "spans": [[0, 126]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "The Slashdot survey asked respondents to mark which families of languages they learned while in school (e.g., assembly, functional languages, dynamic languages).  Table \\ref{langs_school} shows our results.\n", "spans": [[0, 161], [163, 207]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "The vast majority of respondents know a compiled non-functional language, such as C or Java, regardless of major or curriculum. Likewise, dynamic languages are widely known. \n", "spans": [[0, 127], [128, 175]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Less-popular language families (assembly, functional, and mathematical languages) are more sensitive to prior education. Promisingly, developers who learned a functional or math-oriented language in school are more than twice as likely to know one later than those who did not.  \n", "spans": [[0, 120], [121, 280]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Educational intervention has limits, however. %Developers do not remember everything they learn. \n", "spans": [[0, 45], [46, 98]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "For mathematical, functional and assembly languages, the large majority of developers that learned a language in that family no longer know any similar language. Consequently, the correlation between education and later knowledge is relatively modest. \n", "spans": [[0, 161], [162, 253]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Notably, having been a computer science major does not lead to the same linguistic versatility of students who learned different language families as part of the course curriculum: we saw no measurable correlation between being a CS major and knowing particular programming paradigms. Our results suggest that an undergraduate curriculum that does not introduce students to a variety of languages is unlikely to result in more versatile programmers later in their careers.\n", "spans": [[0, 284], [285, 473]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "This demonstrates a weakness of curriculums that only focus on languages such as Java and Python.\n", "spans": [[0, 98]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "One limitation of this finding is that it measures only correlation, and there could be causation in both directions. \n", "spans": [[0, 119]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Developers who expect to use distinctive families such as assembler languages might choose to study them in school. \n", "spans": [[0, 117]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "Demonstrating how much causation flows in each direction is beyond the scope of this paper.\n", "spans": [[0, 92]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec6-learning.tex"}
+,
+{"errors": [], "paragraph": "\\section{Beliefs about Languages}\n", "spans": [[0, 34]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "We now turn from programmer actions to programmer beliefs. \n", "spans": [[0, 60]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "This section looks at  \\emph{what attributes of languages do developers like or dislike?} The question is in contrast to that of Section \\ref{sec:motives}, which examines how developers pick languages within the context of a specific project.\n", "spans": [[0, 88], [88, 243]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "Beliefs help shape developer and manager decisions to learn and advocate languages, and thereby affect the social dynamics of adoption. Understanding what developers value, and how developers perceive languages, can help designers both to build better-liked languages and also to advocate more effectively on behalf of their languages.\n", "spans": [[0, 135], [136, 336]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{Perceived value of features} \n", "spans": [[0, 42]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "The MOOC-d survey asked developers to rate the importance of different types of language features on a scale from unimportant to crucial. \n", "spans": [[0, 139]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "The results are shown in Figure \\ref{fig:features}.\n", "spans": [[0, 52]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "As can be seen, libraries are the top-rated feature. Such perceived importance of libraries cross-validates our finding that libraries matter in practice (Section \\ref{sec:motives}).\n", "spans": [[0, 52], [53, 183]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Feature preferences}  (MOOC-d data set, n = 415). }\n", "spans": [[0, 66], [67, 69]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "We included several options on the MOOC-d survey that represent related concepts.\n", "spans": [[0, 82]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "For example, higher-order functions are a strictly more powerful language primitive than inheritance. Interfaces are often used for type systems.\n", "spans": [[0, 101], [102, 146]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "Threads can be used to implement task parallelism. \n", "spans": [[0, 52]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "While these features are similar in many ways from a semantics point of view, they had sharply different priorities with developers. For example, 72 % of developers considered inheritance important or crucial; only 45 % felt that way about higher-order functions. Interfaces likewise were considered far more important than static types. This is surprising, given that interfaces \n", "spans": [[0, 132], [133, 263], [264, 337], [338, 381]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "are little-used in languages without static types.\n", "spans": [[0, 51]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "Performance was ranked the second most important factor. This is significant in two ways. First, particular features used for low-level programming, such as threads, macros, static types, and templates all rate much lower. \n", "spans": [[0, 56], [57, 89], [90, 224]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "There is a gap between the importance of performance and the language features used to achieve it today. It is unclear if the gap is inherent or if language designers should look for ways to fill it. Second, given the mid-tier importance of performance in picking a language for an actual project (Figure~\\ref{fig:projinfluence}), we also see a gap between perception and practice.\n", "spans": [[0, 104], [105, 199], [200, 382]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Higher-order functions and objects.} Most developers do not see a close connection between the two. (MOOC-d data set, n = 415). }\n", "spans": [[0, 52], [52, 116], [117, 144], [145, 147]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "The survey asked programmers ``How similar are higher-order functions to objects?'' to gauge their beliefs about expressive or practical differences. Responses are shown in Figure \\ref{fig:fp_vs_oo}. \n", "spans": [[0, 81], [81, 149], [150, 201]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "A third of respondents found the question confusing. Another 20 % consider them either totally or largely unrelated. Only 20 % reported ``very similar'' or ``mathematically equivalent.'' (We do not report on confusing questions elsewhere; confusion in this case was expected as it is intended to reflect not understanding the underlying language semantics.) \n", "spans": [[0, 52], [53, 116], [117, 184], [184, 356], [356, 359]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "We conclude that a large fraction of developers are disinclined to reason about the semantic power of language features. Features that appear similar to language designers do not appear so to users. For example, implementation inheritance can be implemented atop higher order functions: methods can be replaced by open functions and inheritance can be modeled with constructor delegation.\n", "spans": [[0, 120], [121, 198], [199, 389]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "The optional free text responses were interesting. They included ``didn't know this was possible. Sounds like it could be very useful'' and ``Objects require imperative programming style while functional programming is a lot less verbose and allows for recursive definition.'' These responses reaffirm our observation that many developers do not perceive languages in the same terms as language designers.\n", "spans": [[0, 50], [51, 97], [98, 274], [274, 406]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "Taken together, we see that developers' impression of feature importance is not closely tied to the underlying semantic power of the language construct in question. We infer that developer preferences here are shaped by factors extrinsic to the language, such as experience and (mis-)education.\n", "spans": [[0, 164], [165, 295]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{What programmers enjoy}\n", "spans": [[0, 36]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "We now turn to a closely related question of what programmers enjoy in a language.\n", "spans": [[0, 83]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "This is an open-ended question, and our data is preliminary.\n", "spans": [[0, 61]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "The Hammer data set, with its large pool of languages and statements, is the data set available to us\n", "spans": [[0, 102]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "that is best suited to the inquiry.\n", "spans": [[0, 36]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "The features of a language that developers enjoy are conceptually related to the features  developers value, and therefore this question serves as cross-validation for the results of Figure~\\ref{fig:features}.\n", "spans": [[0, 210]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Feature desires.} Correlations with the statement ``This language has unusual features that I often miss when using other languages.'' (Hammer)}\n", "spans": [[0, 33], [33, 149], [149, 162]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "The Hammer survey asked developers to rank 51 languages against 111 different statements, including \n", "spans": [[0, 101]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "``I enjoy using this language.'' As described in Section 2, we use the Glicko-2 algorithm~                     to totally order all the languages for each such statement~                         . From these rankings, we correlated different statements. Enjoyment is the closest proxy in the data set for what we mean by ``liking a language'',  so\n", "spans": [[0, 30], [30, 196], [197, 253], [254, 348]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": " we looked for other attributes of languages that correlate with enjoyment. \n", "spans": [[0, 77]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "The statement with the highest correlation with enjoying a language is ``This language is expressive'' (corr. 0.76). Other highly correlated statements include ``I find code written in this language very elegant'' (corr. 0.73), and ``I rarely have difficulty abstracting patterns I find in my code'' (corr. 0.66). While open source libraries significantly influence developer actions, ``Third-party libraries are readily available, well-documented, and of high quality'' only weakly correlates (corr. 0.10) with enjoyment.\n", "spans": [[0, 109], [110, 116], [117, 220], [221, 306], [307, 313], [314, 500], [501, 523]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "Attributes other than ``enjoyment'' are also relevant to our inquiry about developer preferences.\n", "spans": [[0, 98]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "We examined correlations with the statement ``This language has unusual features that I often miss when using other languages.'' The results are shown in Table~\\ref{tab:hammerfeatures}. Perceived expressivity strongly correlates with this statement (corr. 0.87); developers value features that ease development. In contrast, there is no significant correlation between having unusual-but-desired features and the ease of writing efficient code. Expressivity and performance are perceived to be unrelated across actual languages.\n", "spans": [[0, 126], [126, 185], [186, 255], [256, 311], [312, 444], [445, 529]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{Types vs. testing}\n", "spans": [[0, 21], [22, 31]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "\\caption{\\textbf{Beliefs about types and testing.} Shows fraction of responses agreeing with each statement, and 95th percentile confidence bounds. Results from self-identified professional developers in MOOC-b sample. (n = 96)}\n", "spans": [[0, 49], [49, 147], [148, 218], [219, 229]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "We close by examining the perceived tradeoffs around static types, particularly as contrasted with unit testing. Static types are a controversial choice in language design, and we hope our results help show designers how developers react.\n", "spans": [[0, 112], [113, 239]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "The MOOB-b survey included a set of statements about types and testing; respondents were asked to mark if they agreed or disagreed with each. The questions were binary; yes and no were the only options.\n", "spans": [[0, 141], [142, 203]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "We present only the results from the self-identified professional developers in the sample. This filters out responses from students, whose experience may have been derived from small classroom assignments, rather than realistic industrial development. This\n", "spans": [[0, 91], [92, 252], [253, 258]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "leaves us with 96 responses --- small compared to the other populations in this paper, but large enough for meaningful statistical analysis. \n", "spans": [[0, 142]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": " Table \\ref{mooc_type_answers} displays the results. Even despite the large margins of error, the results are striking.\n", "spans": [[0, 52], [53, 120]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": " Only 36 % ``see the value'' of static types. In contrast, 62 % -- nearly twice as many -- see the value of unit testing. Developers are nearly twice as likely to ``enjoy using'' unit tests  (33 %) as compared with static types (18 %). \n", "spans": [[0, 45], [46, 121], [122, 237]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "Contrary to our initial suspicions, developers describe neither types nor testing to be primarily about finding bugs. Only 8 % of professional programmers think finding bugs is the chief benefit of static types, while 33 % say the same about unit tests. Respondents instead find static types to be important in two areas: readability (45 % agreement) and safety (44 % agreement). Bug finding ranked third and modularity a distant fourth.\n", "spans": [[0, 117], [118, 253], [254, 379], [380, 438]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "We suspect the survey population was biased in favor of dynamic languages because the course associated with it focused on software-as-a-service and therefore many web technologies written in dynamic languages. Even so, this result shows that there is a population of developers who are broadly skeptical of the benefits of static types.\n", "spans": [[0, 210], [211, 338]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "We cross-validated this result using the Hammer data.\n", "spans": [[0, 54]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "We looked for statements in the Hammer dataset that correlated with ``This language has a strong static type system.'' \n", "spans": [[0, 116], [116, 120]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "Static types correlate strongly with statements about correctness such as ``If my code in this language successfully compiles there is a good chance my code is correct.'' (correlation 0.85). \n", "spans": [[0, 168], [168, 192]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "However, languages with static types are much less closely correlated with languages developers claim to enjoy (corr. 0.38) and with expressivity (corr 0.31). \n", "spans": [[0, 117], [118, 160]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "Irrespective of the objective value of static typing, we see evidence that many developers do not value it highly.\n", "spans": [[0, 115]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "The MOOC population is by no means representative of all programmers. The underlying\n", "spans": [[0, 69], [70, 85]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "course was taught in Ruby and targeting web application development.\n", "spans": [[0, 69]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "However, we believe the results are valid for dynamic language programmers.\n", "spans": [[0, 76]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "Even on this restricted population, there are useful take-aways from these results.\n", "spans": [[0, 84]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "Our data suggests that developers value the readability provided by types more than they do\n", "spans": [[0, 92]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "many other benefits. \n", "spans": [[0, 22]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "The data also suggests that developers                 find that types improve modularity --- \n", "spans": [[0, 95]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "it contradicts claims often made on behalf of types.\n", "spans": [[0, 53]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "These observations suggest points where future language design research could better\n", "spans": [[0, 85]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "meet perceived needs.\n", "spans": [[0, 22]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec5-believe.tex"}
+,
+{"errors": [], "paragraph": "\\section{Threats to Validity}\n", "spans": [[0, 30]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "This section discusses the limitations of our work. \n", "spans": [[0, 53]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "We begin with threats to validity (whether our results are accurate on the populations we sample) and then consider reliability (whether our results would apply to other populations.)\n", "spans": [[0, 182], [182, 184]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{Validity}\n", "spans": [[0, 22]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "Respondents to the Slashdot survey had the opportunity to explore the Hammer data visualizations before answering the survey. This may have biased them. Because the survey questions are not closely related to the visualized data, we expect that the priming effect and consequent bias will not be large.\n", "spans": [[0, 125], [126, 152], [153, 303]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "Not everybody who starts a survey will complete it. We lack information about respondents who declined to submit. They may therefore differ in demographics, background, or motivation from those whose responses we have. \n", "spans": [[0, 51], [52, 113], [114, 220]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "The methodology used to extract data from the Hammer Project is novel, and we do not have a rigorous analysis of the statistical margin of error. The underlying Glicko algorithm is well-documented and widely used, however.\n", "spans": [[0, 145], [146, 223]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "Likewise, extracting data from SourgeForge required making some assumptions and judgement calls. Projects can\n", "spans": [[0, 96], [97, 110]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "change category, languages, and authors over time. \n", "spans": [[0, 52]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "Our work is largely cross-sectional, looking at one moment in time. We do examine some longitudinal topics (how populations evolve) using the 10 years of SourceForge data and careful phrasing of some of our survey questions, and suspect programming languages are reaching the point where we can and should examine questions that span decades. Furthermore, we examine correlations. Empirical analysis of causality is an important growing area~                                          and would help elucidate the adoption process.\n", "spans": [[0, 67], [68, 342], [343, 380], [381, 531]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "\\subsection{Reliability}\n", "spans": [[0, 25]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "Section \\ref{sec:macro} uses data from the SourceForge repository, which hosts open-source software. It is possible that proprietary code bases are statistically different: for instance, obscure languages might hang on longer inside corporate IT departments. However, open source development is a major part of all development activity and its effects will constrain corporate development. As we showed, open source libraries have a major influence on language selection even within corporate development.\n", "spans": [[0, 100], [101, 258], [259, 389], [390, 506]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "Our survey samples, while large, are self-selected.\n", "spans": [[0, 52]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": " In particular, our Slashdot survey will be biased towards highly engaged programmers who read technology blogs and are interested in programming languages. The Hammer Principle results are likely from a similar population. Our MOOC data will be biased towards programmers who wish to learn more and improve their skills. Because the MOOC course was focused on web-based applications and was taught in Ruby, we expect that the population will be biased towards dynamic-language users. \n", "spans": [[0, 156], [157, 223], [224, 321], [322, 486]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": " This is a particular concern for the Hammer data, where we lack any sort of demographic information about respondents.\n", "spans": [[0, 120]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": " All three surveys are biased towards Americans and English-speakers. While these are important constituencies, they are not the full universe of programmers. \n", "spans": [[0, 69], [70, 160]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "More work is needed to check whether these results hold in other populations. We highlighted points of agreement between our data sources. The overlap in results across our surveys suggest our work does generalize to some extent.\n", "spans": [[0, 77], [78, 138], [139, 230]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "While many of our results are cross-validated with several data sets, some are not: different surveys asked different questions\n", "spans": [[0, 128]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "and different data sources include different metadata. \n", "spans": [[0, 56]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "The SourceForge data is our only source in Sections 3.2 and 3.3.\n", "spans": [[0, 65]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "The observations in Section \\ref{sec:motives} about the importance of legacy knowledge and code are based solely on the Slashdot data set, as are the results about language learning time in Section \\ref{sec:learning_speed}. In Section \\ref{sec:believe}, the MOOC-d survey is our only source for the observation that developers have divergent opinions about semantically-similar features.\n", "spans": [[0, 223], [224, 388]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "Going forwards, we believe it would be valuable to study professionals for whom programming is a significant but not primary job responsibility. For example, engineers and scientists often do not come from computing fields but are still important classes of programmers.\n", "spans": [[0, 144], [145, 271]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-validity.tex"}
+,
+{"errors": [], "paragraph": "\\section{Related Work}\n", "spans": [[0, 23]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Relatively few studies empirically analyze language adoption. Fewer focus on developer decisions, explore cross-language phenomena, or use large data sets.\n", "spans": [[0, 61], [62, 156]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Most similar to our work is that of Chen et al.~                                    .  They gathered or estimated data about 17 different languages in 1993, 1998, and 2003 and then performed regression. In contrast, we examine developer actions and decision making, in much greater scale and fidelity, and with the intent of identifying and quantifying influential factors.\n", "spans": [[0, 85], [87, 202], [203, 374]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Our analysis of SourceForge is a variant of software engineering literature in mining software repositories. For example, Parnin et al.~                       found that only 14 % of developers are responsible for incorporating generic classes into existing Java programs; most developers did not adopt this new language feature but a few became enthusiastic advocates.\n", "spans": [[0, 108], [109, 370]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Surveying programmers about Java (generics) and C++ (templates), we found differences in developer perception of the same phenomena. This may entail that, as was performed in our work, adoption should be studied across languages and, for individual developers, across projects. \n", "spans": [[0, 132], [133, 279]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Others also mine repositories to understand feature and the API adoption within an individual language or project.\n", "spans": [[0, 115]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Okur and Dig~                          show that, given a large library of parallel constructs, 90 % of usage is accounted for by 10 % of API methods. Only a limited portion of functionality has been adopted. \n", "spans": [[0, 150], [151, 210]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Likewise, Vitek et al. characterize the use of laziness in the R language~                    and dynamic code evaluation in JavaScript~                   . We examine different questions.\n", "spans": [[0, 22], [23, 156], [157, 189]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Perhaps the most relevant repository mining research is that of Karus and Gall who investigate the propensity of open source developers to use multiple languages~                             . \n", "spans": [[0, 194]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "They found significant overlap, particularly between closely related languages such as XML Schema and XSL. Their finding does not conflict with our result that transitions between languages are mostly related to popular and past experience (Figure~\\ref{fig:pll}). Consider the likely case that the programmer will switch from editing a WSDL file to editing a Java file: these two languages are often part of the same ecosystem. The probability of then writing PHP is closer to the overall popularity of PHP; PHP is outside of the ecosystem.\n", "spans": [[0, 106], [107, 263], [264, 427], [428, 541]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Many of the questions we answer fundamentally differ from those in the above repository mining studies~                                                                                          . Mining exposes the ``ground truth'' of development practices by focusing on artifacts.\n", "spans": [[0, 194], [195, 282]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "We use surveys to enable more direct inquiries to humans about their decision making process. Decision making has unclear physical artifacts and is subject to perception:  it is unclear how to understand decision making based on just typical repository information.  Furthermore, we use surveys to reveal extrinsic data that is not in typical software repositories, such as demographics.\n", "spans": [[0, 93], [94, 265], [267, 388]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Small-scale surveys have been used to answer some language use questions. Datero and Galup ran a web survey to examine differences in language knowledge by gender~                        . \n", "spans": [[0, 73], [74, 190]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "They found modest differences. For example, within a pool of professionals, male developers were more likely to know most languages,\n", "spans": [[0, 30], [31, 133]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "and COBOL was the only language with a pronounced female lean.\n", "spans": [[0, 63]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "A study at a single American university found no significant bias in the languages learned by undergraduates there, however~                       .\n", "spans": [[0, 149]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Not presented, our data shows that language selection is gender-neutral on a broader sample than the above work. \n", "spans": [[0, 114]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "However, we reported even stronger biases relating to age and organization size. The large scale of our survey has enabled regressing along many dimensions such as these.\n", "spans": [[0, 80], [81, 171]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Adoption decisions for domains beyond programming languages is studied by social psychologists, management science researchers, and other social scientists. \n", "spans": [[0, 158]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Several leading models of adoption arose over the years, such as the Technology Acceptance Model (TAM)~                     and the Unified Theory of Acceptance and Use of Technology (UTAUT)~                        .\n", "spans": [[0, 217]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "These causal, quantitative models relate factors such as perceived ease of use to ultimate adoption decisions. \n", "spans": [[0, 112]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Within a particular population, they predict much of the variance in an individual's desire to adopt a new technology~                           . Models that have been tuned for software development have been able to explain 63 % of the variance in developer intention to use object-oriented design techniques~                          .\n", "spans": [[0, 146], [147, 339]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Whereas that work aims to understand the                  factors behind technology adoption, we seek those that are                                           .\n", "spans": [[0, 161]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Generalizing the notion of adoption even further, Rogers' seminal\n", "spans": [[0, 66]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": " Diffusion of Innovation process is perhaps the most extensively studied model of adoption~             .\n", "spans": [[0, 106]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "A 2000 study shows that this model accurately described the process by which COBOL programmers at a large financial-services company learned the C language~                        .\n", "spans": [[0, 182]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "A subsequent single-organization study looks at the decision of whether to adopt a formal development methodology~                        .\n", "spans": [[0, 140]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "In both cases, the researchers ignored the intrinsic technical attributes of the language or methodology in question, and exclusively considered social factors: we examine both.\n", "spans": [[0, 178]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Furthermore, both cases use sample sizes much smaller than ours: 71 in the first case, and 128 in the latter. We provide a broader view by examining more factors and over wider scenarios.\n", "spans": [[0, 109], [110, 188]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "Finally, various histories of programming languages provide insight into the adoption of specific languages. \n", "spans": [[0, 110]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "For example, SIGPLAN sponsors a series of conferences on the history of programming languages (HOPL). The bulk of the papers are retrospectives by language designers on a particular language or related sequence of languages. In contrast, our work seeks to compare across languages and communities. Furthermore, HOPL retrospectives tend to include deep but anecdotal analysis by language designers, while we perform quantitative data analysis.\n", "spans": [[0, 101], [102, 224], [225, 297], [298, 443]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/sec-relwork.tex"}
+,
+{"errors": [], "paragraph": "\\section{Conclusions}\n", "spans": [[0, 22]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "This paper has looked at programming language adoption through the lenses of four separate research questions:\n", "spans": [[0, 111]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "large-scale statistics,  programmer decisions, language learning,\n", "spans": [[0, 66]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "and general beliefs about languages.\n", "spans": [[0, 37]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "These separate lines of inquiry support each other and paint a unified picture of adoption, with lessons for language designers, advocates, educators, and employers.\n", "spans": [[0, 166]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "In Section \\ref{sec:macro}, we asked what statistical patterns language adoption obeyed. We demonstrated three claims: First, popularity falls off steeply and then plateaus according to a power law. Second, the less popular a language, the more its popularity varies from niche to niche -- popular languages are consistently popular across domains of use, less-popular languages tend to have specific domains. Last, developers switch between languages based primarily on the domain and use of a language, not based on its linguistic features (syntax or semantics.)\n", "spans": [[0, 88], [89, 198], [199, 409], [410, 563], [563, 565]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Section \\ref{sec:motives} used survey data to show what factors influence developers when picking projects. We found that existing code, existing expertise, and open source libraries are the dominant drivers of adoption. This dovetails with the previous finding: libraries and code are niche-specific, and therefore this developer motivation helps explain the statistical findings above. The fact that developers typically do not consider particular language features important in choosing languages is likewise consonant with our statistical finding that developers do not tend to switch between semantically related languages. \n", "spans": [[0, 107], [108, 220], [221, 387], [388, 630]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "One consequence of these findings, taken together, is that language designers and advocates should emphasize libraries.\n", "spans": [[0, 120]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "It is easy to find anecdotal examples of libraries that had major influence on language adoption within niches, such as                for numerical programming in Python, and Ruby on Rails for web applications. %Do we want this parenthetical? -- ASR\n", "spans": [[0, 211], [212, 243], [244, 251]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Section \\ref{sec:learning} asked what causes developers to learn languages. We find that professional developers learn and forget languages throughout their careers, and that as a result, age has little to do with language choice. Some languages are easier to learn than others, and the self-reported ease with which developers learn does not seem closely related to the underlying simplicity of a language's formal semantics. Past education has moderate influence. Having been exposed to a language paradigm in school makes developers more likely to learn or remember similar languages later in their career.\n", "spans": [[0, 75], [76, 230], [231, 426], [427, 465], [466, 610]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "In both Sections~\\ref{sec:motives} and \\ref{sec:learning}, we found that developers demographics strongly differ in their language preferences. We make two observations relating to this occurrence. First, empirical analysis of programs written in the same language may need to check for sample bias due to developer demographics. Second,  ecological models may apply to language adoption as we hypothesized in earlier work~                        . Ecological models would predict that languages spread along demographic boundaries because the languages compete for them. Our data reveals that spread patterns exist, and that developers do indeed maintain a limited working set of languages.\n", "spans": [[0, 143], [144, 197], [198, 329], [330, 448], [449, 571], [572, 692]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Finally, we looked at developer feelings about languages when not tied to particular projects. Libraries still rate highly, supporting the results of Section \\ref{sec:motives}. \n", "spans": [[0, 94], [95, 178]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "We also found that developers have divergent feelings about semantically similar languages features. This suggests that experience and training shape developer language perception, underscoring the results in Section \\ref{sec:learning} about the importance of education.\n", "spans": [[0, 100], [101, 271]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "We find that developers consider ease and flexibility as more important than correctness.\n", "spans": [[0, 90]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Developers show significant unease and unenthusiasm for static typing. This suggests that today's type systems may err too much on the side of catching bad programs rather than enabling flexible development styles. Developers emphasize the benefit of types in understanding programs, suggesting one benefit researchers can build on. \n", "spans": [[0, 70], [71, 214], [215, 334]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Our results also help inform the broader computer science community. \n", "spans": [[0, 70]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Since language selection is tied to libraries, legacy, and familiarity, there are history-effects and therefore potentially multiple stable equilibria. \n", "spans": [[0, 153]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "This suggests that if today's popular languages can be replaced or improved, the changes will be durable.\n", "spans": [[0, 106]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Beyond the immediate results of this study, our experience has implications for future empirical research of programming languages, which is less actively practiced than in software engineering.\n", "spans": [[0, 195]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "We found that survey methods to be a powerful tool for exploring hypotheses about language adoption. We suspect these methods will be an increasingly valuable technique going forwards, especially given the popularity of the Internet and online courses. Likewise, we hope our data, and the methodology subtleties we encountered in gathering it, will support future analysis efforts. Of particular note are our large set of responses, tracking of respondent demographics, and solicitation of data about concrete languages and projects.\n", "spans": [[0, 100], [101, 252], [253, 381], [382, 534]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "We have examined basic questions about language adoption. Going forward, there are many more questions about the sociotechnical nature of programming languages~                        .\n", "spans": [[0, 57], [58, 186]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "\\section*{Acknowledgments}\n", "spans": [[0, 27]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "We thank David MacIver for providing the Hammer data, David Patterson and Armando Fox for the MOOC data, and SourceForge for theirs. Matt Torok, Philip Guo, and Jean Yang helped publicize our Slashdot survey and provided valuable advice. % our viral campaign with just a few yet impressively effective tweets, wall posts, and plus ones. \n", "spans": [[0, 132], [133, 237], [238, 338]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Adrienne Porter Felt and Julie Wu provided helpful methodological guidance. Anonymous reviewers significantly helped revise earlier drafts.\n", "spans": [[0, 75], [76, 140]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+,
+{"errors": [], "paragraph": "Some of our anonymous reviews were among the most careful and constructive ones that we have ever received.\n", "spans": [[0, 108]], "file": "../../../../spindles/bb/leo-personal/socio/oopsla13/oopsla13.tex"}
+]
