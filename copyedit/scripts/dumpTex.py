@@ -160,7 +160,7 @@ def spellcheckSentence(sent):
       yield (False, sent[i], [])
 
 tokExpandCommands = re.compile(r'\\(ref|subref|sched|caption|emph|textbf|title|section|subsection|subsubsection|subsubsubsection)')
-tokCommand = re.compile(r'(\\begin{tabular}.*?\\end{tabular})|(\\begin{lstlisting}.*?\\end{lstlisting})|(\\begin{grammar}.*?\\end{grammar})|(\\((\\\\)| |(([\xc4-\xfc]|\w|[:])*(\*|({.*?})|\[.*?\])*)))', re.DOTALL)
+tokCommand = re.compile(r'(\\begin{tabular}.*?\\end{tabular})|(\\begin{lstlisting}.*?\\end{lstlisting})|(\\begin{grammar}.*?\\end{grammar})|(\\((\\\\)| |(([\xc4-\xfc]|\w|[:])*(\*|({[^}]*})|\[[^]]*\])*)))', re.DOTALL)
 tokText = re.compile(ur'(\w|[\xc4-\xfc]|[\-\u2013\u2014\'-\+#])+|((\$)?[0-9]+(,|[\.xX+]|(\xb0|\\%))?)')
 tokNoise = re.compile(ur'(\xb0|\ufeff|\u200b|\$.*\$)|[${},\u2026:\n\r \t.!<>;`"\u2018\u2019\u201c\u201d\u0060\u00b4|*#=@&~\[\]\+\?\(\)/]|(%.*(\n|$))')
 
@@ -206,13 +206,17 @@ def words (paragraph, firstLine):
 
 tokParagraph = re.compile(r'(\n|\r)((\n|\r)+)')
 def paragraphs(file):
+
     fullFile = ""
     for line in file:
       fullFile = fullFile + line
-
-    includeLen= len('\\include')
+      
+    includeLen = len('\\include')
+    inputLen = len('\\input')
     def replaceNonInput (match):
       if '\\include' == fullFile[match.start():(match.start() + includeLen)]:
+        return fullFile[match.start():match.end()]
+      if '\\input' == fullFile[match.start():(match.start() + inputLen)]:
         return fullFile[match.start():match.end()]
       if tokExpandCommands.match(fullFile[match.start():match.end()]):
         return fullFile[match.start():match.end()]
@@ -245,7 +249,7 @@ def paragraphs(file):
 
 
 def inputs(paragraph):
-    return re.findall('nclude\\{(.*)}',paragraph)
+    return re.findall("\\\\(include|input)\{(.*)\}",paragraph)
 
 def paragraphsRec(fileName):
   fileObj = codecs.open(fileName, 'r', "utf-8")
@@ -254,7 +258,7 @@ def paragraphsRec(fileName):
     yield (fileName, l, p)
     includes = inputs(p)
     if len(includes) > 0:
-      for i in includes:
+      for (_,i) in includes:
         if dir == None:
           dir = os.path.dirname(fileName)
         includeFile = dir + '/' + i + '.tex'
