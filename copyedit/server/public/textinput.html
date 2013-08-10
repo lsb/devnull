@@ -1,6 +1,29 @@
 <html>
 <head>
-<title>Start page</title>
+<title>Proofer</title>
+<style>
+body { 
+	margin: 1em; 
+	max-width: 50em;
+
+}
+h1 {
+	background-color: white;
+	color: #9999FF;
+	margin: 0em;
+}
+#prompt { 
+	width: 100%; 
+	height: 80%; 
+}
+input {
+	font-size: 1.2em;
+}
+input.saving { border: 2px solid #F90; }
+
+input.on { border: 2px solid #090; }
+
+</style>
 <script src="jquery-1.7.1.min.js"></script>
 <script>
 	function $insertDB (elt, db) { db.pipe(D.swap($(elt)[0])); }
@@ -24,7 +47,9 @@ function pollForKey(key) {
 		 			throw out.error;
 		 		}
 		 		if (out.value) {
-		 			$('#continue').attr('disabled',false);
+					$('#submit').removeClass('saving');
+		 			$('#continue, #submit').attr('disabled',false);
+		 			$('#continue').addClass('on');
 		 		} else {
 		 			setTimeout(function () { pollForKey(key); }, 1000);
 		 		}
@@ -33,14 +58,26 @@ function pollForKey(key) {
 
 $(function () {
 
+	function checkPreprocess () {
+		$('#submit').attr('disabled',
+			$('#prompt').val() == 'Put text here. ' ? 'disabled' : false);
+	}
 
-	$('#submit').click(function () {
-		$('#continue').attr('disabled','disabled');
+
+	checkPreprocess();
+	$('#submit').attr('disabled', 'disabled');
+	$('#prompt').bind('input propertychange', checkPreprocess);
+
+
+	$('#submit').click(function () {		
+		$('#submit').addClass('saving');
+		$('#continue').removeClass('on');
+		$('#continue, #submit').attr('disabled','disabled');
 		$.ajax({
 			url: 'api/split-lines',
 			type: 'POST',
 			data: {text: $('#prompt').val()},
-			success: function(result) {			
+			success: function(result) {		
 				console.log('got key',result);
 				if (!result.hasOwnProperty('value')) {
 					console.error('did not get key from server');
@@ -60,16 +97,17 @@ $(function () {
 });
 
 </script>
-<style>
-#prompt { width: 100%; height: 80%; }
-</style>
 </head>
 <body>
+<h1 id="title">Proofer</h1>
 
-<input id="submit" value="process" type="button"/>
-<input id="continue" value="proceed" type="button"/>
+<div style="text-align: right">
+<input id="submit" value="Save file" type="button"/>
+<input id="continue" value="Continue" type="button"/>
+</div>
 <div>
-Put the text below. Take care to keep a sentence on the same line (do not <a href="http://en.wikipedia.org/wiki/Word_wrap#Soft_and_hard_returns">hard wrap</a>).
+<p>Input the text below. Keep a sentence on the same line (do not <a href="http://en.wikipedia.org/wiki/Word_wrap#Soft_and_hard_returns">&quot;hard wrap&quot;</a>).</p>
+<p>LaTeX should be fine.</p>
 <textarea id="prompt">Put text here. </textarea>
 </div>
 

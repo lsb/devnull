@@ -282,7 +282,7 @@ def dumpJson(paragraphs):
     else:
       count = True
     yield json.dumps(p)
-    sleep(0.3)
+    #sleep(0.3)
   yield ']'
 
 

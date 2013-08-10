@@ -3,7 +3,7 @@ var MAX_DOLLARS_BATCH = 7.50;
 var DOLLARS_PER_LETTER = 0.00007;
 var NUM_READERS = 4;
 
-var NONCE = 'vivek';
+var NONCE = 'vivek3am';
 
 
 var LINE_SPLITTER_LOC = "tcp://127.0.0.1:4242";
@@ -81,7 +81,7 @@ function makeBatch (sentences, batchID, putUrl) {
 function getBatch (jobID) {
     return batches[jobID];
 }
-function updateBatch(jobID, i, resultRaw) {
+function updateBatch(jobID, i, resultRaw, isFinal) {
 	var result = 
 		resultRaw
 			.filter(function (o) { 
@@ -90,9 +90,11 @@ function updateBatch(jobID, i, resultRaw) {
 
 	var time = new Date().getTime();
 	batches[jobID][i] = result;
-	batches[jobID].count++;
 	batches[jobID].ticks.push({i: i, time: time});
 	batches[jobID].lastTime = time;
+
+	if (isFinal) batches[jobID].count++;
+
 }
 
 
@@ -164,7 +166,7 @@ function fetchGet (putUrl, url, sent, sentenceI, jobID, dummyGenerator, cb) {
 
 	if (DEBUG) {
 		dummyGenerator(retry, function (out) { 
-			updateBatch(jobID, sentenceI, out); cb(out); });
+			updateBatch(jobID, sentenceI, out, true); cb(out); });
 	} else {
 		request(url, function (err, response, body) {
 			if (!response) {
@@ -180,12 +182,21 @@ function fetchGet (putUrl, url, sent, sentenceI, jobID, dummyGenerator, cb) {
 			} else if (response.statusCode == 502) {
 				console.log('502 (down), try again in ' + (delay / 1000) + ' seconds...', putUrl); 
 				retryAsync();
+			} else if (response.statusCode == 202) {
+				console.log('202, chugging along', putUrl, body);
+				try {
+					var out = JSON.parse(body);
+					updateBatch(jobID, sentenceI, out, false);				
+				} catch (e) {
+					console.log('exn', e);
+				}
+				retryAsync();
 			} else {
 				try {
 					var out = JSON.parse(body);
-					console.log('Result');
+					console.log(response.statusCode, 'Result');
 					console.log(body, sent);
-					updateBatch(jobID, sentenceI, out);
+					updateBatch(jobID, sentenceI, out, true);
 					cb(out);
 				} catch (exn) {
 					console.log('error', err);
@@ -202,7 +213,7 @@ function fetchGet (putUrl, url, sent, sentenceI, jobID, dummyGenerator, cb) {
 function askAsText (sent, batchID) {
 
 	var instructions = 
-	  'Proofread: describe mistakes in these sentences\n'
+	  'Proofread: describe spelling and grammar mistakes in these sentences\n'
 	+ [
 	  'Mistakes can be anything, such as spelling, grammar, awkward phrasing, and run-on sentences.',
 	  'Describe each mistake on a new line (multiple mistakes may appear in a sentence).',
@@ -273,7 +284,7 @@ function askAsTextStyle (sent, batchID) {
 	var instructions = 
 	  'Proofread: describe style mistakes in these sentences\n'
 	+ [
-	  'Is the phrasing awkward or unclear? Does it feel clunky?',
+	  'Is the phrasing awkward or unclear? Can it flow better?',
 	  'Describe each issue on a new line (a sentence may have multiple problems).',
 	  'Preface each issue by a key word in it and then what is the issue, such as "<hellllo> spelling mistake".',
 	  'If there are no issues, leave the box as "ok".',
@@ -292,6 +303,7 @@ function askAsTextStyle (sent, batchID) {
 	  '--- Answer -----',
 	  "<not> The negatives are confusing",
 	  '<,> Difficult to follow and communicating too many ideas',
+	  '<am> Passive voice',
 ////////////////
 	  '==========================',
 	  '',
@@ -412,6 +424,10 @@ function askAsTextRewrite (sent, batchID) {
 		
 		client.connect(LINE_SPLITTER_LOC);		
 		client.invoke(LINE_SPLITTER_NAME, req.body.text, function(error, res, more) {
+			if (!res) {
+				console.log('no res on server, skip', error, res, more); 
+				return;
+			}
 			var book = JSON.parse(res);
 			dict[key].paragraphs = book;
 			console.log('parsed ' + key + ' as ' + book.length + ' paragraphs');

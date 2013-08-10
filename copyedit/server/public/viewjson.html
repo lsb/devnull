@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Turk Error Finder</title>
+    <title>Proofer</title>
     <script src="jquery-1.7.1.min.js"></script>
     <script>
         function $insertDB (elt, db) { db.pipe(D.swap($(elt)[0])); }
@@ -358,7 +358,14 @@ function summarize () {
 	var onSentsJ = $("p.paragraph.on .real .on");
 	var onSents = onSentsJ.toArray().length;
 	var onWords = $('.word', onSentsJ).length;
-		
+	var pageCount = Math.round((10 * onWords / 500.0)) / 10;
+	var profPrice = '$' + (Math.round(100 * onWords * 0.013)/100) + '--$' + (Math.round(100 * onWords * 0.03)/100);
+
+	var MAX_DOLLARS_BATCH = 7.50; 
+	var DOLLARS_PER_LETTER = 0.0002;
+	var NUM_READERS = 4;
+	var ourPrice = '$' + Math.round(100 * ($('.word', onSentsJ).text().length * DOLLARS_PER_LETTER * NUM_READERS))/100;
+
 	var d = D.$span(
 		$(D.$h2('Paragraphs'))[0],
 		$(D.$span('On: ' + on.join(', '))).addClass('on')[0], 
@@ -368,7 +375,7 @@ function summarize () {
 			offSents.map(function (o) { return '(' + o.para + ':' + o.sent + ')'; })			
 					.join(', ')))
 			.addClass('off')[0],
-		D.$span('On (count): ' + onSents + ' lines, ' + onWords + ' words'));
+		D.$span('On (count): ' + onSents + ' lines, ' + onWords + ' words, ' + pageCount + ' pages for ' + ourPrice + ' vs. ' + profPrice));
 	$(d).attr('id','summary');	
 	$insertDB('#summary', Z.unit(d));
 	
