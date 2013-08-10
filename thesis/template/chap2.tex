@@ -840,11 +840,14 @@ In summary, our attribute grammar formalism was sufficiently flexible to specify
 
 
 \section{Related Work}
-\begin{itemize}
-\item loose formalisms: browser impl (C++), d3 (JavaScript), latex formulas (ML)
-\item restricted formalisms: cassowary and hp, UREs
-\item AGs: html tables
-\end{itemize}
+This chapter relates to two broad bodies of work: declarative languages in general and constraint-based specification of layout in particular. 
 
+Our techniques for declarative specification descend from attribute grammar literature. Attribute grammars were originally proposed as a formalism for describing language semantics by Knuth and Wegner~\cite{??} and have since been applied to tasks such as developing Pascal compilers and implementing spreadsheet languages. \cite{??} overviews many such applications. Expressive extensions such as an object system and higher-order behavior have been previously proposed~\cite{??}. Our challenge is in designing extensions that can express our computations yet are restricted enough to support the parallelization techniques shown in the subsequent chapters. We show how to translate our extensions such as the class system into more canonical attribute grammars and thereby address the issue.
+
+Canonical approaches to loops in attribute grammars would encode a list of children as a nested subtree. It may be possible to statically infer the loops from such an encoding, but we avoided the problem by introducing a declarative loop construct. It resembles the uniform recurrence relations described by \cite{??} and \cite{??}. We add the ability to escape a synthesized loop mid-iteration in order to enable global tree traversals involving recursive calls within a loop. 
+
+Declarative layout has been a goal of computer science as early as Englebart and Sutherland's Sketchpad from the ''Mother of all demos'' in 1963. Recent examples include ??'s support of human disability constraints and ??'s of physical constraints. Popular systems such as \LaTeX~\cite{??} and CSS~\cite{??} provide significant high-level control for common design tasks. However, the declarative meaning of the constraints is unknown. This lack has challenged making multiple conformant implementations and correctly reasoning about them for purposes such as optimization and tool building.  In practice, layout language designers manually implement and reason about their languages.
+
+We are aware of several especially significant attempts for declarative definitions of layout that support automated reasoning. First, ?? specify the MathML layout language in ML. Their description helps decompose the specification but, due to the generality of ML, they achieve few provable properties. The specification of a non-automatic HTML table layout by ~~ is similarly interesting in that it relies upon dynamic higher-order attribute grammars. Finally, ~~ et al built the Cassowary linear constraint solver and provide the language of linear constraints as the layout language. The restricted formalism enables significant automated reasoning, though as found by \cite{??}, it cannot encode typical features such as line wrapping. In contrast, we supported reasoning about much of the core CSS layout language and only escaped the system to guarantee the correctness of the occasional use of directed acyclic graphs.
 
 
