@@ -10,8 +10,12 @@
 
 ### INSTALLATION
 ####
-## see virtualenv
+## use virtualenv  (requirements.txt)
 ####
+## may  need nltk magic:
+#optional: sudo pip install -U numpy
+#sudo pip install -U pyyaml nltk
+#sudo python -m nltk.downloader -d /usr/share/nltk_data punkt
 
 
 
