@@ -323,7 +323,7 @@ function clearSentenceState (d) {
 function disableShortSentences () {
 	$("#book .sentence").map(function () {
 		var words = $('.word', this).text();
-		if (words.length < 50) {
+		if ( (words.length < 20) || ($('.word', this).filter(function () { return $(this).text().trim() != ''; }).length < 4)) {
 			$(this).removeClass('on');
 			$(this).addClass('off');
 			console.log('disabling short sentence', words);
@@ -362,9 +362,11 @@ function summarize () {
 	var profPrice = '$' + (Math.round(100 * onWords * 0.013)/100) + '--$' + (Math.round(100 * onWords * 0.03)/100);
 
 	var MAX_DOLLARS_BATCH = 7.50; 
-	var DOLLARS_PER_LETTER = 0.0002;
-	var NUM_READERS = 4;
-	var ourPrice = '$' + Math.round(100 * ($('.word', onSentsJ).text().length * DOLLARS_PER_LETTER * NUM_READERS))/100;
+	var DOLLARS_PER_SENTENCE = 0.01;
+	var NUM_READERS = 1;
+	
+
+	var ourPrice = '$' + (Math.round(100 * onSentsJ.length * DOLLARS_PER_SENTENCE * NUM_READERS)/100);
 
 	var d = D.$span(
 		$(D.$h2('Paragraphs'))[0],
@@ -488,7 +490,23 @@ function bindDOM() {
 	
 	var docP = jsonP.pipe(function (arr) {
 
-		var paragraphs = arr.map(function (o, i) { return {m: o, v: formatParagraph(o, i)}; });
+		var paragraphs = 
+			arr
+				.map(function (p) { //fuse short sentence with previous 
+				
+					p.spans = p.spans.reduce(function (acc, span) { 
+						if ((acc.length > 0) && (span[1] - span[0] < 30)) {
+							acc[acc.length - 1] = [acc[acc.length - 1][0], span[1]];
+						} else {
+							acc.push(span);
+						}
+						return acc; 
+					}, 
+					[]);
+					
+					return p;
+				}) 
+				.map(function (o, i) { return {m: o, v: formatParagraph(o, i)}; });
 
 		//add file breaks
 		var pages = paragraphs.reduce(function (acc, o) {
@@ -770,7 +788,7 @@ function bindDOM() {
 	
 	//based on DOM state
 	//select on sentences from on paragraphs
-	function buildQuery(putURL, getURL) {
+	function buildQuery(putURL, getURL, sentenceCost) {
 		
 		batchIDs[putURL]++;		
 				
@@ -804,13 +822,16 @@ function bindDOM() {
     			});
     		}));
     	
-    	return {post: {sentences: flatSentences, batchID: batchIDs[putURL]}, 
+    	return {post: {
+    				sentences: flatSentences, 
+    				batchID: batchIDs[putURL],
+    				sentenceCost: sentenceCost}, 
     			paraSents: paraSents};
 	}
 	
 	
-	function postAndGet(putURL, getURL, cb) {
-		var query = buildQuery(putURL, getURL);    	
+	function postAndGet(putURL, getURL, sentenceCost, cb) {
+		var query = buildQuery(putURL, getURL, sentenceCost);    	
     	console.log('sending', query.post.sentences);		
     	$('.real .sentence.on')
     		.map(function () { clearSentenceState(this); });
@@ -836,7 +857,12 @@ function bindDOM() {
 	
 	function bindQueryButton(id, putter, getter) {
 		batchIDs[putter] = 0;
-		$(id).click(function () { postAndGet(putter, getter, function () {}); });    		
+		$(id).click(function () { 
+			postAndGet(
+				putter, 
+				getter, 
+				parseFloat($('#price').val()),
+				function () {}); });    		
 	}
     
     bindQueryButton($('#querySpell'), 'turkit', 'improvements');
@@ -870,6 +896,8 @@ function bindDOM() {
     	});
 		event.stopPropagation();
     }); 
+    
+    $('#price').click(function (event) { event.stopPropagation(); });
     
     $('.sender').click(function (event) {
 		launchTimer();
@@ -1079,7 +1107,6 @@ $(function () {
 function rebuildScroll () {
 
 	$('#book .comment .flaggers').map(function (i) {
-		console.warn(i);
 		var count = $('.count', this);
 		if (count.length == 0) {
 			$(this).prepend('<span class="count"></span>');
@@ -1225,6 +1252,10 @@ window.addEventListener('load',bindDOM);
 		<input class="sender" id="querySpell" type="button" value="proofread!"/>
 		<input class="sender" id="queryStyle" type="button" value="style check!"/>
 		<input class="sender" id="queryRewrite" type="button" value="rewrite"/>
+		<span style="margin-left: 0.5em">
+			$/sentence: 
+			<input type="text" id="price"  min="0" value="0.020" style="width:4em"/>
+		</span>
 	  </div>
 
 

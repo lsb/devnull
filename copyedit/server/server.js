@@ -1,9 +1,42 @@
 var DEBUG = false;
 var MAX_DOLLARS_BATCH = 7.50; 
-var DOLLARS_PER_LETTER = 0.00007;
-var NUM_READERS = 4;
+var NUM_READERS = 1;
+var CUSTOM_PAY = true
+var CUSTOM_PER_SENTENCE = 0.02;
 
-var NONCE = 'vivek3am';
+// (pay per hour / (num words in that time)) / lettersPerWord
+var API_DOLLARS_PER_LETTER = (4.00/(225 * 60)) / 5.1;
+function apiTextEstimate(txt) {  //to nearest cent, upwards
+	var base = txt.length * API_DOLLARS_PER_LETTER;
+	return Math.ceil(base * 100) / 100; 
+}
+
+function inflatedCostMaker(c) {
+	return function (txt) { return inflatedCost(txt, c); };
+}
+
+function inflatedCost (txt, cost) {
+
+	return cost; //per sentence
+
+/*
+	var originalCost = apiTextEstimate(txt);
+
+	//sentenceCost: 0.000037
+	//CUSTOM_PERCENT_INCREASE: 2.00x 
+	//===>
+	//base: 0.00001
+	//multiplier: (3.7 * 2.0) => 7
+	//------
+	//result: 0.00001 * 7 = 0.00007
+	
+	var base = Math.pow(10, -1 * (1 + Math.floor(-1 * Math.log(originalCost) / Math.LN10))); 
+	var multiplier = Math.round(CUSTOM_PERCENT_INCREASE * originalCost / base);
+	return base * multiplier;
+*/	
+}
+
+var NONCE = 'iamok';
 
 
 var LINE_SPLITTER_LOC = "tcp://127.0.0.1:4242";
@@ -12,7 +45,8 @@ var LINE_SPLITTER_NAME = "hello";
 //=================
 /*
 	/api/turkit POST 
-		{sentences: [ string ], 
+		{sentences: [ string ],
+		 sentenceCost : number, //$ per sentence , optional 
 		 batchID: int}   //nonce
 		-> {jobID: int}
 	/api/improvements?jobID=int GET
@@ -210,7 +244,14 @@ function fetchGet (putUrl, url, sent, sentenceI, jobID, dummyGenerator, cb) {
 }
 
 
-function askAsText (sent, batchID) {
+function maybeAddCost(sent, sentenceCost, obj) {
+	if (CUSTOM_PAY) {
+		obj.cost = Math.round(100 * sentenceCost);
+		console.log('Inflating sentence cost:', Math.round(100*apiTextEstimate(sent)), ' cents -->', obj.cost, ' cents');		
+	}
+	return obj;
+}
+function askAsText (sent, batchID, sentenceCost) {
 
 	var instructions = 
 	  'Proofread: describe spelling and grammar mistakes in these sentences\n'
@@ -244,7 +285,7 @@ function askAsText (sent, batchID) {
 
 	var format = "(^ok$)|(^(<([^>]+)>[^\\n]+)(\\n+<([^>]+)>[^\\n]+)*\\n*$)";
 
-	return qs.stringify({
+	return qs.stringify(maybeAddCost(sent, sentenceCost, {
 //				cost: 2,
 				distinctUsers: NUM_READERS,
 				instructions: instructions,
@@ -274,12 +315,12 @@ function askAsText (sent, batchID) {
 							 match: {Inexact: '^[^o]|(o[^k])|(ok.+)'}}
 						],
 						percentCorrect: 100})						
-			});
+			}));
 }
 
 
 
-function askAsTextStyle (sent, batchID) {
+function askAsTextStyle (sent, batchID, sentenceCost) {
 
 	var instructions = 
 	  'Proofread: describe style mistakes in these sentences\n'
@@ -313,7 +354,7 @@ function askAsTextStyle (sent, batchID) {
 
 	var format = "(^ok$)|(^(<([^>]+)>[^\\n]+)(\\n+<([^>]+)>[^\\n]+)*\\n*$)";
 
-	return qs.stringify({
+	return qs.stringify(maybeAddCost(sent, sentenceCost, {
 //				cost: 2,
 				distinctUsers: NUM_READERS,
 				instructions: instructions,
@@ -343,11 +384,11 @@ function askAsTextStyle (sent, batchID) {
 							 match: {Inexact: '^[^o]|(o[^k])|(ok.+)'}}
 						],
 						percentCorrect: 100})						
-			});
+			}));
 }
 
 
-function askAsTextRewrite (sent, batchID) {
+function askAsTextRewrite (sent, batchID, sentenceCost) {
 
 	var instructions = 
 	  'Rewrite each sentence to make it better\n'
@@ -362,7 +403,7 @@ function askAsTextRewrite (sent, batchID) {
 	  'Thank you for helping!'
 	].join('\n');
 
-	return qs.stringify({
+	return qs.stringify(maybeAddCost(sent, sentenceCost, {
 //				cost: 2,
 				distinctUsers: NUM_READERS,
 				instructions: instructions,
@@ -389,7 +430,7 @@ function askAsTextRewrite (sent, batchID) {
 							 match: {Inexact: '^([^o]|(o[^k])|(ok.+))'}}}
 						],
 						percentCorrect: 100})						
-			});
+			}));
 }
 
 
@@ -459,6 +500,11 @@ function askAsTextRewrite (sent, batchID) {
 function makePut(putUrl, asker, dummyGet) {
 	app.post('/api/' + putUrl, function (req, res) {
 		var sents = req.body.sentences ? req.body.sentences : [];
+		
+		if (!req.body.hasOwnProperty('sentenceCost')) {
+			console.log('PUT did not provide a sentenceCost, using default of ' + CUSTOM_PER_SENTENCE);
+		}
+		var sentenceCost = req.body.hasOwnProperty('sentenceCost') ? req.body.sentenceCost : CUSTOM_PER_SENTENCE;
 	
 		console.log('PUT batchID', req.body.batchID);
 		for (var i = 0; i < Math.min(sents.length, 5); i++) {
@@ -466,7 +512,11 @@ function makePut(putUrl, asker, dummyGet) {
 			console.log('sample',i, sents[i]);
 		}
 			
-		var estCost = sents.join(',').length * DOLLARS_PER_LETTER * NUM_READERS;
+		var estCost = 
+			NUM_READERS
+			* sents
+			  .map(CUSTOM_PAY ? inflatedCostMaker(sentenceCost) : sentenceCost)
+			  .reduce(function (acc, v) { acc + v; }, 0);						
 		if (estCost >  MAX_DOLLARS_BATCH) {	
 			console.error('Too big a job!');
 			console.error('Estimated cost', estCost);
@@ -486,7 +536,7 @@ function makePut(putUrl, asker, dummyGet) {
 		
 		sents.map(function (sent, idx) {
 			console.log('asking for', sent);
-			var url = 'http://vivam.us/human/ask?' + asker(sent, batchID);
+			var url = 'http://vivam.us/human/ask?' + asker(sent, batchID, sentenceCost);
 			console.log('url', url);	
 			if (DEBUG) {
 				console.log("Fake PUT");
