@@ -1,7 +1,13 @@
 var DEBUG = false;
 var MAX_DOLLARS_BATCH = 7.50; 
 var DOLLARS_PER_LETTER = 0.00007;
-var NUM_READERS = 3;
+var NUM_READERS = 4;
+
+var NONCE = 'vivek';
+
+
+var LINE_SPLITTER_LOC = "tcp://127.0.0.1:4242";
+var LINE_SPLITTER_NAME = "hello";
 
 //=================
 /*
@@ -22,6 +28,16 @@ var NUM_READERS = 3;
 			batchID: int, //user id
 			repollDelayMS: int}; //server delay in ms between batches, use for polling
 		}
+
+	/api/split-lines  
+		POST  {text: ... } -> {key: str}
+		GET {key: str} -> {error: str} | {value: false U [ ... paragraph]}
+		   (false if not parsed yet)
+		
+
+  Requires ../serverSplitter/dumpTex.py running
+  (LINE_SPLITTER_LOC)
+  (LINE_SPLITTER_NAME)
 		 
 */
 //=================
@@ -31,6 +47,9 @@ var request = require("request");
 var app = express();
 app.enable('trust proxy'); //for nginix etc..
 var qs = require('querystring');
+ 
+var zerorpc = require("zerorpc");
+ 
 
 app.use(express.static(__dirname + '/public'));
 app.use(express.bodyParser());
@@ -152,14 +171,14 @@ function fetchGet (putUrl, url, sent, sentenceI, jobID, dummyGenerator, cb) {
 				console.log('no response (offline?), try again in ' + (delay / 1000) + ' seconds...');
 				retryAsync();
 			} else if (response.statusCode == 404) {
-				console.log('404, try again in ' + (delay / 1000) + ' seconds...');
+				console.log('404, try again in ' + (delay / 1000) + ' seconds...', putUrl, body);
 				retryAsync();
 			} else if (response.statusCode == 412) {
-				console.log('412, ERROR: need to do a PUT before a GET');
+				console.log('412, ERROR: need to do a PUT before a GET', putUrl);
 				//die
 				//TODO: tell client?
 			} else if (response.statusCode == 502) {
-				console.log('502 (down), try again in ' + (delay / 1000) + ' seconds...'); 
+				console.log('502 (down), try again in ' + (delay / 1000) + ' seconds...', putUrl); 
 				retryAsync();
 			} else {
 				try {
@@ -179,33 +198,6 @@ function fetchGet (putUrl, url, sent, sentenceI, jobID, dummyGenerator, cb) {
 	} //end if DEBUG
 }
 
-
-
-//DEPRECATED
-function askAsRadio (sent) {
-	return qs.stringify({
-				distinctUsers: 2,
-				instructions: //task description
-					'Proofread: at first glance, which sentences have spelling or grammar mistakes?\nAnswer for each sentence and ignore formatting hints such as "\\section{Chapter name}" and "\\ref{??}"', 
-				question: 
-					JSON.stringify({Radio: {
-						questionText: '"' + sent + '"',
-						chooseOne: ['mistake','ok']
-					}}),
-				knownAnswerQuestionsIgnore: JSON.stringify({
-					answeredQuestions: [
-						{question: 
-							{Radio: {questionText: "The schedule is combined with the attribute grammar to form an intermediate representation, and different code generators target different backends such as JavaScript, OpenCL, and C++.",
-									 chooseOne: ['mistake','ok']}},
-						answer: 'ok'}, 
-						{question: 
-							{Radio: {questionText: "Many of the difficulty in computer science stem from handling loops.",
-									 chooseOne: ['mistake','ok']}},
-						 answer: 'mistake'}], //difficulties => difficulty
-					percentCorrect: 100
-				})
-			});
-}
 
 function askAsText (sent, batchID) {
 
@@ -253,7 +245,7 @@ function askAsText (sent, batchID) {
 						regex: format
 					}})					
 				,	
-				uniqueAskId: '' + batchID,
+				uniqueAskId: NONCE + batchID,
 				knownAnswerQuestions:
 					JSON.stringify({
 						answeredQuestions: [
@@ -321,7 +313,7 @@ function askAsTextStyle (sent, batchID) {
 						regex: format
 					}})					
 				,	
-				uniqueAskId: '' + batchID,
+				uniqueAskId: NONCE + batchID,
 				knownAnswerQuestions:
 					JSON.stringify({
 						answeredQuestions: [
@@ -366,27 +358,86 @@ function askAsTextRewrite (sent, batchID) {
 					JSON.stringify({
 					  ConstrainedText: {
 						questionText: '"' + sent + '"',
-						defaultText: 'perfect',
+						defaultText: 'ok',
 					}})					
 				,	
-				uniqueAskId: '' + batchID,
+				uniqueAskId: NONCE + batchID,
 				knownAnswerQuestions:
 					JSON.stringify({
 						answeredQuestions: [
 							{question: {
 								ConstrainedText:{
 									questionText: 'Lomonosov sent me to Sweden.',
-									defaultText: 'perfect'}},
-							 match: {Exact: 'perfect'}},
+									defaultText: 'ok'}},
+							 match: {Exact: 'ok'}},
 							{question: {
 								ConstrainedText:{
 									questionText: 'Derutra asked me to find as steamer whose dimensions allowed through the locks.',
-									defaultText: 'perfect'},
-							 match: {Inexact: '^[^o]|(o[^k])|(ok.+)'}}}
+									defaultText: 'ok'},
+							 match: {Inexact: '^([^o]|(o[^k])|(ok.+))'}}}
 						],
 						percentCorrect: 100})						
 			});
 }
+
+
+(function () {
+//	recentKeys = []
+	dict = {}
+	
+	var name = '/api/split-lines';
+	
+	app.post(name, function (req, res) {
+	
+		if (!req.body.text) {
+			var err = 'POST split-lines expected field text';
+			console.log(err);
+			res.send({error: err});
+			return;
+		} else if (req.body.text.length > 100000) {
+			var err = 'POST split-lines text too long';
+			console.log('characters: ' + req.body.text.length, err);
+			res.send({error: err});		
+			return;
+		}
+
+		var key = false;
+		while ((!key) || dict.hasOwnProperty(key))
+			key = 'key' + Math.round(Math.random() * 100000000);
+		dict[key] = {text: req.body.text, paragraphs: false};
+		
+		res.send({value: key});		
+		
+		var client = new zerorpc.Client();
+		
+		client.connect(LINE_SPLITTER_LOC);		
+		client.invoke(LINE_SPLITTER_NAME, req.body.text, function(error, res, more) {
+			var book = JSON.parse(res);
+			dict[key].paragraphs = book;
+			console.log('parsed ' + key + ' as ' + book.length + ' paragraphs');
+			//console.log('num paragraphs', JSON.parse(res).length);
+		});		
+	});
+	
+	app.get(name, function (req, res) {
+		var key = req.query.key; 
+		if (!key) {
+			var err = 'GET ' + name + ' requires key field';
+			res.send(JSON.stringify({error: err}));
+			console.log(err);
+			return;
+		}
+		if (!dict.hasOwnProperty(key)) {
+			var err = 'GET ' + name + ' could not locate key';
+			res.send(JSON.stringify({error: err}));
+			console.log(err);
+			return;		
+		}
+				
+		res.send(JSON.stringify({value: dict[key].paragraphs}));		
+	});
+}());
+
 
 
 function makePut(putUrl, asker, dummyGet) {
@@ -465,6 +516,8 @@ function makeGet(getUrl) {
 		res.send(JSON.stringify(out));	
 	}); 
 }
+
+
 
 makePut('turkit', askAsText, dummyGet);
 makeGet('improvements');

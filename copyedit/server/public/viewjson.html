@@ -270,15 +270,27 @@ p.paragraph .comment {
 	scrollbar: invisible;
 }
 </style>
+
 <style type="text/css" media="print">
 .correction {
 	display: block;
 }
+
+p.paragraph { display: none; }
+p.paragraph.error { display: block; }
+p.paragraph.error:before { content: '...' }
+p.paragraph.error .badSentence { color: black; font-weight: bold}
+
 p.paragraph .comment {
 	display: block;
 	padding-left: 1em;
 	padding-right: 1em;
+}
+p.paragraph .comment .correction.turkit {
 	color: red;
+}
+p.paragraph .comment .correction.turkitStyle, p.paragraph .comment .correction.turkitEdit {
+	color: blue;
 }
 #corrections {
 	display: none;
@@ -326,38 +338,37 @@ function summarize () {
 	var on = [];
 	var off = [];
 	$("p.paragraph").map(function (i, d) {
-		if ($(this).attr('class').indexOf('off') == -1) {
-			on.push(i);
-		} else {
-			off.push(i);
-		}
+		($(this).hasClass('off') ? off : on).push(i);
 	});
 	
 	//sentences
 	var paras = $("p.paragraph").map(function (i, d) { return [[i,this]]; })
 	var offSents = [];
-	Array.prototype.filter.call(paras, 
-		function (arr) { var d = arr[1]; return $(d).attr('class').indexOf('off') == -1; })
+	paras.toArray()
+		.filter(function (arr) { return !$(arr[1]).hasClass('off'); })
 		.map(function (arr) {
 			var paragraphId = arr[0]; var paragraphD = arr[1];
 			$('.real .sentence', paragraphD).map(function (i, d) {
-				if ($(this).attr('class') && $(this).attr('class').indexOf('off') != -1) {
+				if ($(this).hasClass('off')) {
 					offSents.push({para: paragraphId, sent: i});
 				}
 			});
 		});
-	var onSents = $("p.paragraph.on .real .on").toArray().length;
+		
+	var onSentsJ = $("p.paragraph.on .real .on");
+	var onSents = onSentsJ.toArray().length;
+	var onWords = $('.word', onSentsJ).length;
 		
 	var d = D.$span(
 		$(D.$h2('Paragraphs'))[0],
-		$(D.$span('On: ' + on.join(', '))).attr('class','on')[0], 
-		$(D.$span('Off: ' + off.join(', '))).attr('class','off')[0],
+		$(D.$span('On: ' + on.join(', '))).addClass('on')[0], 
+		$(D.$span('Off: ' + off.join(', '))).addClass('off')[0],
 		$(D.$h2('Sentences'))[0],
 		$(D.$span('Off: ' + 
 			offSents.map(function (o) { return '(' + o.para + ':' + o.sent + ')'; })			
 					.join(', ')))
-			.attr('class','off')[0],
-		D.$span('On (count): ' + onSents));
+			.addClass('off')[0],
+		D.$span('On (count): ' + onSents + ' lines, ' + onWords + ' words'));
 	$(d).attr('id','summary');	
 	$insertDB('#summary', Z.unit(d));
 	
@@ -406,23 +417,23 @@ function summarize () {
 		  } else {
 		  	var isSpellingError = o.errors[0].e == 'spell';
 		  	var lbl = $(D.$span(isSpellingError ? "Spelling:" : "Grammar:"))
-		  				.attr('class',isSpellingError ? "lblSpell" : "lblGram")[0];		  			  	
+		  				.addClass(isSpellingError ? "lblSpell" : "lblGram")[0];		  			  	
 		    resP = D.$p.apply({}, [textD, lbl].concat(o.errors.map(function (err) {
 		    	if (err.e == "spell") {
 		    		var elt = 		    		
 		    			err.s.length > 0 ?
 		    			 	D.$span(' ' + err.i[4], D.$span( D.$span.apply({}, err.s) ))
 		    			 	: D.$span(' ' + err.i[4])
-		    		return $(elt).attr('class','spell')[0];		    		        
+		    		return $(elt).addClass('spell')[0];		    		        
 		    	} else if (err.e == "gram") {
 		    		var sentence = err.s.split(/\n/).shift().trim();
 		    		var messageD = D.$pre(err.s.substr(sentence.length));//output.map(function (line) { return D.$pre(line); }));
 		    		sentenceD = D.$span(sentence.substring(0,20) + '...');
 		    		
-		    		$(sentenceD).attr('class','gramSentence');
-		    		$(messageD).attr('class','gramMessage');
+		    		$(sentenceD).addClass('gramSentence');
+		    		$(messageD).addClass('gramMessage');
 		    		
-		    		return $(D.$div(sentenceD, messageD)).attr('class','gram')[0];
+		    		return $(D.$div(sentenceD, messageD)).addClass('gram')[0];
 		    	} else {
 		    		throw 'unknown err: ' + err.e;
 		    	}
@@ -431,12 +442,10 @@ function summarize () {
 		
 		return $(resP)
 			.attr('id', 'paragraph_' + i)
-			.attr('class','paragraph on')
+			.addClass('paragraph')
+			.addClass('on')
 			.click(function(){
 			  var toggleOn = toggle(this);
-			  //var toggleOn = $(this).attr('class').indexOf('off') == -1 ? true : false;
-			  //toggleOn = !toggleOn;
-			  //$(this).attr('class', 'paragraph' + (toggleOn ? '' : ' off'));
 			  summarize();
 		})[0];
 	}
@@ -446,13 +455,29 @@ function summarize () {
 
 	
 function bindDOM() {	
-	var BASE_URL = document.URL.replace("#","").replace("viewjson.html","") + "/";
-	//var FILE =  'serviceHalf.json';
-	//var FILE =  'out2.json';
-	//var FILE = 'thesis.json';
-	var FILE = 'socioplt.json';
+
+	var BASE_URL = document.URL.replace("#","").replace(/viewjson.html.*/,"");
+
+	var HARDCODE_FILE = false;
+	var FILE;
+	if (HARDCODE_FILE) {
+		//FILE =  'serviceHalf.json';
+		//FILE =  'out2.json';
+		//FILE = 'thesis.json';
+		//FILE = 'socioplt.json';
+		//FILE = 'vivek.json';	
+	} else {
+		FILE = 'api/split-lines?key=' + location.href.split('?key=')[1];	
+	}
+
 	
-	var jsonP = Z.unit(BASE_URL + FILE).pipeAsync(D.xhrJSON);//.print('== jsonP');
+	var jsonP = Z.unit(BASE_URL + FILE).pipeAsync(D.xhrJSON).pipe(function (o) {
+		console.log('got file', o);
+		if (HARDCODE_FILE) return o;
+		else {
+			return o.value; //TODO error handling
+		}
+	});//.print('== jsonP');
 	
 	var docP = jsonP.pipe(function (arr) {
 
@@ -476,9 +501,6 @@ function bindDOM() {
 				
 				$(lastFileD).click(function () {
 				    var toggleOn = toggle(this);
-			  		//var toggleOn = $(this).attr('class').indexOf('off') == -1 ? true : false;
-					//toggleOn = !toggleOn;
-					//$(this).attr('class','file' + (toggleOn ? '' : ' off'));
 					var rSib = this.nextSibling;
 					while (rSib) {
 						if ($(rSib).hasClass('paragraph')){							
@@ -675,7 +697,7 @@ function bindDOM() {
 		 		if (out.error) console.error('Bad get', out.error);		 			
 
 		 		$('#resultCount').text(out.count + ' / ' + flatSentences.length + ' done');
-		 		$('#title').html('PreProof <small>' + out.count + ' / ' + flatSentences.length + ' sentences checked</small>');		 		
+		 		$('#title').html('Proofer <small>' + out.count + ' / ' + flatSentences.length + ' sentences checked</small>');		 		
 		 		
 		 		if (!out.error && (true || out.count == flatSentences.length)) {		 				 		
 //		 			if (out.count == flatSentences.length)
@@ -685,8 +707,6 @@ function bindDOM() {
     					paraSents.map(function () { return this.nodes; }));
 		 			
 		 			out.sentences.map(function (ratings, i) {
-
-						var prevRatings = 0;
 
 		 				if (!ratings) {
 		 					//console.log('nothing for',i);
@@ -895,12 +915,14 @@ $(function () {
 		var w = cnvJ.width();
 		ctx.clearRect(0, 0, w, cnvJ.height());
 		var matches = $("#corrections p");
+		
+		$('.badSentence', paras).parent().parent().addClass('error');
+
 		paras.map(function (i, e) {
 			//skip
 			if (matches.length == 0 
 				|| $(matches[i]).hasClass('off')
 				|| !$(this).visible(true)) {				
-					$(this).removeClass('error');			
 					return;	
 			}
 						
@@ -1049,6 +1071,20 @@ $(function () {
 
 function rebuildScroll () {
 
+	$('#book .comment .flaggers').map(function (i) {
+		console.warn(i);
+		var count = $('.count', this);
+		if (count.length == 0) {
+			$(this).prepend('<span class="count"></span>');
+			count = $('.count', this);
+		}
+		count.text((i + 1) + ': ');
+	});
+	
+	//#book .comment .flaggers
+	// maybe .count 
+
+
 	$('#fixes').html('');
     var paragraphs = $('#book p.paragraph');
 	var nodes = $.map(paragraphs, function (para) {
@@ -1171,7 +1207,7 @@ window.addEventListener('load',bindDOM);
   </head>
   <body>
   <div id="header" style="max-height: 20em; overflow: auto">
-	  <h1 id="title">PreProof</h1>
+	  <h1 id="title">Proofer</h1>
 	  <div>	
 		<input id="toggleAll" type="button" value="toggle all"/>
 		<input id="short" type="button" value="disable short"/>

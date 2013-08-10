@@ -1,0 +1,77 @@
+<html>
+<head>
+<title>Start page</title>
+<script src="jquery-1.7.1.min.js"></script>
+<script>
+	function $insertDB (elt, db) { db.pipe(D.swap($(elt)[0])); }
+</script>
+<script src="promptjs/p.js"></script>
+<script src="promptjs/pc.js"></script>
+<script src="promptjs/p_tests.js"></script>
+<script>
+
+
+function pollForKey(key) {	
+	$.get('api/split-lines?key=' + key)
+		 .done(function (data) {
+		 		var out = JSON.parse(data);
+		 		if (!out.hasOwnProperty('value') && !out.hasOwnProperty('error')) {
+		 			console.error("unhandled server response for split-lines get", key, out);
+		 			throw "Bad get";
+		 		}
+		 		if (out.hasOwnProperty('error')) {
+		 			console.error("split-lines get error", out.error);
+		 			throw out.error;
+		 		}
+		 		if (out.value) {
+		 			$('#continue').attr('disabled',false);
+		 		} else {
+		 			setTimeout(function () { pollForKey(key); }, 1000);
+		 		}
+		 	});
+}
+
+$(function () {
+
+
+	$('#submit').click(function () {
+		$('#continue').attr('disabled','disabled');
+		$.ajax({
+			url: 'api/split-lines',
+			type: 'POST',
+			data: {text: $('#prompt').val()},
+			success: function(result) {			
+				console.log('got key',result);
+				if (!result.hasOwnProperty('value')) {
+					console.error('did not get key from server');
+					throw 'no key';
+				}
+				console.log('key is', result.value);
+				$('#continue').attr('key', result.value);
+				pollForKey(result.value);
+			}
+		});    	   
+	});
+	
+	$('#continue').attr('disabled','disabled');
+	$('#continue').click(function () {
+		location.href = 'viewjson.html?key=' + $(this).attr('key');
+	});
+});
+
+</script>
+<style>
+#prompt { width: 100%; height: 80%; }
+</style>
+</head>
+<body>
+
+<input id="submit" value="process" type="button"/>
+<input id="continue" value="proceed" type="button"/>
+<div>
+Put the text below. Take care to keep a sentence on the same line (do not <a href="http://en.wikipedia.org/wiki/Word_wrap#Soft_and_hard_returns">hard wrap</a>).
+<textarea id="prompt">Put text here. </textarea>
+</div>
+
+</body>
+</html>

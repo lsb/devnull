@@ -1,24 +1,18 @@
-##arg1: textfile
-## Ex:   python dumpTex.py ../../thesis/template/template.tex
-##       python dumpTex.py ../../thesis/template/template.tex | tee out.json
-## Runs spell check on each sentence. If sentence passes, also runs link-parser to grammar check.
+#!flask/bin/python
+
+## To start service
+##		//serverSplitter$ source flask/bin/activate
+##		//(flask)serverSplitter$ ./dumpTex.py
+##
 ## Outputs results in JSON (with character-level tracking)
-## Tries to handle LaTeX macros, including \include{}.
+## Tries to handle LaTeX macros (to handle include, see old dumpTex...)
 ## Expands some commands such as \emph{hello}, but skips others such as $x + y$ 
 
 ### INSTALLATION
 ####
-#optional: sudo pip install -U numpy
-#sudo easy_install pip
+## see virtualenv
+####
 
-#sudo pip install -U pyyaml nltk
-#sudo python -m nltk.downloader -d /usr/share/nltk_data punkt
-
-
-
-
-SPELLCHECK = False
-GRAMMARCHECK = False
 
 
 import sys
@@ -77,45 +71,10 @@ listen()
 
 
  
-if len(sys.argv) != 2:
-	raise Exception('Expected one argument of input file, only got', len(sys.argv))
-
-file = sys.argv[1]
-
-
-LinkParser = None
-def restartParser ():  
-  global LinkParser
-  try:
-	  if LinkParser:
-		LinkParser.close(force=True)
-	  os.system('killall -9 link-parser &> /dev/null')
-	  LinkParser = pexpect.spawn("link-parser", timeout=0.3)
-	  LinkParser.expect('linkparser>')
-  except:
-    restartParser()
-restartParser()
 
 tokIncomplete = re.compile("No complete linkages found")
 tokOk = re.compile("Found .* had no P.P. violations\)")
-def checkGrammar(sent):
-  clean = sent.replace("}","").replace(".","")
-  clean = clean if clean[len(clean)-1]=="?" else (clean + ".")
-  res = (True, None)
-  try:
-    LinkParser.sendline(clean)
-    LinkParser.expect('linkparser>')
-    out = LinkParser.before
-    if tokIncomplete.search(out):
-      res = (False, out)
-    elif tokOk.search(out):
-      res = (True, None)
-    else:
-      res = (True, out)
-  except:
-    res = (True, str(LinkParser))
-    restartParser()
-  return res
+
 
 def writeDict (words):
   with open('dict', 'w') as f:
@@ -123,43 +82,7 @@ def writeDict (words):
     f.write(s)
     f.flush()
 
-def spellcheckCall (rawWord, caseSensitive):
-  checker = 'ispell' #/opt/local/bin/ispell
-  word = rawWord if caseSensitive else rawWord.lower()
-  command = 'echo "' + word + '" | ' + checker + ' -a -t -p dict | tail -n +2'
-  #print word, command
-  return subprocess.check_output(command, shell=True)
 
-
-def spellcheckSentence(sent):
-
-  orig = map(lambda (f,p,l,c,c2,w,p2): w.strip(), sent)
-  terms = map(lambda (f,p,l,c,c2,w,p2): w.replace("-",""), sent)
-  skips = re.compile('^(#|\(|\)|([0-9][0-9,.+]*)|\'+|"+|\+)?$')
-  terms = map(lambda w: 'skip' if skips.match(w) else w, terms)
-  qry = ' '.join(terms)
-
-  out = spellcheckCall(qry, True)
-  splits = r'\n'
-  outs = out.splitlines()[:-2]
-  okTok = re.compile(r'\*|\+')
-  #print '===='
-  #print qry
-  #for i, w in enumerate(terms):
-  #	print i, w
-  #print '===='  
-  for i, w in enumerate(outs):
-    #print '---'
-    #print i, w
-    #print '---'
-    if okTok.match(w):      
-      yield (True, sent[i], [])
-    elif orig[i].find('-') != -1 and  w.find(': ') != -1 and orig[i] in  w.split(': ')[1].split(', '):
-      yield (True, sent[i], [])
-    elif w[0] == '&':
-      yield (False, sent[i], w.split(': ')[1].split(', '))
-    else:
-      yield (False, sent[i], [])
 
 tokExpandCommands = re.compile(r'\\(ref|subref|sched|caption|emph|textbf|textit|title|section|subsection|subsubsection|subsubsubsection)')
 tokCommand = re.compile(r'(\\begin{tabular}.*?\\end{tabular})|(\\begin{lstlisting}.*?\\end{lstlisting})|(\\begin{grammar}.*?\\end{grammar})|(\\((\\\\)| |(([\xc4-\xfc]|\w|[:])*(\*|({[^}]*})|\[[^]]*\])*)))', re.DOTALL)
@@ -207,11 +130,7 @@ def words (paragraph, firstLine):
     raise  Exception('unknown', paragraph[totalOffset:(totalOffset+5)], paragraph[(totalOffset-20):(totalOffset+20)])
 
 tokParagraph = re.compile(r'(\n|\r)((\n|\r)+)')
-def paragraphs(file):
-
-    fullFile = ""
-    for line in file:
-      fullFile = fullFile + line
+def paragraphs(fullFile):
       
     includeLen = len('\\include')
     inputLen = len('\\input')
@@ -256,7 +175,12 @@ def inputs(paragraph):
 def paragraphsRec(fileName):
   fileObj = codecs.open(fileName, 'r', "utf-8")
   dir = None
-  for (l,p) in paragraphs(fileObj):
+  
+  fullFile = ""
+  for line in fileObj:
+    fullFile = fullFile + line
+  
+  for (l,p) in paragraphs(fullFile):
     yield (fileName, l, p)
     includes = inputs(p)
     if len(includes) > 0:
@@ -269,18 +193,22 @@ def paragraphsRec(fileName):
           yield v
   fileObj.close()
 
-def allWords():
- for (f, line, p) in paragraphsRec(file):
+def paragraphsText(text):
+  for (l,p) in paragraphs(text):
+    yield ('webInput', l, p)
+
+def allWords(paragraphs):
+ for (f, line, p) in paragraphs:
     for (subLine, offset, totalOffset, w) in words(p, line):
       if w.strip() != "":
         yield (f,line,subLine,offset, totalOffset, w,p)
 
-def allParagraphs():
+def allParagraphs(paragraphs):
   lastFile = None
   lastParagraphLine = None
   lastLine = None
   buff = []
-  for (f,para,line,c,cTotal, w,pText) in allWords():
+  for (f,para,line,c,cTotal, w,pText) in allWords(paragraphs):
     if f == lastFile and para == lastParagraphLine:
       buff.append( (f,para,line,c,cTotal, w,pText) )
     else:
@@ -330,40 +258,8 @@ def originalSentence (sent,includePunctuation=True):
 
 writeDict(['GPU','multicore','TBB','webpage','dataflow','JSON'])
 
-minWords = 2
-def checkParagraph (paragraph):
-      global minWords
-      sent = paragraph
-      if len(sent) <= minWords:
-        return
-
-      okParagraph = True
-      if SPELLCHECK:
-		  for (stat, (f,p,l,c,cTotal,w,pText), sugg) in spellcheckSentence(sent):
-			if stat == False:
-			  #spelling error
-			  okParagraph = False
-			  #print
-			  #print f.split("/")[-1],(p+l),c,':',w, '->', sugg
-			  #print '     "', originalSentence(sent),'"'
-			  yield {"e": "spell", "i": [p,l,c,cTotal,w], "s": sugg}    
-      if okParagraph:
-        (_,_,_,_,c,_,p) = sent[0]
-        (_,_,_,_,c2,w,_) = sent[-1]
-        para = p[c:(c2+len(w))]
-        #print 'ok Paragraph, checking for grammar'
-        #print para
-        for line in paragraphToLines(paragraph):
-          for sent in lineToSentences(line):
-            if len(sent) == 0:
-              continue
-            (ok, out) = (True, 0) if (not GRAMMARCHECK) else checkGrammar(originalSentence(sent))
-            if not ok:
-              cleanedSent = map(lambda (f,p,line,c,cTotal,w,pText): [p,line,c,cTotal,w], sent)
-              yield {"e": "gram", "i": cleanedSent, "s": out}
-
-def checkParagraphs():
-  for paragraph in allParagraphs():
+def checkParagraphs(paragraphs):
+  for paragraph in allParagraphs(paragraphs):
     if len(paragraph) == 0:
       continue
 
@@ -371,12 +267,12 @@ def checkParagraphs():
     yield {'file': f, 
     	'paragraph': pText, 
     	'spans': [startEndSpan for startEndSpan in sentence_splitter.span_tokenize(pText)], 
-    	'errors': [err for err in checkParagraph(paragraph)]}
+    	'errors': []}
 
-def dumpJson():
+def dumpJson(paragraphs):
   yield '['
   count = False
-  for p in checkParagraphs():
+  for p in checkParagraphs(paragraphs):
     if count:
       yield ','
     else:
@@ -385,6 +281,21 @@ def dumpJson():
     sleep(0.3)
   yield ']'
 
-for s in dumpJson():
-  print s
-  #print 'step'
+
+
+import zerorpc
+class HelloRPC(object):
+    def hello(self, text):
+
+    	print('python got text', text)    
+    	out = ''
+    	for s in dumpJson(paragraphsText(unicode(text, "utf-8"))):
+		  print s
+		  out = out + s
+        
+        print 'python done'
+        return out
+
+s = zerorpc.Server(HelloRPC())
+s.bind("tcp://0.0.0.0:4242")
+s.run()
