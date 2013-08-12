@@ -8,6 +8,7 @@
     "request": "2.x",
     "sqlite": "2.x",
     "zmq": "~2.4.0",
-    "zerorpc": "~0.9.3"
+    "zerorpc": "~0.9.3",
+    "nodemailer": "~0.5.2"
   }
 }

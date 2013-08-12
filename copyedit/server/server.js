@@ -4,46 +4,20 @@ var NUM_READERS = 1;
 var CUSTOM_PAY = true
 var CUSTOM_PER_SENTENCE = 0.02;
 
-// (pay per hour / (num words in that time)) / lettersPerWord
-var API_DOLLARS_PER_LETTER = (4.00/(225 * 60)) / 5.1;
-function apiTextEstimate(txt) {  //to nearest cent, upwards
-	var base = txt.length * API_DOLLARS_PER_LETTER;
-	return Math.ceil(base * 100) / 100; 
-}
-
-function inflatedCostMaker(c) {
-	return function (txt) { return inflatedCost(txt, c); };
-}
-
-function inflatedCost (txt, cost) {
-
-	return cost; //per sentence
-
-/*
-	var originalCost = apiTextEstimate(txt);
-
-	//sentenceCost: 0.000037
-	//CUSTOM_PERCENT_INCREASE: 2.00x 
-	//===>
-	//base: 0.00001
-	//multiplier: (3.7 * 2.0) => 7
-	//------
-	//result: 0.00001 * 7 = 0.00007
-	
-	var base = Math.pow(10, -1 * (1 + Math.floor(-1 * Math.log(originalCost) / Math.LN10))); 
-	var multiplier = Math.round(CUSTOM_PERCENT_INCREASE * originalCost / base);
-	return base * multiplier;
-*/	
-}
-
-var NONCE = 'iamok';
-
-
-var LINE_SPLITTER_LOC = "tcp://127.0.0.1:4242";
-var LINE_SPLITTER_NAME = "hello";
-
 //=================
 /*
+
+	INPUT: $node server.js '{"name": "Your Name", "gmailAccount": "YourGmailAccount", "gmailPassword": "YourGmailPW", "askHuman": "UrlOfAskHuman"}'
+	
+	ex:
+	'{ \
+		"name": "Leo Meyerovich", \
+		"gmailAccount": "lmeyerov", \
+		"gmailPassword": '*****', \
+		"askHuman": "http://vivam.us/human/", \
+	}'
+
+
 	/api/turkit POST 
 		{sentences: [ string ],
 		 sentenceCost : number, //$ per sentence , optional 
@@ -76,6 +50,67 @@ var LINE_SPLITTER_NAME = "hello";
 */
 //=================
 
+if (process.argv.length != 3)
+        throw "Expected parameters of name, gmail account, and password.";
+var CFG =
+(function () {
+	var data;
+	try {
+		data = JSON.parse(process.argv[2]);
+	} catch (e) {
+		throw "Expected valid JSON as server.js parameter";
+	}
+	var props = ['name', 'gmailAccount', 'gmailPassword', 'askHuman'];
+	props.map(function (p) {
+		if (!data.hasOwnProperty(p)) 
+			throw 'Missing server.js config field "' + p + '"';
+	});
+	return data;
+}())
+
+
+
+
+// (pay per hour / (num words in that time)) / lettersPerWord
+var API_DOLLARS_PER_LETTER = (4.00/(225 * 60)) / 5.1;
+function apiTextEstimate(txt) {  //to nearest cent, upwards
+	var base = txt.length * API_DOLLARS_PER_LETTER;
+	return Math.ceil(base * 100) / 100; 
+}
+
+function inflatedCostMaker(c) {
+	return function (txt) { return inflatedCost(txt, c); };
+}
+
+function inflatedCost (txt, cost) {
+
+	return cost; //per sentence
+
+/*
+	var originalCost = apiTextEstimate(txt);
+
+	//sentenceCost: 0.000037
+	//CUSTOM_PERCENT_INCREASE: 2.00x 
+	//===>
+	//base: 0.00001
+	//multiplier: (3.7 * 2.0) => 7
+	//------
+	//result: 0.00001 * 7 = 0.00007
+	
+	var base = Math.pow(10, -1 * (1 + Math.floor(-1 * Math.log(originalCost) / Math.LN10))); 
+	var multiplier = Math.round(CUSTOM_PERCENT_INCREASE * originalCost / base);
+	return base * multiplier;
+*/	
+}
+
+var NONCE = 'iamokSunday';
+
+
+var LINE_SPLITTER_LOC = "tcp://127.0.0.1:4242";
+var LINE_SPLITTER_NAME = "hello";
+
+
+var email = require("nodemailer")
 var express = require('express');
 var request = require("request");
 var app = express();
@@ -99,7 +134,7 @@ var delay = 10 * 1000;
 
 var jobCounter = 0;
 var batches = [];
-function makeBatch (sentences, batchID, putUrl) {
+function makeBatch (file, sentences, batchID, putUrl) {
 	jobCounter++;
 	var res = [];
 	res.count = 0;
@@ -108,6 +143,8 @@ function makeBatch (sentences, batchID, putUrl) {
 	res.lastTime = new Date().getTime();
 	res.ticks = [];
 	res.putURL = putUrl;
+	res.jobSize = sentences.length;
+	res.file = file,
 //	res.sentences = sentences;
 	batches[jobCounter] = res;	
 	return jobCounter;
@@ -127,8 +164,13 @@ function updateBatch(jobID, i, resultRaw, isFinal) {
 	batches[jobID].ticks.push({i: i, time: time});
 	batches[jobID].lastTime = time;
 
-	if (isFinal) batches[jobID].count++;
-
+	if (isFinal) {
+		batches[jobID].count++;
+		if (batches[jobID].count == batches[jobID].jobSize) {
+			console.log("Batch done!");
+			emailBatch(batches[jobID]);
+		}	
+	}
 }
 
 
@@ -514,9 +556,9 @@ function makePut(putUrl, asker, dummyGet) {
 			
 		var estCost = 
 			NUM_READERS
-			* sents
-			  .map(CUSTOM_PAY ? inflatedCostMaker(sentenceCost) : sentenceCost)
-			  .reduce(function (acc, v) { acc + v; }, 0);						
+			* (sents
+			  .map(CUSTOM_PAY ? inflatedCostMaker(CUSTOM_PER_SENTENCE) : apiTextEstimate)
+			  .reduce(function (acc, v) { return acc + v; }, 0));						
 		if (estCost >  MAX_DOLLARS_BATCH) {	
 			console.error('Too big a job!');
 			console.error('Estimated cost', estCost);
@@ -530,13 +572,13 @@ function makePut(putUrl, asker, dummyGet) {
 		}
 				
 		var batchID = req.body.batchID;
-		var jobID = makeBatch(sents, batchID, putUrl);
+		var jobID = makeBatch(req.body.file, sents, batchID, putUrl);
 		res.send(JSON.stringify({jobID: jobID}));
 		console.log('got sents', sents);
 		
 		sents.map(function (sent, idx) {
 			console.log('asking for', sent);
-			var url = 'http://vivam.us/human/ask?' + asker(sent, batchID, sentenceCost);
+			var url = CFG.askHuman + 'ask?' + asker(sent, batchID, sentenceCost);
 			console.log('url', url);	
 			if (DEBUG) {
 				console.log("Fake PUT");
@@ -593,6 +635,45 @@ makeGet('improvementsStyle');
 
 makePut('turkitRewrite', askAsTextRewrite, dummyGetRewrite);
 makeGet('improvementsRewrite');
+
+
+
+function getEmailInfo () {
+	return {name: CFG.name, CFG: data.gmailAccount, CFG: data.gmailPassword}
+}
+function sendGmail(name, to, subject, html, txt, cb) {
+	var account = getEmailInfo();
+	var mailerCfg = {
+		service: "Gmail",
+		auth: {
+			user: account.address + '@gmail.com',
+			pass: account.password }};
+	var from = account.name + ' <' + account.address + '@gmail.com>';
+	var message = {
+		from: from,
+		to: name + ' <' + to + '>',
+		subject: subject,
+		html: html,
+		text: txt,
+		cc: from
+	};
+	console.log('sending message', message);
+	email
+		.createTransport("SMTP", mailerCfg)
+		.sendMail(message, function (err, msg) { cb(err, msg); });
+};
+
+function emailBatch(batch) {
+	setTimeout(function () {
+		sendGmail(
+			'happy customer',
+			'lmeyerov@eecs.berkeley.edu',
+			'all done!',
+			'msg body, link: key=' + batch.file,
+			'msg body <a href="key=' + batch.file + '">link</a>',
+			function (err, data) { console.log('email to ' + 'lmeyerov@eecs', err || data); });				
+		}, 0);
+}
 
 app.listen(3000);
 console.log('Listening on port 3000');

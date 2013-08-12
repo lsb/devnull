@@ -2,6 +2,8 @@
 <head>
 <title>Proofer</title>
 <style>
+
+#menu h2 { display: inline-block; }
 body { 
 	margin: 1em; 
 	max-width: 50em;
@@ -22,6 +24,8 @@ input {
 input.saving { border: 2px solid #F90; }
 
 input.on { border: 2px solid #090; }
+
+input[type='text'] { width: 15em; border: 1px solid silver; }
 
 </style>
 <script src="jquery-1.7.1.min.js"></script>
@@ -47,8 +51,8 @@ function pollForKey(key) {
 		 			throw out.error;
 		 		}
 		 		if (out.value) {
-					$('#submit').removeClass('saving');
-		 			$('#continue, #submit').attr('disabled',false);
+					$('#save').removeClass('saving');
+		 			$('#continue, #save').attr('disabled',false);
 		 			$('#continue').addClass('on');
 		 		} else {
 		 			setTimeout(function () { pollForKey(key); }, 1000);
@@ -59,20 +63,24 @@ function pollForKey(key) {
 $(function () {
 
 	function checkPreprocess () {
-		$('#submit').attr('disabled',
-			$('#prompt').val() == 'Put text here. ' ? 'disabled' : false);
+		$('#save').attr('disabled',
+			($('#name').val() == 'name' 
+			|| $('#email').val() == 'email'
+			|| $('#prompt').val() == 'Put text here. ') ? 'disabled' : false);
+		$('#prompt').attr('disabled',
+			($('#name').val() == 'name' 
+			|| $('#email').val() == 'email') ? 'disabled' : false);
 	}
 
-
 	checkPreprocess();
-	$('#submit').attr('disabled', 'disabled');
-	$('#prompt').bind('input propertychange', checkPreprocess);
+	$('#save').attr('disabled', 'disabled');
+	$('#prompt, #name, #email').bind('input propertychange', checkPreprocess);
+	
 
-
-	$('#submit').click(function () {		
-		$('#submit').addClass('saving');
+	$('#save').click(function () {		
+		$('#save').addClass('saving');
 		$('#continue').removeClass('on');
-		$('#continue, #submit').attr('disabled','disabled');
+		$('#continue, #save').attr('disabled','disabled');
 		$.ajax({
 			url: 'api/split-lines',
 			type: 'POST',
@@ -101,9 +109,17 @@ $(function () {
 <body>
 <h1 id="title">Proofer</h1>
 
-<div style="text-align: right">
-<input id="submit" value="Save file" type="button"/>
-<input id="continue" value="Continue" type="button"/>
+<div id="menu">
+	<div>
+	<h2>1. Email to: </h2>
+	<input id=name type="text" value="name"/>
+	<input id=email type="text" value="email"/>
+	</div>
+	<div>
+	<h2>2. Your text: </h2>
+	<input id="save" value="Save text" type="button"/>
+	<input id="continue" value="Continue" type="button"/>
+	</div>
 </div>
 <div>
 <p>Input the text below. Keep a sentence on the same line (do not <a href="http://en.wikipedia.org/wiki/Word_wrap#Soft_and_hard_returns">&quot;hard wrap&quot;</a>).</p>

@@ -823,6 +823,7 @@ function bindDOM() {
     		}));
     	
     	return {post: {
+    				file: location.href.split('?key=')[1],
     				sentences: flatSentences, 
     				batchID: batchIDs[putURL],
     				sentenceCost: sentenceCost}, 
