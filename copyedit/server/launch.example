@@ -1,0 +1,2 @@
+##copy this file as "launch", edit, and run that
+node server.js '{"name": "Leo Meyerovich", "gmailAccount": "lmeyerov", "gmailPassword": "*****", "askHuman": "http://vivam.us/human/"}'
