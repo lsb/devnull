@@ -1,0 +1,26 @@
+
+
+## 1. get key
+curl -X POST -H "Content-Type: application/json" -d '{"text": "Sentence 1. Sentence 2."}' http://localhost:3000/api/split-lines
+##     --> {value: 'key34547883'}
+
+## 2. read paragraph/sentence splits at that key
+##   (loop until successful -- will not return with value field until python finished processing)
+curl "http://localhost:3000/api/split-lines?key=key34547883"
+##    --> {"value":[{"errors":[],"paragraph":"Sentence 1. Sentence 2.","spans":[[0,11],[12,23]],"file":"webInput"}]}
+
+## 3. proofread a sentence (MAKE SURE server.js HAS debug=true UP TOP!)
+##    (get retrieval ID)
+curl -X POST -H "Content-Type: application/json" -d '{"file": "key34547883", "sentences": ["Sentence 1.", "Sentence 2."], "batchID": "MyHandshake"}' http://localhost:3000/api/turkit
+##    --> {"jobID":2}
+
+## 3b. instead of turkit, can do turkitStyle or turkitRewrite
+curl -X POST -H "Content-Type: application/json" -d '{"file": "key34547883", "sentences": ["Sentence 1.", "Sentence 2."], "batchID": "MyHandshake"}' http://localhost:3000/api/turkitStyle
+curl -X POST -H "Content-Type: application/json" -d '{"file": "key34547883", "sentences": ["Sentence 1.", "Sentence 2."], "batchID": "MyHandshake"}' http://localhost:3000/api/turkitRewrite
+##    --> {"startTime":1376287498275,"lastTime":1376287499963,"responseTime":1376287744634,"ticks":[{"i":0,"time":1376287498276},{"i":1,"time":1376287499963}],"count":2,"sentences":[["ok","ok","ok"],["<is> 0.8205959047190845 ha hah a long description goes here ok","<the> 0.8205959047190845 another long description goes here asdf asdf asdf","<the> 0.8205959047190845 short des","<if> 0.8205959047190845 this sentence is going to be long and take space too due to its redundancy"]],"jobID":"2","batchID":"MyHandshake","putURL":"turkit","repollDelayMS":10000}
+
+## 4. for fetch above, poll on current result
+curl "http://localhost:3000/api/improvements?jobID=2"
+
+
+
