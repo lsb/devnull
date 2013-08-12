@@ -1,0 +1,5 @@
+#0. npm install
+#1. copy "launch.example" to "launch"
+#2. edit the email options there
+#3. run "launch"
+#(4. run "../serverSplitter/dumpTex.py")
